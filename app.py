@@ -161,4 +161,9 @@ st.markdown(
     <div style='text-align: center;'>
         <p style='font-size: 1.5em; margin-bottom: 5px;'>🍎</p>
         <p style='margin-bottom: 2px;'>Desarrollado con ❤️ por <b>Luis Atencio</b></p>
-        <p style='font-size: 0.85em; color:
+        <p style='font-size: 0.85em; color: #555; margin-bottom: 2px;'>para sus amigos y participantes del <b>T.E.L E.R.A.C</b></p>
+        <p style='font-size: 0.75em; color: silver;'>Zulia, Venezuela | 2026</p>
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
