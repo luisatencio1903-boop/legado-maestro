@@ -1,10 +1,13 @@
 import streamlit as st
 import google.generativeai as genai
 
-# --- CONFIGURACIÓN DEL CEREBRO (IA) ---
-# Aquí es donde pegas tu llave mágica. Borra lo que está entre comillas y pon la tuya.
-genai.configure(api_key="AIzaSyBXN7qqo7H1QrOzRSujrJNg8m0Z6YdVnqo")
-model = genai.GenerativeModel('gemini-1.5-flash')
+# --- CONEXIÓN SEGURA (Se solicita automáticamente de tus Secrets) ---
+try:
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+    model = genai.GenerativeModel('gemini-1.5-flash')
+except Exception:
+    st.error("⚠️ Configuración de seguridad pendiente en Streamlit.")
+    st.stop()
 
 # --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(page_title="Legado Maestro", page_icon="🍎")
@@ -15,7 +18,7 @@ with st.sidebar:
     st.title("Legado Maestro")
     st.write("---")
     st.info("💡 Herramienta de Apoyo Docente")
-    # AQUÍ ESTÁ TU FIRMA / EASTER EGG
+    # AQUÍ ESTÁ TU FIRMA ORIGINAL
     st.caption("👨‍🏫 **Creado por el Prof. Luis Atencio**")
     st.caption("Para el Taller Laboral, mis amigos y estudiantes.")
     st.write("---")
@@ -40,7 +43,7 @@ if opcion == "📝 Crear Plan de Clase":
         if tema and grado:
             with st.spinner('El Prof. Luis ha entrenado a esta IA para pensar...'):
                 prompt = f"""
-                Actúa como un docente experto de Educación Especial en Venezuela.
+                Actúa como un docente experto de Educación Especial en Venezuela (Zulia).
                 Crea un plan de clase detallado para el Taller Laboral.
                 Tema: {tema}
                 Grupo: {grado}
@@ -63,16 +66,16 @@ elif opcion == "🔧 Consultar Mantenimiento":
     
     if st.button("🔍 Consultar"):
         if duda:
-            prompt = f"Actúa como supervisor de Mantenimiento y Servicios Generales. Responde esta duda técnica de forma educativa: {duda}"
+            prompt = f"Actúa como supervisor de Mantenimiento y Servicios Generales. Responde esta duda técnica de forma educativa y sencilla: {duda}"
             respuesta = model.generate_content(prompt)
             st.info(respuesta.text)
 
 elif opcion == "💡 Idea para Actividad":
     st.markdown("### Dinámicas para el Aula")
     if st.button("🎲 Dame una idea sorpresa"):
-        prompt = "Dame una idea de juego o dinámica rápida para estudiantes de educación laboral que fomente el compañerismo."
+        prompt = "Dame una idea de juego o dinámica rápida para estudiantes de educación laboral que fomente el compañerismo en el taller."
         respuesta = model.generate_content(prompt)
-        st.balloons() # ¡Efecto especial de globos!
+        st.balloons() 
         st.write(respuesta.text)
 
 # --- PIE DE PÁGINA (TU SELLO) ---
