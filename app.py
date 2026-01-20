@@ -37,13 +37,13 @@ LOGO_URL = "https://raw.githubusercontent.com/luisatencio1903-boop/legado-maestr
 if "ready" not in st.session_state:
     st.session_state.ready = True
 
-# --- 5. CONEXIÓN CON IA ---
+# --- 5. CONEXIÓN CON EL CEREBRO DE LA APP ---
 try:
     if "GOOGLE_API_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"].strip())
         model = genai.GenerativeModel('gemini-2.5-flash')
     else:
-        st.error("⚠️ Falta API Key.")
+        st.error("⚠️ Falta la llave de acceso (API Key).")
         st.stop()
 except Exception as e:
     st.error(f"⚠️ Error de conexión: {e}")
@@ -80,7 +80,7 @@ if opcion == "📝 Planificación Profesional":
 
     if st.button("🚀 Generar Planificación"):
         if rango and notas:
-            with st.spinner('Procesando datos...'):
+            with st.spinner('Redactando documento...'):
                 try:
                     prompt = f"""
                     Actúa como Luis Atencio, Bachiller Docente. 
@@ -93,14 +93,15 @@ if opcion == "📝 Planificación Profesional":
                     st.success("¡Planificación Generada!")
                     st.markdown(res.text)
                 except Exception as e:
-                    st.warning("⏳ La IA está descansando. Espera 1 minuto y prueba de nuevo.")
+                    # MENSAJE HUMANO CORREGIDO
+                    st.warning("⏳ Tómate un momento de descanso, vuelve en un minuto y seguimos.")
 
 # --- OPCIÓN 2: MENSAJE MOTIVACIONAL ---
 elif opcion == "🌟 Mensaje Motivacional":
     st.subheader("Dosis de Ánimo Express ⚡")
     
     if st.button("❤️ Mensaje Corto para Compartir"):
-        with st.spinner('Buscando frase perfecta...'):
+        with st.spinner('Buscando las palabras correctas...'):
             try:
                 temas = [
                     """Dame solo UNA frase bíblica poderosa sobre la enseñanza o el amor. 
@@ -138,32 +139,35 @@ elif opcion == "🌟 Mensaje Motivacional":
                 """, unsafe_allow_html=True)
                 
             except Exception as e:
-                # AQUÍ ESTÁ EL MENSAJE AMIGABLE SI SE ACABA EL SALDO
-                st.warning("⏳ ¡Mucha inspiración por hoy! Espera 1 minuto para recargar energías.")
+                # MENSAJE HUMANO CORREGIDO
+                st.warning("⏳ Tómate un momento de descanso, vuelve en un minuto y seguimos.")
 
 # --- OPCIÓN 3: IDEAS ---
 elif opcion == "💡 Ideas de Actividades":
     tema = st.text_input("Tema a trabajar:")
     if st.button("✨ Sugerir"):
         try:
-            res = model.generate_content(f"Sugiere 3 actividades técnicas, creativas y breves para {tema} en Taller Laboral.")
-            st.markdown(res.text)
+            with st.spinner('Pensando ideas creativas...'):
+                res = model.generate_content(f"Sugiere 3 actividades técnicas, creativas y breves para {tema} en Taller Laboral.")
+                st.markdown(res.text)
         except:
-             st.warning("⏳ Espera un momento, la IA se está reiniciando.")
+             # MENSAJE HUMANO CORREGIDO
+             st.warning("⏳ Tómate un momento de descanso, vuelve en un minuto y seguimos.")
 
 # --- OPCIÓN 4: CONSULTAS ---
 elif opcion == "❓ Consultas Técnicas":
     duda = st.text_area("Consulta:")
     if st.button("🔍 Responder"):
         try:
-            res = model.generate_content(f"Respuesta técnica profesional y breve: {duda}")
-            st.markdown(res.text)
+            with st.spinner('Consultando base de conocimientos...'):
+                res = model.generate_content(f"Respuesta técnica profesional y breve: {duda}")
+                st.markdown(res.text)
         except:
-             st.warning("⏳ Espera un momento, la IA se está reiniciando.")
+             # MENSAJE HUMANO CORREGIDO
+             st.warning("⏳ Tómate un momento de descanso, vuelve en un minuto y seguimos.")
 
 # --- 8. PIE DE PÁGINA ---
 st.markdown("---")
-# Usamos columnas de Streamlit en lugar de HTML puro para que la imagen cargue mejor
 col1, col2, col3 = st.columns([1,2,1])
 with col2:
     st.image(LOGO_URL, width=60)
