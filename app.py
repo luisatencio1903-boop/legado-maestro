@@ -30,7 +30,7 @@ hide_streamlit_style = """
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# --- 3. URL DEL LOGO ---
+# --- 3. URL DEL LOGO (Solo para la barra lateral) ---
 LOGO_URL = "https://raw.githubusercontent.com/luisatencio1903-boop/legado-maestro/main/logo_legado.png"
 
 # --- 4. ARRANQUE SEGURO ---
@@ -51,7 +51,10 @@ except Exception as e:
 
 # --- 6. BARRA LATERAL ---
 with st.sidebar:
-    st.image(LOGO_URL, width=150)
+    try:
+        st.image(LOGO_URL, width=150)
+    except:
+        st.header("🍎") # Si falla la imagen, pone una manzana
     st.title("Legado Maestro")
     st.markdown("---")
     st.caption("👨‍🏫 **Luis Atencio**")
@@ -93,7 +96,7 @@ if opcion == "📝 Planificación Profesional":
                     st.success("¡Planificación Generada!")
                     st.markdown(res.text)
                 except Exception as e:
-                    st.warning("⏳ El sistema está tomando aire. Espera 1 minuto y vuelve a intentar.")
+                    st.warning("⏳ El sistema se está recargando. Por favor espera unos minutos.")
 
 # --- OPCIÓN 2: MENSAJE MOTIVACIONAL ---
 elif opcion == "🌟 Mensaje Motivacional":
@@ -103,19 +106,10 @@ elif opcion == "🌟 Mensaje Motivacional":
         with st.spinner('Buscando las palabras correctas...'):
             try:
                 temas = [
-                    """Dame solo UNA frase bíblica poderosa sobre la enseñanza o el amor. 
-                    Ejemplo: 'Instruye al niño en su camino...' 
-                    Corta y directa.""",
-                    
-                    """Una frase célebre corta sobre educación y superación.
-                    Máximo 15 palabras.""",
-                    
-                    """Una frase de aliento guerrero para el docente venezolano. 
-                    Ejemplo: 'Tu aula es luz en tiempos difíciles.'
-                    Corto y contundente.""",
-                    
-                    """Un recordatorio flash de vocación.
-                    Ejemplo: 'Ese pequeño avance vale todo el esfuerzo.'"""
+                    "Dame solo UNA frase bíblica poderosa sobre enseñar. Corta.",
+                    "Una frase célebre corta sobre educación y superación.",
+                    "Una frase de aliento guerrero para el docente venezolano. Corta.",
+                    "Un recordatorio flash de vocación docente."
                 ]
                 
                 tema_elegido = random.choice(temas)
@@ -138,46 +132,40 @@ elif opcion == "🌟 Mensaje Motivacional":
                 """, unsafe_allow_html=True)
                 
             except Exception as e:
-                # MENSAJE DE ESPERA CLARO
-                st.warning("⏳ ¡Mucha inspiración por ahora! El sistema descansa 1 minuto. Intenta brevemente.")
+                st.warning("⏳ El sistema se está recargando. Por favor espera unos minutos.")
 
 # --- OPCIÓN 3: IDEAS ---
 elif opcion == "💡 Ideas de Actividades":
     tema = st.text_input("Tema a trabajar:")
     if st.button("✨ Sugerir"):
         try:
-            with st.spinner('Pensando ideas creativas...'):
-                res = model.generate_content(f"Sugiere 3 actividades técnicas, creativas y breves para {tema} en Taller Laboral.")
+            with st.spinner('Pensando ideas...'):
+                res = model.generate_content(f"Sugiere 3 actividades técnicas breves para {tema} en Taller Laboral.")
                 st.markdown(res.text)
         except:
-             st.warning("⏳ El sistema está tomando aire. Espera 1 minuto y vuelve a intentar.")
+             st.warning("⏳ El sistema se está recargando. Por favor espera unos minutos.")
 
 # --- OPCIÓN 4: CONSULTAS ---
 elif opcion == "❓ Consultas Técnicas":
     duda = st.text_area("Consulta:")
     if st.button("🔍 Responder"):
         try:
-            with st.spinner('Consultando base de conocimientos...'):
-                res = model.generate_content(f"Respuesta técnica profesional y breve: {duda}")
+            with st.spinner('Consultando...'):
+                res = model.generate_content(f"Respuesta técnica breve: {duda}")
                 st.markdown(res.text)
         except:
-             st.warning("⏳ El sistema está tomando aire. Espera 1 minuto y vuelve a intentar.")
+             st.warning("⏳ El sistema se está recargando. Por favor espera unos minutos.")
 
-# --- 8. PIE DE PÁGINA (CORREGIDO PARA QUE CARGUE EL LOGO) ---
+# --- 8. PIE DE PÁGINA (SIN IMAGEN PARA EVITAR ERRORES) ---
 st.markdown("---")
-# Usamos columnas para centrar y cargar la imagen de forma segura
-col_izq, col_centro, col_der = st.columns([1, 6, 1])
-
-with col_centro:
-    # Mostramos la imagen con st.image para evitar el error de icono roto
-    st.image(LOGO_URL, width=40) 
-    st.markdown(
-        """
-        <div style='text-align: left;'>
-            <p style='margin-bottom: 2px;'>Desarrollado con ❤️ por <b>Luis Atencio</b></p>
-            <p style='font-size: 0.85em; color: #555; margin-bottom: 2px;'>para sus amigos y participantes del <b>T.E.L E.R.A.C</b></p>
-            <p style='font-size: 0.75em; color: silver;'>Zulia, Venezuela | 2026</p>
-        </div>
-        """, 
-        unsafe_allow_html=True
-    )
+st.markdown(
+    """
+    <div style='text-align: center;'>
+        <p style='font-size: 1.5em; margin-bottom: 5px;'>🍎</p>
+        <p style='margin-bottom: 2px;'>Desarrollado con ❤️ por <b>Luis Atencio</b></p>
+        <p style='font-size: 0.85em; color: #555; margin-bottom: 2px;'>para sus amigos y participantes del <b>T.E.L E.R.A.C</b></p>
+        <p style='font-size: 0.75em; color: silver;'>Zulia, Venezuela | 2026</p>
+    </div>
+    """, 
+    unsafe_allow_html=True
+)
