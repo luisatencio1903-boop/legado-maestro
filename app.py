@@ -2,37 +2,37 @@ import streamlit as st
 import google.generativeai as genai
 import time
 
-# --- 1. CONFIGURACIÓN DE PÁGINA ---
+# --- 1. CONFIGURACIÓN DE PÁGINA (ESTABLECE TU MARCA EN EL MÓVIL) ---
 st.set_page_config(
     page_title="Legado Maestro",
     page_icon="logo_legado.png",
     layout="centered"
 )
 
-# --- 2. EVITAR ERROR 500 (ESPERA DE INICIO) ---
+# --- 2. LÓGICA DE ARRANQUE PARA EVITAR ERROR 500 ---
 if "app_ready" not in st.session_state:
-    with st.spinner("Cargando Asistente Educativo..."):
-        time.sleep(2)  # Da tiempo al servidor para despertar
+    with st.spinner("Iniciando Legado Maestro..."):
+        time.sleep(2)  # Tiempo de espera para estabilizar la conexión del APK
     st.session_state.app_ready = True
 
-# --- 3. CONFIGURACIÓN DE SEGURIDAD ---
+# --- 3. CONFIGURACIÓN DE SEGURIDAD (API KEY) ---
 try:
     if "GOOGLE_API_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"].strip())
         model = genai.GenerativeModel('gemini-2.5-flash')
     else:
-        st.error("⚠️ Falta la llave API en los Secrets de Streamlit.")
+        st.error("⚠️ Error: Configure 'GOOGLE_API_KEY' en los Secrets de Streamlit.")
         st.stop()
 except Exception as e:
     st.error(f"⚠️ Error de conexión: {e}")
     st.stop()
 
-# --- 4. IDENTIDAD EN BARRA LATERAL ---
+# --- 4. BARRA LATERAL (IDENTIDAD INSTITUCIONAL) ---
 with st.sidebar:
     try:
         st.image("logo_legado.png", width=150)
     except:
-        st.warning("⚠️ Cargando logo institucional...")
+        st.warning("⚠️ Cargando escudo institucional...")
             
     st.title("Legado Maestro")
     st.markdown("---")
@@ -41,64 +41,61 @@ with st.sidebar:
     st.caption("Taller Laboral 'Elena Rosa Aranguibel'")
     st.write("---")
 
-# --- 5. CUERPO DE LA APP ---
+# --- 5. CUERPO PRINCIPAL ---
 st.title("🍎 Asistente Educativo - Zulia")
 
 opcion = st.selectbox(
     "¿Qué vamos a trabajar hoy, colega?",
-    ["📝 Planificador Semanal", "💡 Ideas Prácticas", "❓ Consultas Técnicas"]
+    ["📝 Planificador Semanal Profesional", "💡 Ideas para Actividades", "❓ Consultas Técnicas"]
 )
 
-if opcion == "📝 Planificador Semanal":
-    st.subheader("Planificación Técnica Profesional")
-    rango = st.text_input("Lapso de la semana:", placeholder="Ej: 19 al 23 de enero 2026")
+if opcion == "📝 Planificador Semanal Profesional":
+    st.subheader("Planificación Técnica Estructurada")
+    rango = st.text_input("Lapso de la semana:", placeholder="Ej: del 19 al 23 de enero de 2026")
     aula = st.text_input("Aula / Grupo:", value="Mantenimiento y Servicios Generales")
-    st.info("Escribe tus notas. El profesor Luis Atencio les dará el formato oficial.")
+    st.info("Escribe tus notas. El profesor Luis Atencio les dará el formato técnico oficial.")
     notas = st.text_area("Notas del cronograma:", height=200)
 
-    if st.button("🚀 Generar Planificación Estructurada"):
+    if st.button("🚀 Generar Planificación"):
         if rango and notas:
             with st.spinner('Procesando datos técnicos...'):
                 try:
                     prompt = f"""
-                    Actúa como Luis Atencio, Bachiller Docente.
-                    Estructura estas notas en una planificación formal y técnica para Educación Especial.
+                    Actúa como Luis Atencio, Bachiller Docente del Taller Laboral 'Elena Rosa Aranguibel'.
+                    Organiza estas notas en una planificación formal y técnica para Educación Especial.
                     LAPSO: {rango} | AULA: {aula} | DOCENTE: Luis Atencio.
                     NOTAS: {notas}
 
-                    ESTRUCTURA:
+                    ESTRUCTURA OBLIGATORIA POR DÍA:
                     1. Día y Fecha.
                     2. Título (Técnico).
                     3. Competencia (Profesional).
                     4. Exploración (Concisa, sin coloquialismos ni religión).
-                    5. Desarrollo (Viñetas paso a paso).
-                    6. REFLEXIÓN (Evaluación y aseo).
+                    5. Desarrollo (Viñetas técnicas paso a paso).
+                    6. REFLEXIÓN (Evaluación y rutina de aseo resumida).
                     7. Mantenimiento (Orden y limpieza).
 
-                    REGLAS: Tono técnico, profesional y laico.
-                    FIRMA: Luis Atencio, Bachiller Docente.
+                    REGLAS: Tono profesional y laico. Firma: Luis Atencio, Bachiller Docente.
                     """
                     res = model.generate_content(prompt)
                     st.success("¡Planificación generada con éxito!")
                     st.markdown(res.text)
                 except Exception as e:
-                    st.error(f"Error técnico: {e}")
+                    st.error(f"Error técnico de la IA: {e}")
 
-elif opcion == "💡 Ideas Prácticas":
-    st.subheader("Generador de Estrategias")
-    tema = st.text_input("¿Qué técnica quieres fortalecer?")
+elif opcion == "💡 Ideas para Actividades":
+    tema = st.text_input("Habilidad a fortalecer:")
     if st.button("✨ Sugerir"):
-        res = model.generate_content(f"Sugiere 3 actividades breves y técnicas para {tema}. Tono profesional.")
+        res = model.generate_content(f"Sugiere 3 actividades técnicas breves para {tema}. Tono profesional.")
         st.markdown(res.text)
 
 elif opcion == "❓ Consultas Técnicas":
-    st.subheader("Consultoría Pedagógica")
-    pregunta = st.text_area("Duda técnica:")
+    duda = st.text_area("Duda pedagógica:")
     if st.button("🔍 Responder"):
-        res = model.generate_content(f"Responde de forma profesional sobre educación especial: {pregunta}")
+        res = model.generate_content(f"Respuesta técnica sobre educación especial para taller laboral: {duda}")
         st.markdown(res.text)
 
-# --- 6. MARCA PROFESIONAL AL PIE ---
+# --- 6. FIRMA Y MARCA PROFESIONAL AL PIE ---
 st.markdown("---")
 st.markdown(
     """
