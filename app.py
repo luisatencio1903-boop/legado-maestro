@@ -99,7 +99,7 @@ if opcion == "📝 Planificación Profesional":
                     st.markdown(res.text)
                 except Exception as e:
                     # AQUÍ MUESTRA EL ERROR REAL
-                    st.error(f"⚠️ ERROR TÉCNICO (Mándame foto de esto): {e}")
+                    st.error(f"⚠️ ERROR TÉCNICO: {e}")
 
 # --- OPCIÓN 2: MENSAJE MOTIVACIONAL ---
 elif opcion == "🌟 Mensaje Motivacional":
@@ -126,4 +126,6 @@ elif opcion == "🌟 Mensaje Motivacional":
                 
                 res = model.generate_content(prompt_final, generation_config=config_creativa)
                 
-                st.
+                st.markdown(f"""
+                <div style="background-color: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #eee; border-left: 8px solid #ff4b4b; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">
+                    <div class="mensaje-texto">
