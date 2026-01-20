@@ -1,28 +1,33 @@
 import streamlit as st
 import google.generativeai as genai
+import time
 
-# --- 1. CONFIGURACIÓN DE PÁGINA (ESTABLECE EL NOMBRE E ICONO DE LA APP) ---
+# --- 1. CONFIGURACIÓN DE PÁGINA (ESTABLECE EL NOMBRE E ICONO) ---
 st.set_page_config(
     page_title="Legado Maestro",
     page_icon="logo_legado.png",
     layout="centered"
 )
 
-# --- 2. CONFIGURACIÓN DE SEGURIDAD ---
+# --- 2. PREVENCIÓN DE ERROR 500 (WAKE-UP LOGIC) ---
+if "app_ready" not in st.session_state:
+    with st.spinner("Iniciando Legado Maestro..."):
+        time.sleep(2)  # Tiempo de espera para que el servidor de Streamlit despierte
+    st.session_state.app_ready = True
+
+# --- 3. CONFIGURACIÓN DE SEGURIDAD ---
 try:
     if "GOOGLE_API_KEY" in st.secrets:
-        api_key = st.secrets["GOOGLE_API_KEY"].strip()
-        genai.configure(api_key=api_key)
-        # Se utiliza Gemini 2.5 Flash por su alta velocidad y precisión técnica
+        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"].strip())
         model = genai.GenerativeModel('gemini-2.5-flash')
     else:
         st.error("⚠️ Configure 'GOOGLE_API_KEY' en los Secrets de Streamlit.")
         st.stop()
 except Exception as e:
-    st.error(f"⚠️ Error de conexión con el servidor de IA: {e}")
+    st.error(f"⚠️ Error de conexión: {e}")
     st.stop()
 
-# --- 3. IDENTIDAD INSTITUCIONAL (SIDEBAR) ---
+# --- 4. IDENTIDAD INSTITUCIONAL (SIDEBAR) ---
 with st.sidebar:
     try:
         st.image("logo_legado.png", width=150)
@@ -35,23 +40,20 @@ with st.sidebar:
     st.caption("Bachiller Docente")
     st.caption("Taller Laboral 'Elena Rosa Aranguibel'")
     st.write("---")
-    st.info("💡 Apoyo pedagógico técnico para Educación Especial.")
 
-# --- 4. ASISTENTE EDUCATIVO - CUERPO PRINCIPAL ---
+# --- 5. CUERPO PRINCIPAL ---
 st.title("🍎 Asistente Educativo - Zulia")
 
 opcion = st.selectbox(
     "¿Qué vamos a trabajar hoy, colega?",
-    ["📝 Planificador Semanal Profesional", "💡 Ideas para Actividades Laborales", "❓ Consultas Técnicas"]
+    ["📝 Planificador Profesional", "💡 Ideas para Actividades", "❓ Consultas Técnicas"]
 )
 
-# --- OPCIÓN 1: PLANIFICADOR ---
-if opcion == "📝 Planificador Semanal Profesional":
+if opcion == "📝 Planificador Profesional":
     st.subheader("Estructuración de Planificación Semanal")
     rango = st.text_input("Lapso de la semana:", placeholder="Ej: del 19 al 23 de enero de 2026")
     aula = st.text_input("Aula / Grupo:", value="Mantenimiento y Servicios Generales")
-    
-    st.info("Ingrese sus notas diarias. El profesor Luis les dará el formato técnico profesional.")
+    st.info("Escribe tus notas. El profesor Luis les dará el formato técnico profesional.")
     notas = st.text_area("Cronograma de actividades:", height=200, placeholder="Lunes: actividad...")
 
     if st.button("🚀 Generar Planificación Estructurada"):
@@ -61,46 +63,40 @@ if opcion == "📝 Planificador Semanal Profesional":
                     prompt = f"""
                     Actúa como Luis Atencio, Bachiller Docente del Taller Laboral 'Elena Rosa Aranguibel'.
                     Organiza estas notas en una planificación formal, técnica y concisa para Educación Especial.
-
-                    DATOS: LAPSO: {rango} | AULA: {aula} | DOCENTE: Luis Atencio.
+                    LAPSO: {rango} | AULA: {aula} | DOCENTE: Luis Atencio.
                     NOTAS: {notas}
 
-                    ESTRUCTURA OBLIGATORIA POR DÍA:
-                    1. Día y Fecha (Acorde al lapso {rango}).
+                    ESTRUCTURA POR DÍA:
+                    1. Día y Fecha.
                     2. Título (Técnico y breve).
-                    3. Competencia (Redacción profesional en tercera persona).
-                    4. Exploración (Concisa, sin coloquialismos ni referencias religiosas).
-                    5. Desarrollo (Pasos prácticos detallados en viñetas).
-                    6. REFLEXIÓN (Evaluación del aprendizaje y rutina de aseo personal resumida).
-                    7. Mantenimiento (Tarea técnica de orden y limpieza del taller).
+                    3. Competencia (Técnica).
+                    4. Exploración (Concisa, sin coloquialismos ni religión).
+                    5. Desarrollo (Viñetas técnicas paso a paso).
+                    6. REFLEXIÓN (Evaluación y rutina de aseo resumida).
+                    7. Mantenimiento (Orden y limpieza).
 
                     REQUISITOS: Tono profesional, laico y resumido. Firma: Luis Atencio, Bachiller Docente.
                     """
                     res = model.generate_content(prompt)
-                    st.success("¡Planificación generada con éxito!")
                     st.markdown(res.text)
                 except Exception as e:
                     st.error(f"Error técnico: {e}")
 
-# --- OPCIÓN 2: IDEAS ---
-elif opcion == "💡 Ideas para Actividades Laborales":
-    st.subheader("Generador de Estrategias Prácticas")
-    habilidad = st.text_input("Habilidad o técnica a fortalecer:")
-    if st.button("✨ Sugerir Actividades"):
-        with st.spinner('Buscando estrategias...'):
-            res = model.generate_content(f"Como Bachiller Docente, sugiere 3 actividades técnicas breves para trabajar {habilidad} en educación especial. Tono profesional y laico.")
-            st.markdown(res.text)
+elif opcion == "💡 Ideas para Actividades":
+    st.subheader("Generador de Estrategias")
+    habilidad = st.text_input("Habilidad a fortalecer:")
+    if st.button("✨ Sugerir"):
+        res = model.generate_content(f"Sugiere 3 actividades técnicas breves para {habilidad} en educación especial. Tono profesional y laico.")
+        st.markdown(res.text)
 
-# --- OPCIÓN 3: CONSULTAS ---
 elif opcion == "❓ Consultas Técnicas":
-    st.subheader("Consultoría Pedagógica Especializada")
+    st.subheader("Consultoría Pedagógica")
     duda = st.text_area("Ingrese su duda técnica:")
     if st.button("🔍 Responder"):
-        with st.spinner('Analizando...'):
-            res = model.generate_content(f"Respuesta técnica y profesional sobre educación especial para taller laboral: {duda}")
-            st.markdown(res.text)
+        res = model.generate_content(f"Respuesta técnica sobre educación especial para taller laboral: {duda}")
+        st.markdown(res.text)
 
-# --- 5. FIRMA Y MARCA PROFESIONAL AL PIE ---
+# --- 6. FIRMA Y MARCA PROFESIONAL AL PIE ---
 st.markdown("---")
 st.markdown(
     """
