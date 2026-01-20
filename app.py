@@ -1,31 +1,33 @@
 import streamlit as st
 import google.generativeai as genai
 
-# --- CONFIGURACIÓN DE SEGURIDAD (Limpieza de clave) ---
+# --- CONFIGURACIÓN DE SEGURIDAD ---
 try:
-    # Limpiamos posibles espacios en blanco en la clave de Secrets
+    # Llamamos a tu llave desde los Secrets de Streamlit
     raw_key = st.secrets["GOOGLE_API_KEY"]
-    clean_key = raw_key.strip() 
-    genai.configure(api_key=clean_key)
+    genai.configure(api_key=raw_key.strip())
     
-    # Usamos el nombre completo del modelo para evitar el error 'NotFound'
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    # CAMBIO CLAVE: Usamos solo el nombre del modelo sin prefijos
+    # Esto soluciona el error 404 en la mayoría de las versiones
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except Exception as e:
-    st.error(f"⚠️ Error en la configuración de seguridad: {e}")
+    st.error(f"⚠️ Error de configuración: {e}")
     st.stop()
 
-# --- CONFIGURACIÓN DE LA PÁGINA (Tu esencia) ---
+# --- CONFIGURACIÓN DE LA PÁGINA (Tu esencia, Luis) ---
 st.set_page_config(page_title="Legado Maestro", page_icon="🍎")
 
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
     st.title("Legado Maestro")
+    st.write("---")
     st.info("💡 Apoyo Docente")
     st.caption("👨‍🏫 **Prof. Luis Atencio**")
     st.caption("Taller Laboral 'Elena Rosa Aranguibel'")
+    st.write("---")
 
 st.title("🍎 Asistente Educativo")
-st.subheader("Planificación Pedagógica")
+st.subheader("Planificación Pedagógica - Zulia")
 
 opcion = st.selectbox(
     "¿Qué vamos a trabajar hoy, colega?",
@@ -33,22 +35,27 @@ opcion = st.selectbox(
 )
 
 if opcion == "📝 Crear Plan de Clase":
-    tema = st.text_input("Tema (Ej: Higiene, Efemérides)")
-    grado = st.text_input("Grupo (Ej: Mantenimiento)", value="Mantenimiento y Servicios Generales")
+    st.markdown("### Generador de Planificaciones")
+    tema = st.text_input("Tema (Ej: Higiene, Herramientas, Valores)")
+    grado = st.text_input("Grupo", value="Mantenimiento y Servicios Generales")
     
     if st.button("✨ Generar Plan"):
         if tema and grado:
             with st.spinner('Procesando orden del Prof. Luis...'):
                 try:
+                    # Instrucción optimizada para evitar errores de contenido
                     prompt = f"Actúa como docente de Educación Especial en el Zulia. Crea un plan sobre {tema} para el grupo {grado} (Semana 19-23 de enero 2026). Incluye Inicio, Desarrollo y Cierre."
                     respuesta = model.generate_content(prompt)
                     st.success("¡Planificación lista!")
                     st.markdown(respuesta.text)
                 except Exception as e:
-                    st.error(f"Error al conectar con la IA: {e}")
+                    st.error(f"Error técnico al generar: {e}")
         else:
-            st.warning("Por favor, completa los campos.")
+            st.warning("Por favor, completa los campos de tema y grupo.")
 
+# --- TU SELLO AL PIE ---
+st.markdown("---")
+st.markdown("<div style='text-align: center'>Desarrollado con ❤️ por <b>Luis Atencio</b> para el futuro de la educación.</div>", unsafe_allow_html=True)
 # --- TU SELLO AL PIE ---
 st.markdown("---")
 st.markdown("<div style='text-align: center'>Desarrollado con ❤️ por <b>Luis Atencio</b></div>", unsafe_allow_html=True)
