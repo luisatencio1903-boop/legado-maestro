@@ -37,13 +37,13 @@ LOGO_URL = "https://raw.githubusercontent.com/luisatencio1903-boop/legado-maestr
 if "ready" not in st.session_state:
     st.session_state.ready = True
 
-# --- 5. CONEXIÓN CON EL CEREBRO DE LA APP ---
+# --- 5. CONEXIÓN CON IA ---
 try:
     if "GOOGLE_API_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"].strip())
         model = genai.GenerativeModel('gemini-2.5-flash')
     else:
-        st.error("⚠️ Falta la llave de acceso (API Key).")
+        st.error("⚠️ Falta API Key.")
         st.stop()
 except Exception as e:
     st.error(f"⚠️ Error de conexión: {e}")
@@ -93,8 +93,7 @@ if opcion == "📝 Planificación Profesional":
                     st.success("¡Planificación Generada!")
                     st.markdown(res.text)
                 except Exception as e:
-                    # MENSAJE HUMANO CORREGIDO
-                    st.warning("⏳ Tómate un momento de descanso, vuelve en un minuto y seguimos.")
+                    st.warning("⏳ El sistema está tomando aire. Espera 1 minuto y vuelve a intentar.")
 
 # --- OPCIÓN 2: MENSAJE MOTIVACIONAL ---
 elif opcion == "🌟 Mensaje Motivacional":
@@ -139,8 +138,8 @@ elif opcion == "🌟 Mensaje Motivacional":
                 """, unsafe_allow_html=True)
                 
             except Exception as e:
-                # MENSAJE HUMANO CORREGIDO
-                st.warning("⏳ Tómate un momento de descanso, vuelve en un minuto y seguimos.")
+                # MENSAJE DE ESPERA CLARO
+                st.warning("⏳ ¡Mucha inspiración por ahora! El sistema descansa 1 minuto. Intenta brevemente.")
 
 # --- OPCIÓN 3: IDEAS ---
 elif opcion == "💡 Ideas de Actividades":
@@ -151,8 +150,7 @@ elif opcion == "💡 Ideas de Actividades":
                 res = model.generate_content(f"Sugiere 3 actividades técnicas, creativas y breves para {tema} en Taller Laboral.")
                 st.markdown(res.text)
         except:
-             # MENSAJE HUMANO CORREGIDO
-             st.warning("⏳ Tómate un momento de descanso, vuelve en un minuto y seguimos.")
+             st.warning("⏳ El sistema está tomando aire. Espera 1 minuto y vuelve a intentar.")
 
 # --- OPCIÓN 4: CONSULTAS ---
 elif opcion == "❓ Consultas Técnicas":
@@ -163,19 +161,21 @@ elif opcion == "❓ Consultas Técnicas":
                 res = model.generate_content(f"Respuesta técnica profesional y breve: {duda}")
                 st.markdown(res.text)
         except:
-             # MENSAJE HUMANO CORREGIDO
-             st.warning("⏳ Tómate un momento de descanso, vuelve en un minuto y seguimos.")
+             st.warning("⏳ El sistema está tomando aire. Espera 1 minuto y vuelve a intentar.")
 
-# --- 8. PIE DE PÁGINA ---
+# --- 8. PIE DE PÁGINA (CORREGIDO PARA QUE CARGUE EL LOGO) ---
 st.markdown("---")
-col1, col2, col3 = st.columns([1,2,1])
-with col2:
-    st.image(LOGO_URL, width=60)
+# Usamos columnas para centrar y cargar la imagen de forma segura
+col_izq, col_centro, col_der = st.columns([1, 6, 1])
+
+with col_centro:
+    # Mostramos la imagen con st.image para evitar el error de icono roto
+    st.image(LOGO_URL, width=40) 
     st.markdown(
         """
-        <div style='text-align: center;'>
-            <p style='margin-bottom: 5px;'>Desarrollado con ❤️ por <b>Luis Atencio</b></p>
-            <p style='font-size: 0.85em; color: #555;'>para sus amigos y participantes del <b>T.E.L E.R.A.C</b></p>
+        <div style='text-align: left;'>
+            <p style='margin-bottom: 2px;'>Desarrollado con ❤️ por <b>Luis Atencio</b></p>
+            <p style='font-size: 0.85em; color: #555; margin-bottom: 2px;'>para sus amigos y participantes del <b>T.E.L E.R.A.C</b></p>
             <p style='font-size: 0.75em; color: silver;'>Zulia, Venezuela | 2026</p>
         </div>
         """, 
