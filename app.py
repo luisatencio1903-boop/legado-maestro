@@ -29,13 +29,13 @@ hide_streamlit_style = """
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# --- 3. CONEXIÓN CON GROQ (El nuevo cerebro) ---
+# --- 3. CONEXIÓN CON GROQ (CEREBRO NUEVO 🧠) ---
 try:
     if "GROQ_API_KEY" in st.secrets:
-        # Iniciamos el cliente de Groq
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-        # Modelo a usar: Llama 3 (Rápido y potente)
-        MODELO_USADO = "llama3-8b-8192"
+        
+        # ACTUALIZACIÓN: Usamos el modelo 3.3 Versatile (El más potente y activo hoy)
+        MODELO_USADO = "llama-3.3-70b-versatile" 
     else:
         st.error("⚠️ Falta la API Key de Groq en los Secrets.")
         st.stop()
@@ -99,7 +99,7 @@ if opcion == "📝 Planificación Profesional":
 
     if st.button("🚀 Generar Planificación"):
         if rango and notas:
-            with st.spinner('Redactando documento con Llama 3...'):
+            with st.spinner('Redactando documento con Llama 3.3...'):
                 prompt = f"""
                 Actúa como Luis Atencio, Bachiller Docente. 
                 Estructura estas notas en una planificación técnica para Educación Especial.
