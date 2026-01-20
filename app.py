@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import time
+import random  # <--- NUEVO: Para elegir mensajes variados
 
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -9,13 +10,20 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. MODO "APP NATIVA" (Ocultar marcas) ---
+# --- 2. ESTILOS CSS (Modo App Nativa + CORRECCIÓN DE COLOR DE TEXTO) ---
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             header {visibility: hidden;}
             .viewerBadge_container__1QSob {display: none !important;}
+            
+            /* ESTO FUERZA EL TEXTO DEL MENSAJE A SER NEGRO SIEMPRE */
+            .mensaje-texto {
+                color: #000000 !important;
+                font-weight: 500;
+                font-size: 1.1em;
+            }
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -85,27 +93,55 @@ if opcion == "📝 Planificación Profesional":
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-# --- OPCIÓN 2: MENSAJE MOTIVACIONAL (CORREGIDO DE COLOR 🎨) ---
+# --- OPCIÓN 2: MENSAJE MOTIVACIONAL (VARIADO Y CORREGIDO 🎨) ---
 elif opcion == "🌟 Mensaje Motivacional":
-    st.subheader("Ánimo, Colega Venezolano 🇻🇪")
-    st.info("Un espacio para recargar energías.")
+    st.subheader("Inspiración Diaria ✨")
+    st.info("Un mensaje diferente cada vez: Fe, Éxito o Resiliencia.")
     
     if st.button("❤️ Generar Mensaje de Hoy"):
-        with st.spinner('Redactando mensaje de aliento...'):
+        with st.spinner('Buscando inspiración...'):
             try:
-                prompt = """
-                Genera un mensaje motivacional corto, emotivo y muy humano dirigido a un docente de educación especial en Venezuela.
-                Reconoce la dura situación país pero resalta la grandeza de su labor.
-                Tono de compañero a compañero.
+                # LISTA DE TEMAS VARIADOS
+                temas = [
+                    # TEMA 1: CITA BÍBLICA
+                    """Genera un mensaje basado en una CITA BÍBLICA poderosa sobre enseñar, servir al necesitado o el amor al prójimo. 
+                    Relaciona la cita con la labor del docente de educación especial.
+                    Tono: Espiritual y reconfortante.""",
+                    
+                    # TEMA 2: HISTORIA DE ÉXITO
+                    """Genera un mensaje breve citando a un educador famoso o una persona histórica (como Hellen Keller, Anne Sullivan, etc.) que superó grandes obstáculos.
+                    Úsalo de ejemplo para motivar al docente actual.
+                    Tono: Inspirador y profesional.""",
+                    
+                    # TEMA 3: VOCACIÓN PURA
+                    """Genera un mensaje centrado en la VOCACIÓN y el corazón. 
+                    Recuérdale al docente que su trabajo con niños especiales cambia vidas, aunque no siempre se vea el resultado inmediato.
+                    Tono: Emotivo y cercano.""",
+                    
+                    # TEMA 4: SITUACIÓN PAÍS (VENEZUELA)
+                    """Genera un mensaje de solidaridad sobre la situación en Venezuela. 
+                    Reconoce la dificultad económica pero resalta la valentía de seguir educando a pesar de todo.
+                    Tono: De lucha y compañerismo."""
+                ]
+                
+                # ELEGIR UNO AL AZAR
+                tema_elegido = random.choice(temas)
+                
+                prompt_final = f"""
+                {tema_elegido}
+                IMPORTANTE: El mensaje debe ser corto (máximo 1 párrafo).
                 CIERRE OBLIGATORIO: "Ánimos. Att: Profesor Luis Atencio"
                 """
-                res = model.generate_content(prompt)
                 
-                # AQUÍ ESTÁ LA CORRECCIÓN: color: #000000 (Negro puro)
+                res = model.generate_content(prompt_final)
+                
+                # MUESTRA EL MENSAJE CON COLOR NEGRO FORZADO (class='mensaje-texto')
                 st.markdown(f"""
                 <div style="background-color: #f0f2f6; padding: 20px; border-radius: 10px; border-left: 5px solid #ff4b4b;">
-                    <h4 style="color: #000000;">🌟 Para ti, compañero de lucha:</h4>
-                    <p style="font-size: 1.1em; color: #000000; font-weight: 500;">{res.text}</p>
+                    <h4 style="color: #000000 !important; margin-top: 0;">🌟 Para ti, colega:</h4>
+                    <div class="mensaje-texto">
+                        {res.text}
+                    </div>
                 </div>
                 """, unsafe_allow_html=True)
                 
