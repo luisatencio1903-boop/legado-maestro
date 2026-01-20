@@ -5,7 +5,7 @@ import google.generativeai as genai
 try:
     api_key = st.secrets["GOOGLE_API_KEY"].strip()
     genai.configure(api_key=api_key)
-    # Mantener el modelo Gemini 2.5 Flash confirmado en tu diagnóstico
+    # Mantenemos Gemini 2.5 Flash por su capacidad de seguir instrucciones precisas
     model = genai.GenerativeModel('gemini-2.5-flash')
 except Exception as e:
     st.error(f"⚠️ Error de configuración: {e}")
@@ -32,9 +32,8 @@ rango_fecha = st.text_input("Ingresa el lapso de la semana:", placeholder="Ej: d
 # Cuadro para el Aula / Grupo
 grado = st.text_input("Aula / Grupo:", value="Mantenimiento y Servicios Generales")
 
-# SECCIÓN DE CRONOGRAMA CON TU CAMBIO SOLICITADO
+# SECCIÓN DE CRONOGRAMA
 st.markdown("### 📝 Cronograma de la Semana")
-# Cambio realizado aquí: de "La IA se encargará" a "El profesor Luis se encargará"
 st.info("Escribe el día y tus actividades. El profesor Luis se encargará de darle el formato profesional a cada una.")
 
 notas_docente = st.text_area(
@@ -45,12 +44,13 @@ notas_docente = st.text_area(
 
 if st.button("🚀 Generar Planificación Estructurada"):
     if rango_fecha and notas_docente:
-        with st.spinner('Luis, estoy organizando tus actividades bajo tu formato profesional...'):
+        with st.spinner('Generando planificación profesional y técnica...'):
             try:
-                # El prompt se mantiene enfocado en tu identidad de Bachiller Docente
+                # PROMPT PROFESIONAL Y TÉCNICO:
+                # Instrucciones estrictas para eliminar coloquialismos y ser conciso.
                 prompt = f"""
-                Actúa como Luis Atencio, bachiller docente del Taller Laboral 'Elena Rosa Aranguibel'.
-                Tu tarea es organizar estas actividades en una planificación profesional y modesta.
+                Actúa como Luis Atencio, Bachiller Docente del Taller Laboral 'Elena Rosa Aranguibel'.
+                Tu tarea es estructurar las notas del docente en una planificación didáctica formal, técnica y concisa para Educación Especial.
 
                 LAPSO: {rango_fecha}
                 AULA: {grado}
@@ -58,27 +58,29 @@ if st.button("🚀 Generar Planificación Estructurada"):
                 NOTAS DEL DOCENTE:
                 {notas_docente}
 
-                FORMATO POR DÍA DETECTADO:
-                1. Día y Fecha: (Asigna la fecha exacta según el lapso {rango_fecha}).
-                2. Título: (Acorde a la actividad).
-                3. Competencia: (Redacción técnica y sencilla).
-                4. Exploración: (Charla o dinámica inicial).
-                5. Desarrollo: (Explicación detallada de las actividades anotadas).
-                6. Cierre: (Reflexión y rutina de aseo personal).
-                7. Mantenimiento: (Tarea técnica de orden y limpieza).
+                INSTRUCCIONES DE FORMATO ESTRICTO PARA CADA DÍA:
+                1.  **Día y Fecha:** (Asignar fecha exacta según el lapso {rango_fecha}).
+                2.  **Título:** (Breve y descriptivo de la actividad principal).
+                3.  **Competencia:** (Redactar en tercera persona, usando verbos en presente indicativo y terminología pedagógica. Ej: "Identifica las herramientas...", "Ejecuta rutinas de...").
+                4.  **Exploración:** (Describir la actividad inicial de forma breve y directa. Evitar saludos coloquiales o narraciones extensas. Usar viñetas para listar acciones puntuales).
+                5.  **Desarrollo:** (Listar las actividades principales de forma secuencial, concisa y técnica, usando viñetas. Describir la acción y el recurso, sin explicaciones innecesarias).
+                6.  **Cierre:** (Especificar la actividad de evaluación o reflexión y la rutina de aseo de forma directa y resumida).
+                7.  **Mantenimiento:** (Describir la tarea técnica de orden y limpieza a realizar).
 
-                REGLAS:
-                - Usa un tono motivador y zuliano ("¡Epale mi gente!").
-                - Firma como: Luis Atencio, Bachiller Docente.
+                REGLAS CRÍTICAS DE TONO Y CONTENIDO:
+                -   **TONO PROFESIONAL:** Usar un lenguaje técnico, formal y objetivo, adecuado para una planificación docente. Evitar por completo coloquialismos como "Epale", "mi gente", "chévere".
+                -   **LAICIDAD:** No incluir ninguna referencia religiosa (Dios, Virgen, santos). La planificación debe ser estrictamente pedagógica.
+                -   **CONCISIÓN:** Las descripciones deben ser breves y directas, utilizando viñetas para facilitar la lectura rápida. Evitar párrafos largos o explicaciones redundantes.
+                -   **FIRMA:** Finalizar el documento únicamente con: Luis Atencio, Bachiller Docente.
                 """
                 
                 respuesta = model.generate_content(prompt)
-                st.success("¡Planificación organizada con éxito!")
+                st.success("¡Planificación profesional generada con éxito!")
                 st.markdown(respuesta.text)
             except Exception as e:
                 st.error(f"Error técnico: {e}")
     else:
-        st.warning("Luis, por favor ingresa el lapso de fecha y tus actividades.")
+        st.warning("Por favor, ingresa el lapso de fecha y tus actividades para generar la planificación.")
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
