@@ -1,8 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
-import time
-import random
 import os
+import random
 
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -39,15 +38,12 @@ if "ready" not in st.session_state:
 try:
     if "GOOGLE_API_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"].strip())
-        
-        # Usamos el modelo rápido (1.5 Flash)
         model = genai.GenerativeModel('gemini-1.5-flash')
-        
     else:
-        st.error("⚠️ Falta API Key en los Secrets.")
+        st.error("⚠️ Falta la API Key en los Secrets de Streamlit.")
         st.stop()
 except Exception as e:
-    st.error(f"⚠️ ERROR DE CONEXIÓN INICIAL: {e}")
+    st.error(f"⚠️ Error de conexión inicial: {e}")
     st.stop()
 
 # --- 5. BARRA LATERAL ---
@@ -98,8 +94,7 @@ if opcion == "📝 Planificación Profesional":
                     st.success("¡Planificación Generada!")
                     st.markdown(res.text)
                 except Exception as e:
-                    # AQUÍ MUESTRA EL ERROR REAL
-                    st.error(f"⚠️ ERROR TÉCNICO: {e}")
+                    st.error(f"⚠️ ERROR DE GOOGLE: {e}")
 
 # --- OPCIÓN 2: MENSAJE MOTIVACIONAL ---
 elif opcion == "🌟 Mensaje Motivacional":
@@ -129,3 +124,41 @@ elif opcion == "🌟 Mensaje Motivacional":
                 st.markdown(f"""
                 <div style="background-color: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #eee; border-left: 8px solid #ff4b4b; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">
                     <div class="mensaje-texto">
+                        {res.text}
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+            except Exception as e:
+                st.error(f"⚠️ ERROR DE GOOGLE: {e}")
+
+# --- OPCIÓN 3: IDEAS ---
+elif opcion == "💡 Ideas de Actividades":
+    tema = st.text_input("Tema a trabajar:")
+    if st.button("✨ Sugerir"):
+        try:
+            with st.spinner('Pensando...'):
+                res = model.generate_content(f"Sugiere 3 actividades técnicas breves para {tema} en Taller Laboral.")
+                st.markdown(res.text)
+        except Exception as e:
+             st.error(f"⚠️ ERROR DE GOOGLE: {e}")
+
+# --- OPCIÓN 4: CONSULTAS ---
+elif opcion == "❓ Consultas Técnicas":
+    duda = st.text_area("Consulta:")
+    if st.button("🔍 Responder"):
+        try:
+            with st.spinner('Consultando...'):
+                res = model.generate_content(f"Respuesta técnica breve: {duda}")
+                st.markdown(res.text)
+        except Exception as e:
+             st.error(f"⚠️ ERROR DE GOOGLE: {e}")
+
+# --- 7. PIE DE PÁGINA ---
+st.markdown("---")
+st.markdown(
+    """
+    <div style='text-align: center;'>
+        <p style='font-size: 1.5em; margin-bottom: 5px;'>🍎</p>
+        <p style='margin-bottom: 2px;'>Desarrollado con ❤️ por <b>Luis Atencio</b></p>
+        <p style='font-size: 0.85em; color:
