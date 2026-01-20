@@ -11,7 +11,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. ESTILOS CSS (Texto Negro y Diseño Limpio) ---
+# --- 2. ESTILOS CSS ---
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
@@ -35,29 +35,27 @@ st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 if "ready" not in st.session_state:
     st.session_state.ready = True
 
-# --- 4. CONEXIÓN CON IA (MODO ALTO TRÁFICO 🏎️) ---
+# --- 4. CONEXIÓN CON IA (MODELO RÁPIDO 1.5) ---
 try:
     if "GOOGLE_API_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GOOGLE_API_KEY"].strip())
         
-        # AQUÍ ESTÁ EL SECRETO: Usamos 'gemini-1.5-flash'
-        # Este modelo permite 15 peticiones por minuto (Ideal para varios docentes)
+        # Usamos el modelo rápido (1.5 Flash)
         model = genai.GenerativeModel('gemini-1.5-flash')
         
     else:
-        st.error("⚠️ Falta API Key.")
+        st.error("⚠️ Falta API Key en los Secrets.")
         st.stop()
 except Exception as e:
-    st.error(f"⚠️ Error de conexión: {e}")
+    st.error(f"⚠️ ERROR DE CONEXIÓN INICIAL: {e}")
     st.stop()
 
 # --- 5. BARRA LATERAL ---
 with st.sidebar:
-    # Verificación inteligente de imagen
     if os.path.exists("logo_legado.png"):
         st.image("logo_legado.png", width=150)
     else:
-        st.header("🍎") # Manzana de respaldo
+        st.header("🍎")
         
     st.title("Legado Maestro")
     st.markdown("---")
@@ -100,7 +98,8 @@ if opcion == "📝 Planificación Profesional":
                     st.success("¡Planificación Generada!")
                     st.markdown(res.text)
                 except Exception as e:
-                    st.warning("⏳ El sistema está atendiendo a muchos usuarios. Espera 1 min.")
+                    # AQUÍ MUESTRA EL ERROR REAL
+                    st.error(f"⚠️ ERROR TÉCNICO (Mándame foto de esto): {e}")
 
 # --- OPCIÓN 2: MENSAJE MOTIVACIONAL ---
 elif opcion == "🌟 Mensaje Motivacional":
@@ -127,49 +126,4 @@ elif opcion == "🌟 Mensaje Motivacional":
                 
                 res = model.generate_content(prompt_final, generation_config=config_creativa)
                 
-                st.markdown(f"""
-                <div style="background-color: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #eee; border-left: 8px solid #ff4b4b; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">
-                    <div class="mensaje-texto">
-                        {res.text}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-            except Exception as e:
-                st.warning("⏳ Mucha inspiración por ahora. Espera 1 min.")
-
-# --- OPCIÓN 3: IDEAS ---
-elif opcion == "💡 Ideas de Actividades":
-    tema = st.text_input("Tema a trabajar:")
-    if st.button("✨ Sugerir"):
-        try:
-            with st.spinner('Pensando...'):
-                res = model.generate_content(f"Sugiere 3 actividades técnicas breves para {tema} en Taller Laboral.")
-                st.markdown(res.text)
-        except:
-             st.warning("⏳ El sistema está ocupado. Espera 1 min.")
-
-# --- OPCIÓN 4: CONSULTAS ---
-elif opcion == "❓ Consultas Técnicas":
-    duda = st.text_area("Consulta:")
-    if st.button("🔍 Responder"):
-        try:
-            with st.spinner('Consultando...'):
-                res = model.generate_content(f"Respuesta técnica breve: {duda}")
-                st.markdown(res.text)
-        except:
-             st.warning("⏳ El sistema está ocupado. Espera 1 min.")
-
-# --- 7. PIE DE PÁGINA ---
-st.markdown("---")
-st.markdown(
-    """
-    <div style='text-align: center;'>
-        <p style='font-size: 1.5em; margin-bottom: 5px;'>🍎</p>
-        <p style='margin-bottom: 2px;'>Desarrollado con ❤️ por <b>Luis Atencio</b></p>
-        <p style='font-size: 0.85em; color: #555; margin-bottom: 2px;'>para sus amigos y participantes del <b>T.E.L E.R.A.C</b></p>
-        <p style='font-size: 0.75em; color: silver;'>Zulia, Venezuela | 2026</p>
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
+                st.
