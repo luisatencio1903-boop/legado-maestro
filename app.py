@@ -1,7 +1,7 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
 # AUTOR ORIGINAL: Luis Atencio
-# FECHA DE ACTUALIZACIÓN: Enero 2026 (Versión 3.2 - Fix Visual)
+# FECHA DE ACTUALIZACIÓN: Enero 2026 (Versión 3.3 - Fix Días y Formato)
 # PROPÓSITO: Asistente IA para Educación Especial (Venezuela)
 # DERECHOS: Propiedad intelectual de Luis Atencio.
 # ---------------------------------------------------------
@@ -18,7 +18,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. ESTILOS CSS (COMPATIBLE MODO OSCURO) ---
+# --- 2. ESTILOS CSS (MODO OSCURO + FORMATO) ---
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
@@ -28,7 +28,7 @@ hide_streamlit_style = """
             /* CAJA DE PLANIFICACIÓN: LETRA NEGRA OBLIGATORIA */
             .plan-box {
                 background-color: #f0f2f6 !important;
-                color: #000000 !important; /* Arregla el modo oscuro */
+                color: #000000 !important; 
                 padding: 20px;
                 border-radius: 10px;
                 border-left: 5px solid #0068c9;
@@ -36,7 +36,14 @@ hide_streamlit_style = """
                 font-family: sans-serif;
             }
             
-            /* CAJA DE MENSAJES: LETRA NEGRA OBLIGATORIA */
+            /* Títulos de días en la planificación */
+            .plan-box h3 {
+                color: #0068c9 !important;
+                margin-top: 20px;
+                border-bottom: 1px solid #ccc;
+            }
+
+            /* CAJA DE MENSAJES */
             .mensaje-texto {
                 color: #000000 !important;
                 font-family: 'Helvetica', sans-serif;
@@ -118,7 +125,7 @@ opcion = st.selectbox(
 )
 
 # =========================================================
-# OPCIÓN 1: PLANIFICADOR (VISUALMENTE CORREGIDO)
+# OPCIÓN 1: PLANIFICADOR (FIX DÍAS Y ESPACIOS)
 # =========================================================
 if opcion == "📝 Planificación Profesional":
     st.subheader("Planificación Técnica (Taller Laboral)")
@@ -133,34 +140,38 @@ if opcion == "📝 Planificación Profesional":
 
     if st.button("🚀 Generar Planificación"):
         if rango and notas:
-            with st.spinner('Estructurando Planificación (Exploración/Desarrollo/Reflexión)...'):
+            with st.spinner('Estructurando Planificación por días...'):
                 
-                # --- PROMPT CON SALTOS DE LÍNEA OBLIGATORIOS ---
+                # --- PROMPT CORREGIDO PARA INCLUIR DÍAS ---
                 prompt_inicial = f"""
                 Actúa como Luis Atencio, Bachiller Docente del Taller Laboral.
-                Crea una planificación técnica para Educación Especial.
+                Crea una planificación técnica para Educación Especial para el lapso: {rango}.
                 
                 DATOS:
-                - Lapso: {rango}
                 - Aula: {aula}
                 - Tema/Notas: {notas}
 
-                ESTRUCTURA VISUAL OBLIGATORIA (Usa Markdown con negritas y saltos de línea):
-                Por favor, para cada día o tema, usa este formato EXACTO con espacios entre líneas:
+                INSTRUCCIÓN DE FORMATO OBLIGATORIA:
+                Debes generar un bloque separado para CADA UNO de los días del lapso (Lunes, Martes, Miércoles, Jueves, Viernes).
+                
+                Usa EXACTAMENTE esta estructura visual para cada día:
 
-                **1. TÍTULO DE LA CLASE:** [Título aquí]
+                ### 📅 [NOMBRE DEL DÍA Y FECHA]
                 
-                **2. COMPETENCIA:** [Solo el texto técnico]
+                **1. TÍTULO DE LA CLASE:** [Título]
                 
-                **3. EXPLORACIÓN:** [Contenido]
+                **2. COMPETENCIA:** [Texto técnico directo del objetivo]
                 
-                **4. DESARROLLO:** [Contenido]
+                **3. EXPLORACIÓN:** [Actividad de inicio]
                 
-                **5. REFLEXIÓN:** [Contenido]
+                **4. DESARROLLO:** [Actividad central]
                 
-                **6. MANTENIMIENTO:** [Contenido]
+                **5. REFLEXIÓN:** [Cierre]
                 
-                (Repite esta estructura visualmente separada para los siguientes días).
+                **6. MANTENIMIENTO:** [Orden del taller]
+
+                ---
+                (Repite el bloque anterior para el siguiente día)
 
                 AL FINAL DEL DOCUMENTO (Una sola vez):
                 - **📚 FUNDAMENTACIÓN LEGAL:** Cita brevemente el Currículo Nacional Bolivariano y la LOE.
@@ -225,4 +236,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión 3.2 (Visual Fix)")
+st.caption("Desarrollado por Luis Atencio | Versión 3.3 (Formato Corregido)")
