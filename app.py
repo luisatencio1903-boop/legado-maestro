@@ -1,7 +1,7 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
 # AUTOR ORIGINAL: Luis Atencio
-# FECHA DE ACTUALIZACIÓN: Enero 2026 (Versión 3.0 - Estructura Corregida)
+# FECHA DE ACTUALIZACIÓN: Enero 2026 (Versión 3.1 - Final)
 # PROPÓSITO: Asistente IA para Educación Especial (Venezuela)
 # DERECHOS: Propiedad intelectual de Luis Atencio.
 # ---------------------------------------------------------
@@ -18,7 +18,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# --- 2. ESTILOS CSS (MODO OSCURO FIX) ---
+# --- 2. ESTILOS CSS (COMPATIBLE MODO OSCURO) ---
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
@@ -28,7 +28,7 @@ hide_streamlit_style = """
             /* CAJA DE PLANIFICACIÓN: LETRA NEGRA OBLIGATORIA */
             .plan-box {
                 background-color: #f0f2f6 !important;
-                color: #000000 !important; /* <--- ESTO ARREGLA EL MODO OSCURO */
+                color: #000000 !important; /* Arregla el modo oscuro */
                 padding: 20px;
                 border-radius: 10px;
                 border-left: 5px solid #0068c9;
@@ -135,7 +135,7 @@ if opcion == "📝 Planificación Profesional":
         if rango and notas:
             with st.spinner('Estructurando Planificación (Exploración/Desarrollo/Reflexión)...'):
                 
-                # --- AQUÍ ESTÁ LA CORRECCIÓN DE LA ESTRUCTURA ---
+                # --- PROMPT MEJORADO Y LIMPIO ---
                 prompt_inicial = f"""
                 Actúa como Luis Atencio, Bachiller Docente del Taller Laboral.
                 Crea una planificación técnica para Educación Especial.
@@ -145,16 +145,16 @@ if opcion == "📝 Planificación Profesional":
                 - Aula: {aula}
                 - Tema/Notas: {notas}
 
-                ESTRUCTURA OBLIGATORIA (Repetir para cada día si es necesario o por tema):
+                ESTRUCTURA OBLIGATORIA (Repetir para cada día/tema):
                 1. TÍTULO DE LA CLASE
-                2. COMPETENCIA (Del Currículo Nacional Bolivariano)
+                2. COMPETENCIA: (Escribe SOLO el texto técnico de la competencia. NO repitas frases como "según el currículo", ve directo al objetivo).
                 3. EXPLORACIÓN (Inicio / Diagnóstico)
                 4. DESARROLLO (Actividad central práctica)
                 5. REFLEXIÓN (Cierre / Evaluación Cualitativa)
                 6. MANTENIMIENTO (Orden y limpieza del taller)
 
-                AL FINAL DEL DOCUMENTO:
-                - Agrega la sección "📚 FUNDAMENTACIÓN LEGAL" citando la base legal (LOE/CRBV).
+                AL FINAL DEL DOCUMENTO (Una sola vez):
+                - Agrega la sección "📚 FUNDAMENTACIÓN LEGAL" indicando que el contenido se basa en el Currículo Nacional Bolivariano y la LOE.
                 - FIRMA: Luis Atencio, Bachiller Docente.
                 """
                 
@@ -216,4 +216,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión 3.0")
+st.caption("Desarrollado por Luis Atencio | Versión 3.1")
