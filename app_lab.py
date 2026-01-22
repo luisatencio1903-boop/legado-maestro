@@ -326,54 +326,67 @@ if opcion == "📝 Planificación Profesional":
                         st.rerun()
                 except Exception as e:
                     st.error(f"Error al guardar: {e}")
-
 # =========================================================
-# OPCIÓN 2: MENSAJE MOTIVACIONAL (CEREBRO EMOCIONAL 2.0)
+# OPCIÓN 2: MENSAJE MOTIVACIONAL (CEREBRO EMOCIONAL 3.0 - SIN ROBOTISMOS)
 # =========================================================
 elif opcion == "🌟 Mensaje Motivacional":
     st.subheader("Dosis de Ánimo Express ⚡")
-    st.markdown("Recarga tu energía docente con una palabra de aliento.")
+    st.markdown("Sin saludos protocolares. Solo la energía que necesitas.")
     
-    if st.button("❤️ Recibir Dosis de Ánimo"):
+    if st.button("❤️ Recibir Dosis"):
         
-        # Ruleta de temas para asegurar variedad (importar random arriba si falta)
         import random
-        temas_animo = [
-            "la importancia de la paciencia en la educación especial",
-            "una cita bíblica sobre la fortaleza y el servicio al prójimo",
-            "la recompensa espiritual de enseñar a quien más lo necesita",
-            "un dicho popular venezolano sobre la constancia y el trabajo duro",
-            "el impacto silencioso pero eterno de un maestro en el futuro",
-            "la resiliencia del docente venezolano frente a las adversidades"
+        
+        # Ruleta de ESTILOS (No solo temas, sino FORMAS de hablar)
+        estilos_posibles = [
+            {
+                "rol": "El Colega Realista",
+                "instruccion": "Dile algo crudo pero esperanzador sobre el cansancio y la satisfacción de enseñar. Usa humor venezolano ligero. NO SALUDES."
+            },
+            {
+                "rol": "El Sabio Espiritual",
+                "instruccion": "Dame solo una cita bíblica de fortaleza (Salmos, Josué, Isaías) y una frase corta de aplicación docente. Sin sermones. NO SALUDES."
+            },
+            {
+                "rol": "El Motivador Directo",
+                "instruccion": "Una frase corta, tipo 'golpe de energía'. Que sea una orden cariñosa para no rendirse. Ejemplo: '¡Límpiate las rodillas y sigue!'. NO SALUDES."
+            },
+            {
+                "rol": "El Observador",
+                "instruccion": "Hazle una pregunta que lo haga recordar a su alumno favorito o su momento más feliz en el aula. NO SALUDES."
+            }
         ]
-        tema_elegido = random.choice(temas_animo)
         
-        INSTRUCCIONES_MOTIVACION = """
-        ERES "LEGADO MAESTRO" EN TU MODO 'COLEGA EMPÁTICO'.
+        estilo_seleccionado = random.choice(estilos_posibles)
         
-        TU OBJETIVO: Dar un mensaje breve, genuino y conmovedor a un docente de Educación Especial.
+        INSTRUCCIONES_MOTIVACION = f"""
+        ERES "LEGADO MAESTRO". HOY TU ROL ES: {estilo_seleccionado['rol']}.
         
-        REGLAS DE ORO:
-        1. PROHIBIDO repetir la frase de Nelson Mandela sobre el arma más poderosa. ¡SÉ ORIGINAL!
-        2. Tono: Cálido, cercano, como un amigo que te pone la mano en el hombro.
-        3. Contexto: Venezuela. Usa palabras nuestras (lucha, constancia, fe, muchachos).
-        4. NO hables de política ni leyes aquí. Solo corazón y vocación.
-        5. Extensión: Máximo 3 oraciones potentes.
+        ⚠️ REGLA DE ORO (ANTI-ROBOT):
+        1. PROHIBIDO ABSOLUTAMENTE empezar con: "Querido docente", "Estimado colega", "Hola", "Saludos".
+        2. EMPIEZA DIRECTO AL GRANO. Como si estuvieras continuando una conversación.
+        3. NO uses la frase de Nelson Mandela.
+        4. Tono: Venezolano, cercano, corto (máximo 2 líneas).
+        
+        TU TAREA ESPECÍFICA: {estilo_seleccionado['instruccion']}
         """
         
-        prompt = f"Dame un mensaje de ánimo enfocado en: {tema_elegido}. Que se sienta personal y directo al corazón del docente."
+        prompt = "Dame el mensaje ahora."
         
-        with st.spinner("Conectando con el corazón..."):
-            # Temperatura alta (0.9) para máxima creatividad y cero repetición
+        with st.spinner(f"Sintonizando modo {estilo_seleccionado['rol']}..."):
             res = generar_respuesta([
                 {"role": "system", "content": INSTRUCCIONES_MOTIVACION}, 
                 {"role": "user", "content": prompt}
-            ], temperatura=0.9)
+            ], temperatura=1.0) # Temperatura máxima para variedad total
             
             st.markdown(f"""
-            <div style="background-color: #ffffff; padding: 25px; border-radius: 15px; border: 1px solid #e0e0e0; border-left: 10px solid #ff4b4b; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                <h3 style="color: #ff4b4b; margin-top: 0;">🍎 Para ti, colega:</h3>
-                <div class="mensaje-texto" style="font-style: italic; font-size: 1.3em;">"{res}"</div>
+            <div style="background-color: #fff; padding: 20px; border-radius: 12px; border-left: 6px solid #FF4B4B; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
+                <div class="mensaje-texto" style="font-size: 1.4em; font-weight: 600; color: #333;">
+                    "{res}"
+                </div>
+                <div style="margin-top: 10px; font-size: 0.8em; color: #888; text-align: right;">
+                    Modo: {estilo_seleccionado['rol']}
+                </div>
             </div>
             """, unsafe_allow_html=True)
 # =========================================================
