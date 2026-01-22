@@ -225,53 +225,52 @@ if opcion == "📝 Planificación Profesional":
                 st.session_state.temp_rango = rango
                 st.session_state.temp_tema = notas
                 
-     # --- PROMPT MAESTRO (FUSIÓN: ESTRUCTURA + HUMANIDAD) ---
-                prompt_inicial = f"""
-                Actúa como Luis Atencio, experto en Educación Especial (Taller Laboral).
-                Planificación para: {rango}. Aula: {aula}. Tema: {notas}.
+    # --- PROMPT MAESTRO (VERIFICACIÓN REAL + HUMANIDAD) ---
+prompt_inicial = f"""
+Actúa como Luis Atencio, experto en Educación Especial (Taller Laboral) en Venezuela.
+Planificación para: {rango}. Aula: {aula}. Tema: {notas}.
 
-                ⚠️ PASO 1: INTRODUCCIÓN LEGAL (OBLIGATORIO):
-                Empieza la respuesta SIEMPRE con este texto exacto:
-                "📝 **Planificación Sugerida bajo lineamientos del MPPE:**
-                Esta propuesta didáctica se basa en los pilares del Currículo Nacional Bolivariano, adaptada a la realidad del Taller Laboral para fomentar la independencia y el trabajo productivo."
-                (Deja dos líneas vacías después de esto).
+⚠️ PASO 1: VALIDACIÓN Y FUNDAMENTACIÓN (LÓGICA EXPERTA):
+Antes de generar la planificación, realiza una revisión interna:
+1. Verifica que las estrategias propuestas se alineen con los principios del **Currículo Nacional Bolivariano** (Aprender a Crear, Convivir y Valorar).
+2. Asegúrate de que las actividades sean aptas para Educación Especial y Taller Laboral (Enfoque en independencia y trabajo productivo).
+3. Una vez verificado esto, inicia tu respuesta confirmando que la planificación cumple con estos lineamientos y es legalmente pertinente. NO uses frases prefabricadas; redáctalo con autoridad profesional.
 
-                ⚠️ PASO 2: HUMANIZACIÓN (¡NO SEAS ROBOT!):
-                - PROHIBIDO empezar todos los días con "Iniciamos...".
-                - VARÍA LOS VERBOS: "Damos apertura...", "Arrancamos el día...", "Mediante un conversatorio...", "Se presenta...".
-                - USA LENGUAJE DOCENTE VENEZOLANO: (Saberes, Hacer Social, P.A.).
+⚠️ PASO 2: HUMANIZACIÓN (EL LEGADO DOCENTE):
+- PROHIBIDO el "copia y pega" robótico. No empieces todos los días igual.
+- ELIMINA la voz pasiva aburrida ("Se presenta...", "Se realiza...").
+- USA VOZ ACTIVA Y CERCANA: "Arrancamos el día...", "Invitamos a...", "Desafiamos al grupo...", "Compartimos experiencias...".
+- USA LÉXICO VENEZOLANO: Saberes previos, P.A., Ambiente de aprendizaje, Hacer Social.
 
-                ⚠️ PASO 3: CONTROL DE FORMATO Y LONGITUD (CRÍTICO):
-                - REGLA DEL LUNES: Después de escribir "### Lunes", dale ENTER. Jamás escribas en esa misma línea.
-                - REGLA DE LONGITUD: Para los puntos 3, 4 y 5, IMITA EL TAMAÑO DEL SIGUIENTE EJEMPLO.
+⚠️ PASO 3: CONTROL DE FORMATO Y EJEMPLO (CRÍTICO):
+- REGLA DEL LUNES: Después de "### Lunes", dale ENTER. No escribas en la misma línea.
+- REGLA DE LONGITUD Y ESTILO: Para los puntos 3, 4 y 5, usa el siguiente ejemplo como TU ESTÁNDAR DE CALIDAD:
 
-                👇 EJEMPLO MAESTRO (IMITA ESTE TAMAÑO Y FORMATO):
-                2. **COMPETENCIA:** Identificar herramientas de trabajo. (Así de corta)
-                3. **EXPLORACIÓN:** Damos apertura al encuentro pedagógico mostrando las herramientas reales sobre el mesón, invitando a los estudiantes a manipularlas y sentir su peso, para activar la curiosidad y rescatar sus saberes previos sobre el tema.
-                (Fíjate: Es un párrafo sustancioso de 3 oraciones, no repite palabras y tiene la etiqueta en negrita).
+👇 EJEMPLO DE CÓMO REDACTAR (Imita este estilo humano y directo):
+3. **EXPLORACIÓN:** Iniciamos con un conversatorio sobre la importancia del mantenimiento y servicios generales, invitando a los estudiantes a compartir experiencias. Mediante el diálogo interactivo, despertamos la curiosidad y la participación activa. Proyectamos un video sobre diversos escenarios de mantenimiento para que visualicen y comprendan mejor el concepto.
 
-                ESTRUCTURA DIARIA (Lunes a Viernes):
+ESTRUCTURA DIARIA (Lunes a Viernes):
 
-                ### [DÍA]
+### [DÍA]
 
-                1. **TÍTULO:** [Creativo]
-                2. **COMPETENCIA:** [Máx 10 palabras]
-                
-                3. **EXPLORACIÓN:** [Párrafo sustancioso (Imita el Ejemplo). VARÍA EL VERBO.]
-                
-                4. **DESARROLLO:** [Párrafo sustancioso (Imita el Ejemplo). Enfocado en "Aprender a Hacer".]
-                
-                5. **REFLEXIÓN:** [Párrafo sustancioso (Imita el Ejemplo). Enfocado en "Aprender a Convivir".]
-                
-                6. **MANTENIMIENTO:** [Acción concreta]
-                7. **ESTRATEGIAS:** [Técnicas]
-                8. **RECURSOS:** [Materiales]
+1. **TÍTULO:** [Creativo]
+2. **COMPETENCIA:** [Máx 10 palabras]
 
-                ---
-                (Repite estructura variando verbos)
+3. **EXPLORACIÓN:** [Párrafo humano. Imita el ejemplo anterior. VARÍA EL VERBO DE INICIO.]
 
-                AL FINAL: 📚 FUNDAMENTACIÓN LEGAL: Cita la LOE o CRBV.
-                """
+4. **DESARROLLO:** [Párrafo práctico. Enfocado en "Aprender a Hacer". Describe la acción real.]
+
+5. **REFLEXIÓN:** [Párrafo de cierre. Enfocado en "Aprender a Convivir".]
+
+6. **MANTENIMIENTO:** [Acción concreta]
+7. **ESTRATEGIAS:** [Técnicas]
+8. **RECURSOS:** [Materiales]
+
+---
+(Repite para los 5 días. Si usas el mismo verbo de inicio dos días seguidos, fallarás la misión).
+
+AL FINAL: 📚 FUNDAMENTACIÓN LEGAL: Cita el artículo específico de la LOE o la CRBV que respalda esta planificación particular que has creado.
+"""
                 
                 mensajes = [
                     {"role": "system", "content": INSTRUCCIONES_TECNICAS},
