@@ -225,20 +225,20 @@ if opcion == "📝 Planificación Profesional":
                 st.session_state.temp_rango = rango
                 st.session_state.temp_tema = notas
                 
-        # --- PROMPT MODO TWITTER (MAX 280 CARACTERES) ---
+       # --- PROMPT TÉCNICA "FEW-SHOT" (IMITAR EJEMPLO) ---
                 prompt_inicial = f"""
                 Actúa como Luis Atencio. Planificación técnica para: {rango}.
                 Aula: {aula}. Tema: {notas}.
 
                 ⚠️ INSTRUCCIONES DE FORMATO:
-                - Antes del título de cada día (Ej: "### Lunes"), deja UNA LÍNEA VACÍA.
+                - Antes del título de cada día, deja UNA LÍNEA VACÍA.
 
-                ⚠️ CONTROL DE EXTENSIÓN ESTRICTO (Regla del Tweet):
-                - En EXPLORACIÓN, DESARROLLO y REFLEXIÓN:
-                - Imagina que estás escribiendo un TWEET.
-                - Tienes un LÍMITE DURO de 280 caracteres (unas 40-50 palabras) por punto.
-                - Ve directo al grano. NO uses introducciones como "En esta parte haremos...". Empieza con el verbo.
-                - Ejemplo perfecto: "Los estudiantes clasifican herramientas reales de limpieza en una mesa, debatiendo en grupos de 3 cuál es el uso correcto de cada una para fijar el conocimiento práctico." (Esto es un Tweet perfecto).
+                ⚠️ CONTROL DE EXTENSIÓN (TÉCNICA DE IMITACIÓN):
+                Para los puntos 3, 4 y 5, NO cuentes palabras. SIMPLEMENTE IMITA EL TAMAÑO DEL SIGUIENTE EJEMPLO.
+                
+                EJEMPLO PERFECTO DE LONGITUD (¡HAZLO ASÍ!):
+                "Iniciamos la jornada reuniendo a los estudiantes en el área de trabajo para presentar las herramientas de jardinería, permitiendo que cada uno las manipule y describa su textura y peso, activando así sus conocimientos previos sensoriales antes de la teoría."
+                (Fíjate que este texto es sustancioso, explica el QUÉ y el PARA QUÉ. ¡Copia esa extensión!)
 
                 ESTRUCTURA DIARIA (Lunes a Viernes):
 
@@ -246,9 +246,9 @@ if opcion == "📝 Planificación Profesional":
                 
                 1. **TÍTULO:** [Corto]
                 2. **COMPETENCIA:** [Objetivo]
-                3. **EXPLORACIÓN:** [Longitud de un TWEET. Máx 280 caracteres.]
-                4. **DESARROLLO:** [Longitud de un TWEET. Máx 280 caracteres.]
-                5. **REFLEXIÓN:** [Longitud de un TWEET. Máx 280 caracteres.]
+                3. **EXPLORACIÓN:** [Imita la longitud del ejemplo anterior.]
+                4. **DESARROLLO:** [Imita la longitud del ejemplo anterior. Detalla la acción.]
+                5. **REFLEXIÓN:** [Imita la longitud del ejemplo anterior. Cierre pedagógico.]
                 6. **MANTENIMIENTO:** [Acción]
                 7. **ESTRATEGIAS:** [Técnicas]
                 8. **RECURSOS:** [Lista]
