@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: LEGADO PRUEBA 1.6 (Módulo: Archivo + Chat Contextual)
+# VERSIÓN: LEGADO PRUEBA 1.7 (Final: Archivo + Chat + BORRADO SEGURO)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -374,11 +374,11 @@ elif opcion == "🌟 Mensaje Motivacional":
             """, unsafe_allow_html=True)
 
 # =========================================================
-# OPCIÓN 5: 📂 MI ARCHIVO PEDAGÓGICO (NUEVA JOYA)
+# OPCIÓN 5: 📂 MI ARCHIVO PEDAGÓGICO (CON BORRADO SEGURO)
 # =========================================================
 elif opcion == "📂 Mi Archivo Pedagógico":
     st.subheader(f"📂 Expediente de: {st.session_state.u['NOMBRE']}")
-    st.info("Aquí están tus planificaciones guardadas. Despliega una para verla y chatea con ella.")
+    st.info("Aquí están tus planificaciones guardadas. Puedes consultarlas o borrarlas.")
     
     try:
         # 1. Leer datos y filtrar por usuario
@@ -396,55 +396,56 @@ elif opcion == "📂 Mi Archivo Pedagógico":
                 
                 with st.expander(etiqueta):
                     
-                    # 1. ÁREA DE VISUALIZACIÓN / EDICIÓN TEMPORAL
-                    # Usamos text_area para que puedan copiar o modificar localmente para la consulta
-                    contenido_plan = st.text_area("Contenido del Plan:", value=row['CONTENIDO'], height=300, key=f"txt_{index}")
+                    # 1. VISUALIZACIÓN
+                    contenido_plan = st.text_area("Contenido:", value=row['CONTENIDO'], height=300, key=f"txt_{index}")
                     
-                    st.markdown("---")
+                    # 2. BOTONERA (CONSULTAR vs BORRAR)
+                    col_izq, col_der = st.columns([4, 1])
                     
-                    # 2. EL CONSULTOR CONTEXTUAL (LA MAGIA)
-                    st.markdown("#### 🤖 Consultor Inteligente")
-                    st.caption("Pregunta algo sobre ESTA planificación específica. Ej: '¿Cómo evalúo la actividad del martes?'")
+                    # --- CONSULTOR ---
+                    with col_izq:
+                        st.markdown("#### 🤖 Consultor Inteligente")
+                        pregunta = st.text_input("Duda sobre este plan:", key=f"preg_{index}", placeholder="Ej: ¿Cómo evalúo esto?")
+                        if st.button("Consultar Plan", key=f"btn_{index}") and pregunta:
+                            with st.spinner("Analizando..."):
+                                prompt_contextual = f"""
+                                ACTÚA COMO ASESOR PEDAGÓGICO. CONTEXTO: {contenido_plan}. PREGUNTA: "{pregunta}".
+                                Responde directo y útil.
+                                """
+                                respuesta_contextual = generar_respuesta([
+                                    {"role": "system", "content": INSTRUCCIONES_TECNICAS},
+                                    {"role": "user", "content": prompt_contextual}
+                                ], temperatura=0.5)
+                                st.markdown(f'<div class="consultor-box">💡 <strong>Respuesta:</strong><br>{respuesta_contextual}</div>', unsafe_allow_html=True)
+
+                    # --- ZONA DE PELIGRO (BORRAR) ---
+                    with col_der:
+                        st.write("") # Espacio
+                        st.write("")
+                        st.write("")
+                        # Botón inicial de borrar
+                        if st.button("🗑️ Borrar", key=f"del_init_{index}"):
+                            st.session_state[f"confirm_del_{index}"] = True
                     
-                    col_preg, col_btn = st.columns([3,1])
-                    
-                    with col_preg:
-                        pregunta = st.text_input("Tu duda:", key=f"preg_{index}", placeholder="Escribe aquí tu duda sobre este plan...")
-                    
-                    with col_btn:
-                        st.write("") # Espacio para alinear
-                        st.write("") 
-                        boton_consultar = st.button("Consultar", key=f"btn_{index}")
-                    
-                    if boton_consultar and pregunta:
-                        with st.spinner("Analizando tu planificación..."):
-                            # PROMPT CONTEXTUAL: Le pasamos el plan exacto a la IA
-                            prompt_contextual = f"""
-                            ACTÚA COMO UN ASESOR PEDAGÓGICO EXPERTO.
-                            
-                            CONTEXTO: El docente tiene la siguiente planificación guardada:
-                            ------------------------------------------------------------
-                            {contenido_plan}
-                            ------------------------------------------------------------
-                            
-                            SU PREGUNTA: "{pregunta}"
-                            
-                            TU MISIÓN: Responde la duda basándote EXCLUSIVAMENTE en la planificación de arriba.
-                            Sé práctico, directo y útil. Dame ejemplos concretos de cómo aplicar lo que me preguntas.
-                            """
-                            
-                            respuesta_contextual = generar_respuesta([
-                                {"role": "system", "content": INSTRUCCIONES_TECNICAS},
-                                {"role": "user", "content": prompt_contextual}
-                            ], temperatura=0.5)
-                            
-                            # Mostrar respuesta en una cajita diferenciada
-                            st.markdown(f"""
-                            <div class="consultor-box">
-                                <strong>💡 Respuesta del Consultor:</strong><br><br>
-                                {respuesta_contextual}
-                            </div>
-                            """, unsafe_allow_html=True)
+                    # CONFIRMACIÓN DE BORRADO (Aparece abajo si se activa)
+                    if st.session_state.get(f"confirm_del_{index}", False):
+                        st.warning("⚠️ ¿Estás seguro de eliminar esta planificación?")
+                        col_si, col_no = st.columns(2)
+                        
+                        if col_si.button("✅ SÍ, BORRAR", key=f"yes_{index}"):
+                            with st.spinner("Eliminando..."):
+                                # LEEMOS DE NUEVO LA BASE ACTUALIZADA (Evitar conflictos)
+                                df_root = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                                # Borramos por el índice original
+                                df_root = df_root.drop(index)
+                                conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_root)
+                                st.success("Eliminado.")
+                                time.sleep(1)
+                                st.rerun()
+                        
+                        if col_no.button("❌ CANCELAR", key=f"no_{index}"):
+                            st.session_state[f"confirm_del_{index}"] = False
+                            st.rerun()
 
     except Exception as e:
         st.error(f"Error cargando archivo: {e}")
@@ -475,4 +476,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: LEGADO PRUEBA 1.6")
+st.caption("Desarrollado por Luis Atencio | Versión: LEGADO PRUEBA 1.7")
