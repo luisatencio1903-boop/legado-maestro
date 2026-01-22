@@ -283,6 +283,7 @@ respuesta = generar_respuesta(mensajes, temperatura=0.4)
 st.session_state.plan_actual = respuesta
 st.rerun()
 
+
     # --- MOSTRAR RESULTADO Y OPCIÓN DE GUARDAR ---
     if st.session_state.plan_actual:
         st.markdown("---")
