@@ -224,6 +224,13 @@ if not st.session_state.auth:
 
     st.stop() # DETENER SI NO HAY LOGIN
 
+# --- INICIALIZACIÓN DE MEMORIA (EL PUENTE QUE FALTABA) ---
+if 'plan_actual' not in st.session_state: st.session_state.plan_actual = ""
+if 'actividad_detectada' not in st.session_state: st.session_state.actividad_detectada = ""
+if 'temp_rango' not in st.session_state: st.session_state.temp_rango = ""
+if 'temp_tema' not in st.session_state: st.session_state.temp_tema = ""
+if 'eval_resultado' not in st.session_state: st.session_state.eval_resultado = ""
+
 # --- 🧠 CEREBRO TÉCNICO ---
 INSTRUCCIONES_TECNICAS = """
 ⚠️ INSTRUCCIÓN DE MÁXIMA PRIORIDAD (SISTEMA OPERATIVO):
