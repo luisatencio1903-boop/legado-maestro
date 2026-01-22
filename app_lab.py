@@ -1,121 +1,96 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
-from groq import Groq
-from streamlit_gsheets import GSheetsConnection
 import time
 
-# --- 1. CONFIGURACIÓN ---
-st.set_page_config(page_title="Legado Maestro - Gestión Zulia", layout="wide")
+# --- ESTRUCTURA DE PANTALLA PROFESIONAL ---
+st.set_page_config(page_title="Legado Maestro - Torre de Control", layout="wide")
 
-# --- 2. CONEXIÓN (Usa el encabezado [connections.gsheets] de tus Secrets) ---
-conn = st.connection("gsheets", type=GSheetsConnection)
-URL_HOJA = st.secrets["GSHEETS_URL"]
+# Estilos CSS para tarjetas y botones
+st.markdown("""
+    <style>
+    .card { background: white; padding: 20px; border-radius: 10px; border-left: 5px solid #0068c9; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 15px; }
+    .status-pendiente { color: #f39c12; font-weight: bold; }
+    .status-aprobado { color: #2ecc71; font-weight: bold; }
+    .status-envivo { color: #e74c3c; font-weight: bold; animation: blinker 1.5s linear infinite; }
+    @keyframes blinker { 50% { opacity: 0; } }
+    </style>
+    """, unsafe_allow_html=True)
 
-# --- 3. FUNCIONES DE LIMPIEZA Y SEGURIDAD ---
-def limpiar_dato(valor):
-    """Quita espacios y el .0 de las cédulas de Google Sheets"""
-    return str(valor).strip().split('.')[0]
+# --- LÓGICA DE USUARIOS (Ya funcional) ---
+# (Asumimos que el usuario ya está logueado y tenemos st.session_state.usuario)
 
-# --- 4. GESTIÓN DE SESIÓN ---
-if 'autenticado' not in st.session_state:
-    st.session_state.autenticado = False
-    st.session_state.usuario = None
+u = st.session_state.usuario
 
-# --- 5. INTERFAZ DE ACCESO ---
-if not st.session_state.autenticado:
-    st.title("🛡️ Seguridad Legado Maestro")
-    tab_login, tab_registro = st.tabs(["🔐 Entrar", "📝 Registrarse"])
+# --- PANEL DOCENTE (ESTILO NAVEGADOR) ---
+if u['ROL'] == "DOCENTE":
+    st.title(f"👨‍🏫 Aula de {u['NOMBRE']}")
+    
+    # Sistema de ventanas tipo navegador
+    t_semana, t_hoy, t_historial = st.tabs(["📅 Planificación Semanal", "🚀 Actividad de Hoy", "📜 Mi Memoria"])
 
-    with tab_login:
-        c_login = st.text_input("Cédula", key="l_ced")
-        p_login = st.text_input("Contraseña", type="password", key="l_pass")
-        if st.button("INICIAR SESIÓN"):
-            df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
-            # Limpiamos y buscamos coincidencia real
-            df_u['CEDULA_LIMPIA'] = df_u['CEDULA'].apply(limpiar_dato)
-            match = df_u[(df_u['CEDULA_LIMPIA'] == limpiar_dato(c_login)) & (df_u['CLAVE'] == p_login)]
-            
-            if not match.empty:
-                st.session_state.autenticado = True
-                st.session_state.usuario = match.iloc[0].to_dict()
-                st.success("Acceso concedido...")
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.error("Credenciales incorrectas o usuario no activo.")
+    with t_semana:
+        st.subheader("Planificación de la Próxima Semana")
+        # Aquí el docente genera su plan (por ejemplo un domingo)
+        plan_propuesto = st.text_area("Desarrolle la planificación técnica:", height=200)
+        if st.button("Enviar para Revisión del Director"):
+            # GUARDAR EN EXCEL con ESTADO = "PENDIENTE REVISION"
+            st.success("Planificación enviada. Espere la aprobación del Director para ejecutar.")
 
-    with tab_registro:
-        st.subheader("Validación de Nómina")
-        c_reg = st.text_input("Ingrese su Cédula", key="r_ced")
-        p_reg = st.text_input("Cree su Contraseña", type="password", key="r_pass")
+    with t_hoy:
+        # Filtramos en el Excel si hay una planificación APROBADA para HOY
+        st.subheader(f"Actividad Programada: {datetime.now().strftime('%A %d/%m')}")
         
-        if st.button("VALIDAR Y ACTIVAR CUENTA"):
-            df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
-            df_u['CEDULA_LIMPIA'] = df_u['CEDULA'].apply(limpiar_dato)
-            cedula_ingresada = limpiar_dato(c_reg)
-
-            if cedula_ingresada in df_u['CEDULA_LIMPIA'].values:
-                idx = df_u.index[df_u['CEDULA_LIMPIA'] == cedula_ingresada][0]
-                
-                if pd.notna(df_u.loc[idx, 'CLAVE']) and str(df_u.loc[idx, 'CLAVE']).strip() != "":
-                    st.warning("Usted ya tiene una cuenta activa.")
-                else:
-                    df_u.loc[idx, 'CLAVE'] = p_reg
-                    df_u.loc[idx, 'ESTADO'] = "ACTIVO"
-                    # Eliminamos la columna temporal antes de subir
-                    df_subir = df_u.drop(columns=['CEDULA_LIMPIA'])
-                    conn.update(spreadsheet=URL_HOJA, worksheet="USUARIOS", data=df_subir)
-                    st.success("✅ ¡Registro exitoso! Ahora puede iniciar sesión.")
-            else:
-                st.error("🚫 Su cédula no está autorizada en la nómina oficial.")
-
-# --- 6. PANEL DE CONTROL (SI ESTÁ AUTENTICADO) ---
-else:
-    u = st.session_state.usuario
-    st.sidebar.title(f"👤 {u['NOMBRE']}")
-    st.sidebar.write(f"Rol: **{u['ROL']}**")
-    if st.sidebar.button("Cerrar Sesión"):
-        st.session_state.autenticado = False
-        st.rerun()
-
-    # --- VISTA DOCENTE ---
-    if u['ROL'] == "DOCENTE":
-        st.header("👨‍🏫 Planificador Técnico en Vivo")
-        tema = st.text_input("Tema de la clase:", value="Mantenimiento General")
+        # Simulamos que hay una aprobada
+        st.info("✅ Planificación Aprobada por Dirección: 'Mantenimiento de Circuitos'")
         
-        if st.button("🧠 GENERAR PLANIFICACIÓN IA"):
-            client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-            res = client.chat.completions.create(
-                messages=[{"role": "user", "content": f"Planifica 8 puntos técnicos para {tema} en educación especial."}],
-                model="llama-3.3-70b-versatile"
-            )
-            st.session_state.plan_doc = res.choices[0].message.content
-            st.info(st.session_state.plan_doc)
-
-        if 'plan_doc' in st.session_state:
-            if st.button("🚀 INICIAR CLASE Y REPORTAR"):
-                df_act = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-                nueva_fila = pd.DataFrame([{
-                    "FECHA": datetime.now().strftime("%d/%m/%Y"),
-                    "USUARIO": u['NOMBRE'],
-                    "ROL": u['ROL'],
-                    "AULA": "MANTENIMIENTO",
-                    "TEMA": tema,
-                    "CONTENIDO": st.session_state.plan_doc,
-                    "ESTADO": "EN CURSO",
-                    "HORA_INICIO": datetime.now().strftime("%H:%M")
-                }])
-                df_final = pd.concat([df_act, nueva_fila], ignore_index=True)
-                conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_final)
-                st.balloons()
-                st.success("Reporte enviado al Director con éxito.")
-
-    # --- VISTA DIRECTOR / SUPERVISOR ---
-    else:
-        st.header(f"📊 Monitor de Gestión: {u['ROL']}")
-        df_ver = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+        c1, c2 = st.columns(2)
+        with c1:
+            if st.button("▶️ INICIAR ACTIVIDAD"):
+                st.session_state.en_clase = True
+                # Registrar HORA_INICIO en Hoja1
+        with c2:
+            if st.button("⏹️ CULMINAR ACTIVIDAD"):
+                st.session_state.en_clase = False
+                # Registrar HORA_FIN y pedir EVIDENCIA
         
-        # Filtro de seguridad: El Director ve todo el historial
-        st.subheader("Seguimiento de Actividades Escolares")
-        st.dataframe(df_ver)
+        if st.session_state.get('en_clase'):
+            st.markdown("### <span class='status-envivo'>● ACTIVIDAD EN PROGRESO</span>", unsafe_allow_html=True)
+            foto = st.file_uploader("Subir Evidencia (Foto/Reporte)")
+
+# --- PANEL DIRECTOR (MONITOR INTERACTIVO) ---
+elif u['ROL'] == "DIRECTOR":
+    st.title("🏛️ Torre de Control Institucional")
+    
+    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1.metric("Docentes Activos", "4", "+1")
+    col_m2.metric("Pendientes por Revisar", "2")
+    col_m3.metric("Evidencias Cargadas", "85%")
+
+    st.markdown("---")
+    
+    # VENTANA 1: REVISIÓN DE PLANES (Lo que pediste de los viernes/lunes)
+    with st.expander("📥 Planificaciones por Aprobar", expanded=True):
+        st.write("Docente: Luis Atencio - Aula: Mantenimiento")
+        st.text("Plan: Mantenimiento de motores para el día miércoles...")
+        
+        # Cuadro de sugerencias que pediste
+        observacion = st.text_input("Sugerencias o modificaciones (Ej: Cambiar actividad del miércoles):")
+        
+        c_a1, c_a2 = st.columns(2)
+        if c_a1.button("✅ APROBAR PLAN"):
+            st.success("Plan aprobado. El docente ya puede visualizarlo.")
+        if c_a2.button("⚠️ ENVIAR CON OBSERVACIONES"):
+            st.warning("Sugerencias enviadas al docente.")
+
+    # VENTANA 2: MONITOR EN VIVO
+    st.subheader("👀 Monitor de Actividad en Tiempo Real (Hoy)")
+    # Simulamos datos del día
+    st.markdown("""
+        <div class='card'>
+            <h4>Docente: Luis Atencio</h4>
+            <p><b>Estado:</b> <span class='status-envivo'>● EN CLASE</span></p>
+            <p><b>Tema:</b> Motores Eléctricos | <b>Inicio:</b> 08:00 AM</p>
+            <p><b>Evidencia:</b> <span style='color:gray'>Esperando culminación...</span></p>
+        </div>
+    """, unsafe_allow_html=True)
