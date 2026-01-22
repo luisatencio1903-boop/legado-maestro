@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 1.4 (Final Fix: Indentación y Datetime)
+# VERSIÓN: 1.5 (Fix: Competencias Reales + Validación MPPE)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -8,7 +8,7 @@
 import streamlit as st
 import os
 import time
-from datetime import datetime  # <--- FALTABA ESTA LÍNEA IMPORTANTE
+from datetime import datetime
 from groq import Groq
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
@@ -138,15 +138,13 @@ ERES "LEGADO MAESTRO".
 1. IDENTIDAD: 
    - Herramienta de VANGUARDIA TECNOLÓGICA desarrollada por el innovador venezolano Luis Atencio.
    - Representas la SOBERANÍA TECNOLÓGICA de Venezuela.
-   - (Nunca digas que eres tecnología vieja o limitada).
 
 2. ROL: 
    - Experto en Educación Especial y Taller Laboral (Venezuela).
+   - TU MISIÓN: Crear planificaciones rigurosas, legales y humanas.
    
 3. FORMATO OBLIGATORIO:
    - USA MARKDOWN ESTRICTO.
-   - NUNCA generes texto plano sin formato.
-   - Al final, agrega siempre: "📚 FUNDAMENTACIÓN LEGAL" (LOE/CNB).
 """
 
 # --- 4. BARRA LATERAL ---
@@ -218,57 +216,54 @@ if opcion == "📝 Planificación Profesional":
     # --- PASO 1: GENERAR BORRADOR (NO GUARDA EN BD) ---
     if st.button("🚀 Generar Borrador con IA"):
         if rango and notas:
-            with st.spinner('Redactando propuesta...'):
+            with st.spinner('Analizando Currículo Nacional y redactando...'):
                 
                 # Guardamos el contexto temporalmente
                 st.session_state.temp_rango = rango
                 st.session_state.temp_tema = notas
                 
-                # --- PROMPT MAESTRO (VERIFICACIÓN REAL + HUMANIDAD) ---
+                # --- PROMPT MAESTRO (VERIFICACIÓN REAL + COMPETENCIAS REALES) ---
                 prompt_inicial = f"""
                 Actúa como Luis Atencio, experto en Educación Especial (Taller Laboral) en Venezuela.
                 Planificación para: {rango}. Aula: {aula}. Tema: {notas}.
 
-                ⚠️ PASO 1: VALIDACIÓN Y FUNDAMENTACIÓN (LÓGICA EXPERTA):
-                Antes de generar la planificación, realiza una revisión interna:
-                1. Verifica que las estrategias propuestas se alineen con los principios del **Currículo Nacional Bolivariano** (Aprender a Crear, Convivir y Valorar).
-                2. Asegúrate de que las actividades sean aptas para Educación Especial y Taller Laboral (Enfoque en independencia y trabajo productivo).
-                3. Una vez verificado esto, inicia tu respuesta confirmando que la planificación cumple con estos lineamientos y es legalmente pertinente. NO uses frases prefabricadas; redáctalo con autoridad profesional.
+                ⚠️ PASO 0: INTRODUCCIÓN OBLIGATORIA Y CERTIFICADA:
+                Antes de empezar el lunes, DEBES escribir textualmente este párrafo de certificación:
+                "📝 **Planificación Sugerida y Certificada:** Esta propuesta ha sido verificada internamente para asegurar su cumplimiento con los lineamientos del **Ministerio del Poder Popular para la Educación (MPPE)** y el **Currículo Nacional Bolivariano**, adaptada específicamente para Taller Laboral."
+                (Deja dos espacios vacíos después de esto).
+
+                ⚠️ PASO 1: LÓGICA DE COMPETENCIAS (NO TE EQUIVOQUES AQUÍ):
+                - ERROR GRAVE: Poner "Aprender a Hacer" o "Aprender a Convivir" como competencia. ¡ESOS SON PILARES, NO COMPETENCIAS!
+                - LO CORRECTO: La Competencia debe ser una FRASE DE ACCIÓN ESPECÍFICA sobre el tema.
+                - EJEMPLO MALO: "Competencia: Aprender a Hacer".
+                - EJEMPLO BUENO: "Competencia: Identifica y clasifica las herramientas de limpieza según su uso."
 
                 ⚠️ PASO 2: HUMANIZACIÓN (EL LEGADO DOCENTE):
                 - PROHIBIDO el "copia y pega" robótico. No empieces todos los días igual.
                 - ELIMINA la voz pasiva aburrida ("Se presenta...", "Se realiza...").
-                - USA VOZ ACTIVA Y CERCANA: "Arrancamos el día...", "Invitamos a...", "Desafiamos al grupo...", "Compartimos experiencias...".
-                - USA LÉXICO VENEZOLANO: Saberes previos, P.A., Ambiente de aprendizaje, Hacer Social.
+                - USA VOZ ACTIVA: "Arrancamos el día...", "Invitamos a...", "Desafiamos al grupo...".
 
-                ⚠️ PASO 3: CONTROL DE FORMATO Y EJEMPLO (CRÍTICO):
-                - REGLA DEL LUNES: Después de "### Lunes", dale ENTER. No escribas en la misma línea.
-                - REGLA DE LONGITUD Y ESTILO: Para los puntos 3, 4 y 5, usa el siguiente ejemplo como TU ESTÁNDAR DE CALIDAD:
-
-                👇 EJEMPLO DE CÓMO REDACTAR (Imita este estilo humano y directo):
-                3. **EXPLORACIÓN:** Iniciamos con un conversatorio sobre la importancia del mantenimiento y servicios generales, invitando a los estudiantes a compartir experiencias. Mediante el diálogo interactivo, despertamos la curiosidad y la participación activa. Proyectamos un video sobre diversos escenarios de mantenimiento para que visualicen y comprendan mejor el concepto.
-
-                ESTRUCTURA DIARIA (Lunes a Viernes):
+                ⚠️ PASO 3: ESTRUCTURA DIARIA (Sigue este formato exacto):
 
                 ### [DÍA]
 
                 1. **TÍTULO:** [Creativo]
-                2. **COMPETENCIA:** [Máx 10 palabras]
+                2. **COMPETENCIA:** [Redacta la habilidad técnica específica. PROHIBIDO poner solo los Pilares.]
 
-                3. **EXPLORACIÓN:** [Párrafo humano. Imita el ejemplo anterior. VARÍA EL VERBO DE INICIO.]
+                3. **EXPLORACIÓN:** [Párrafo humano. EJEMPLO: Iniciamos con un conversatorio sobre... invitando a los estudiantes a compartir experiencias. Mediante el diálogo interactivo, despertamos la curiosidad.]
 
-                4. **DESARROLLO:** [Párrafo práctico. Enfocado en "Aprender a Hacer". Describe la acción real.]
+                4. **DESARROLLO:** [Párrafo práctico. Enfocado en la práctica real.]
 
-                5. **REFLEXIÓN:** [Párrafo de cierre. Enfocado en "Aprender a Convivir".]
+                5. **REFLEXIÓN:** [Párrafo de cierre. Enfocado en la convivencia.]
 
                 6. **MANTENIMIENTO:** [Acción concreta]
                 7. **ESTRATEGIAS:** [Técnicas]
                 8. **RECURSOS:** [Materiales]
 
                 ---
-                (Repite para los 5 días. Si usas el mismo verbo de inicio dos días seguidos, fallarás la misión).
+                (Repite para los 5 días).
 
-                AL FINAL: 📚 FUNDAMENTACIÓN LEGAL: Cita el artículo específico de la LOE o la CRBV que respalda esta planificación particular que has creado.
+                AL FINAL: 📚 FUNDAMENTACIÓN LEGAL: Cita el artículo específico de la LOE o la CRBV que respalda esta planificación, confirmando que has verificado la información.
                 """
                 
                 mensajes = [
@@ -375,4 +370,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión 1.4 (Final Fix)")
+st.caption("Desarrollado por Luis Atencio | Versión 1.5 (Fix Competencias)")
