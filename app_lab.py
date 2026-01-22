@@ -328,33 +328,54 @@ if opcion == "📝 Planificación Profesional":
                     st.error(f"Error al guardar: {e}")
 
 # =========================================================
-# OPCIÓN 2: MENSAJE MOTIVACIONAL (CEREBRO EMOCIONAL)
+# OPCIÓN 2: MENSAJE MOTIVACIONAL (CEREBRO EMOCIONAL 2.0)
 # =========================================================
 elif opcion == "🌟 Mensaje Motivacional":
     st.subheader("Dosis de Ánimo Express ⚡")
-    if st.button("❤️ Mensaje Corto"):
+    st.markdown("Recarga tu energía docente con una palabra de aliento.")
+    
+    if st.button("❤️ Recibir Dosis de Ánimo"):
+        
+        # Ruleta de temas para asegurar variedad (importar random arriba si falta)
+        import random
+        temas_animo = [
+            "la importancia de la paciencia en la educación especial",
+            "una cita bíblica sobre la fortaleza y el servicio al prójimo",
+            "la recompensa espiritual de enseñar a quien más lo necesita",
+            "un dicho popular venezolano sobre la constancia y el trabajo duro",
+            "el impacto silencioso pero eterno de un maestro en el futuro",
+            "la resiliencia del docente venezolano frente a las adversidades"
+        ]
+        tema_elegido = random.choice(temas_animo)
         
         INSTRUCCIONES_MOTIVACION = """
-        Eres un colega docente venezolano dando ánimo.
-        Tu objetivo es inspirar.
-        REGLA DE ORO: NO cites leyes, NO cites artículos de la constitución, NO hables de política.
-        Solo entrega la frase motivacional (bíblica o célebre) y una despedida cálida.
+        ERES "LEGADO MAESTRO" EN TU MODO 'COLEGA EMPÁTICO'.
+        
+        TU OBJETIVO: Dar un mensaje breve, genuino y conmovedor a un docente de Educación Especial.
+        
+        REGLAS DE ORO:
+        1. PROHIBIDO repetir la frase de Nelson Mandela sobre el arma más poderosa. ¡SÉ ORIGINAL!
+        2. Tono: Cálido, cercano, como un amigo que te pone la mano en el hombro.
+        3. Contexto: Venezuela. Usa palabras nuestras (lucha, constancia, fe, muchachos).
+        4. NO hables de política ni leyes aquí. Solo corazón y vocación.
+        5. Extensión: Máximo 3 oraciones potentes.
         """
         
-        prompt = "Frase motivacional corta para docente venezolano. Cita bíblica o célebre."
+        prompt = f"Dame un mensaje de ánimo enfocado en: {tema_elegido}. Que se sienta personal y directo al corazón del docente."
         
-        # Temperatura 0.8 para creatividad
-        res = generar_respuesta([
-            {"role": "system", "content": INSTRUCCIONES_MOTIVACION}, 
-            {"role": "user", "content": prompt}
-        ], temperatura=0.8)
-        
-        st.markdown(f"""
-        <div style="background-color: #ffffff; padding: 20px; border-radius: 15px; border: 2px solid #eee; border-left: 8px solid #ff4b4b;">
-            <div class="mensaje-texto">{res}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
+        with st.spinner("Conectando con el corazón..."):
+            # Temperatura alta (0.9) para máxima creatividad y cero repetición
+            res = generar_respuesta([
+                {"role": "system", "content": INSTRUCCIONES_MOTIVACION}, 
+                {"role": "user", "content": prompt}
+            ], temperatura=0.9)
+            
+            st.markdown(f"""
+            <div style="background-color: #ffffff; padding: 25px; border-radius: 15px; border: 1px solid #e0e0e0; border-left: 10px solid #ff4b4b; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <h3 style="color: #ff4b4b; margin-top: 0;">🍎 Para ti, colega:</h3>
+                <div class="mensaje-texto" style="font-style: italic; font-size: 1.3em;">"{res}"</div>
+            </div>
+            """, unsafe_allow_html=True)
 # =========================================================
 # OPCIÓN 3: IDEAS (CEREBRO TÉCNICO)
 # =========================================================
