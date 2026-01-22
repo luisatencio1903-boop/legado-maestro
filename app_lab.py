@@ -225,37 +225,46 @@ if opcion == "📝 Planificación Profesional":
                 st.session_state.temp_rango = rango
                 st.session_state.temp_tema = notas
                 
-      # --- PROMPT "EJEMPLO MAESTRO" (FORMATO + LONGITUD) ---
+     # --- PROMPT "ANTI-PEGOSTES" (FORMATO PERFECTO) ---
                 prompt_inicial = f"""
                 Actúa como Luis Atencio. Planificación técnica para: {rango}.
                 Aula: {aula}. Tema: {notas}.
 
-                ⚠️ INSTRUCCIONES DE FORMATO:
-                - Antes del título de cada día, deja UNA LÍNEA VACÍA.
-                - IMPORTANTE: No olvides las etiquetas en negrita (Ej: **3. EXPLORACIÓN:**).
-
-                ⚠️ INSTRUCCIONES DE LONGITUD:
-                - COMPETENCIA (Punto 2): Debe ser CORTA y DIRECTA (Máximo 10 palabras).
-                - Puntos 3, 4 y 5: Deben ser PÁRRAFOS SUSTANCIOSOS (Imita el ejemplo de abajo).
-
-                👇 EJEMPLO EXACTO DE CÓMO DEBE VERSE (IMITA ESTE FORMATO):
+                ⚠️ REGLA DE ORO DE FORMATO (¡LEER ATENTAMENTE!):
+                - Cuando escribas "### Lunes", ESTÁ PROHIBIDO escribir el contenido en la misma línea.
+                - DEBES DARLE "ENTER" INMEDIATAMENTE después de "### Lunes".
+                - El "1. **TÍTULO**" siempre debe empezar en una línea nueva abajo.
                 
-                2. **COMPETENCIA:** Identificar y clasificar herramientas básicas de limpieza. (¡ASÍ DE CORTA!)
+                MAL (No hagas esto):
+                ### Lunes 1. **TÍTULO:** ...
+
+                BIEN (Haz esto):
+                ### Lunes
+                (Espacio vacío)
+                1. **TÍTULO:** ...
+
+                ⚠️ INSTRUCCIONES DE LONGITUD (Puntos 3, 4 y 5):
+                - Mantén el tamaño sustancioso que ya lograste (aprox 40-50 palabras).
+                - Recuerda las etiquetas en negrita (Ej: **3. EXPLORACIÓN:**).
+
+                👇 EJEMPLO EXACTO DE FORMATO Y LONGITUD (IMITA ESTO):
+                
+                2. **COMPETENCIA:** Identificar herramientas básicas. (Corta)
                 3. **EXPLORACIÓN:** Iniciamos la jornada reuniendo a los estudiantes en el círculo de trabajo para presentar las herramientas físicas, permitiendo que cada uno las manipule, diga su nombre y describa su textura, activando así sus conocimientos previos sensoriales antes de pasar a la teoría.
-                (Nota: Fíjate que el punto 3 tiene la etiqueta en negrita y luego el texto largo. ¡Hazlo igual!)
+                (Nota: Párrafo sustancioso y con etiqueta en negrita).
 
                 ESTRUCTURA DIARIA (Lunes a Viernes):
 
                 ### [DÍA]
-                
+
                 1. **TÍTULO:** [Corto]
-                2. **COMPETENCIA:** [MUY CORTA. Máx 10 palabras.]
-                3. **EXPLORACIÓN:** [Párrafo sustancioso igual al ejemplo. NO OLVIDES LA ETIQUETA EN NEGRITA.]
-                4. **DESARROLLO:** [Párrafo sustancioso igual al ejemplo. Describe la acción detallada.]
-                5. **REFLEXIÓN:** [Párrafo sustancioso igual al ejemplo. Cierre pedagógico.]
-                6. **MANTENIMIENTO:** [Acción corta]
-                7. **ESTRATEGIAS:** [Técnicas cortas]
-                8. **RECURSOS:** [Lista corta]
+                2. **COMPETENCIA:** [MUY CORTA]
+                3. **EXPLORACIÓN:** [Párrafo sustancioso. IMITA EL EJEMPLO.]
+                4. **DESARROLLO:** [Párrafo sustancioso. IMITA EL EJEMPLO.]
+                5. **REFLEXIÓN:** [Párrafo sustancioso. IMITA EL EJEMPLO.]
+                6. **MANTENIMIENTO:** [Acción]
+                7. **ESTRATEGIAS:** [Técnicas]
+                8. **RECURSOS:** [Lista]
 
                 ---
                 (Repite estructura)
