@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: LEGADO PRUEBA 1.8 (Final: Fix CSS Modo Oscuro + UI Borrado)
+# VERSIÓN: LEGADO PRUEBA 1.9 (Final: Sesión Persistente + Borrado UI)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -38,6 +38,33 @@ except:
     st.error("⚠️ Error conectando con la Base de Datos.")
     st.stop()
 
+# --- LÓGICA DE PERSISTENCIA DE SESIÓN (AUTO-LOGIN) ---
+# Verificamos si hay un usuario anclado en la URL (query params)
+# Si el usuario recarga la página, esto se ejecuta primero.
+
+query_params = st.query_params
+usuario_en_url = query_params.get("u", None)
+
+if not st.session_state.auth and usuario_en_url:
+    try:
+        # Intentamos recuperar la sesión automáticamente
+        df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
+        df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
+        
+        # Buscamos al usuario por la cédula que está en la URL
+        match = df_u[df_u['C_L'] == usuario_en_url]
+        
+        if not match.empty:
+            st.session_state.auth = True
+            st.session_state.u = match.iloc[0].to_dict()
+            # No mostramos mensaje de éxito para que sea transparente y rápido
+        else:
+            # Si la cédula en la URL no es válida, limpiamos la URL
+            st.query_params.clear()
+    except:
+        pass # Si falla, simplemente pedirá login normal
+
+# --- FORMULARIO DE LOGIN (Solo si no logró autenticarse arriba) ---
 if not st.session_state.auth:
     st.title("🛡️ Acceso Legado Maestro")
     st.markdown("Ingrese sus credenciales para acceder a la plataforma.")
@@ -60,11 +87,16 @@ if not st.session_state.auth:
                 df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
                 
                 # Verificamos credenciales
-                match = df_u[(df_u['C_L'] == limpiar_id(c_in)) & (df_u['CLAVE'] == p_in)]
+                cedula_limpia = limpiar_id(c_in)
+                match = df_u[(df_u['C_L'] == cedula_limpia) & (df_u['CLAVE'] == p_in)]
                 
                 if not match.empty:
                     st.session_state.auth = True
                     st.session_state.u = match.iloc[0].to_dict()
+                    
+                    # AQUÍ ESTÁ EL TRUCO: Guardamos la cédula en la URL para el futuro
+                    st.query_params["u"] = cedula_limpia
+                    
                     st.success("¡Bienvenido!")
                     time.sleep(1)
                     st.rerun()
@@ -73,7 +105,7 @@ if not st.session_state.auth:
             except Exception as e:
                 st.error(f"Error de conexión: {e}")
     
-    # ESTA LÍNEA ES MÁGICA: Detiene la carga aquí si no hay login.
+    # Detiene la carga aquí si no hay login.
     st.stop()
 
 # --- 2. ESTILOS CSS (MODO OSCURO + FORMATO) ---
@@ -192,9 +224,12 @@ with st.sidebar:
         st.session_state.plan_actual = ""
         st.rerun()
         st.markdown("---")
+    
+    # BOTÓN DE CERRAR SESIÓN (MODIFICADO PARA LIMPIAR URL)
     if st.button("🔒 Cerrar Sesión"):
         st.session_state.auth = False
         st.session_state.u = None
+        st.query_params.clear() # Limpiamos la huella en la URL
         st.rerun()
 
 # --- 5. GESTIÓN DE MEMORIA ---
@@ -489,4 +524,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: LEGADO PRUEBA 1.8")
+st.caption("Desarrollado por Luis Atencio | Versión: LEGADO PRUEBA 1.9")
