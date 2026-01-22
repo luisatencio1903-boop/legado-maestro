@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 1.3 (Fix Definitivo: Estrategias, Recursos y Formato)
+# VERSIÓN: 1.4 (Final Fix: Indentación y Datetime)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -8,6 +8,7 @@
 import streamlit as st
 import os
 import time
+from datetime import datetime  # <--- FALTABA ESTA LÍNEA IMPORTANTE
 from groq import Groq
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
@@ -72,7 +73,6 @@ if not st.session_state.auth:
                 st.error(f"Error de conexión: {e}")
     
     # ESTA LÍNEA ES MÁGICA: Detiene la carga aquí si no hay login.
-    # Así no tienes que indentar ni mover tu código original de abajo.
     st.stop()
 
 # --- 2. ESTILOS CSS (MODO OSCURO + FORMATO) ---
@@ -151,7 +151,6 @@ ERES "LEGADO MAESTRO".
 
 # --- 4. BARRA LATERAL ---
 with st.sidebar:
-    # Si tienes el logo, lo muestra, si no, usa un emoji
     if os.path.exists("logo_legado.png"):
         st.image("logo_legado.png", width=150)
     else:
@@ -225,63 +224,63 @@ if opcion == "📝 Planificación Profesional":
                 st.session_state.temp_rango = rango
                 st.session_state.temp_tema = notas
                 
-    # --- PROMPT MAESTRO (VERIFICACIÓN REAL + HUMANIDAD) ---
-# --- PROMPT MAESTRO (VERIFICACIÓN REAL + HUMANIDAD) ---
-    prompt_inicial = f"""
-    Actúa como Luis Atencio, experto en Educación Especial (Taller Laboral) en Venezuela.
-    Planificación para: {rango}. Aula: {aula}. Tema: {notas}.
+                # --- PROMPT MAESTRO (VERIFICACIÓN REAL + HUMANIDAD) ---
+                prompt_inicial = f"""
+                Actúa como Luis Atencio, experto en Educación Especial (Taller Laboral) en Venezuela.
+                Planificación para: {rango}. Aula: {aula}. Tema: {notas}.
 
-    ⚠️ PASO 1: VALIDACIÓN Y FUNDAMENTACIÓN (LÓGICA EXPERTA):
-    Antes de generar la planificación, realiza una revisión interna:
-    1. Verifica que las estrategias propuestas se alineen con los principios del **Currículo Nacional Bolivariano** (Aprender a Crear, Convivir y Valorar).
-    2. Asegúrate de que las actividades sean aptas para Educación Especial y Taller Laboral (Enfoque en independencia y trabajo productivo).
-    3. Una vez verificado esto, inicia tu respuesta confirmando que la planificación cumple con estos lineamientos y es legalmente pertinente. NO uses frases prefabricadas; redáctalo con autoridad profesional.
+                ⚠️ PASO 1: VALIDACIÓN Y FUNDAMENTACIÓN (LÓGICA EXPERTA):
+                Antes de generar la planificación, realiza una revisión interna:
+                1. Verifica que las estrategias propuestas se alineen con los principios del **Currículo Nacional Bolivariano** (Aprender a Crear, Convivir y Valorar).
+                2. Asegúrate de que las actividades sean aptas para Educación Especial y Taller Laboral (Enfoque en independencia y trabajo productivo).
+                3. Una vez verificado esto, inicia tu respuesta confirmando que la planificación cumple con estos lineamientos y es legalmente pertinente. NO uses frases prefabricadas; redáctalo con autoridad profesional.
 
-    ⚠️ PASO 2: HUMANIZACIÓN (EL LEGADO DOCENTE):
-    - PROHIBIDO el "copia y pega" robótico. No empieces todos los días igual.
-    - ELIMINA la voz pasiva aburrida ("Se presenta...", "Se realiza...").
-    - USA VOZ ACTIVA Y CERCANA: "Arrancamos el día...", "Invitamos a...", "Desafiamos al grupo...", "Compartimos experiencias...".
-    - USA LÉXICO VENEZOLANO: Saberes previos, P.A., Ambiente de aprendizaje, Hacer Social.
+                ⚠️ PASO 2: HUMANIZACIÓN (EL LEGADO DOCENTE):
+                - PROHIBIDO el "copia y pega" robótico. No empieces todos los días igual.
+                - ELIMINA la voz pasiva aburrida ("Se presenta...", "Se realiza...").
+                - USA VOZ ACTIVA Y CERCANA: "Arrancamos el día...", "Invitamos a...", "Desafiamos al grupo...", "Compartimos experiencias...".
+                - USA LÉXICO VENEZOLANO: Saberes previos, P.A., Ambiente de aprendizaje, Hacer Social.
 
-    ⚠️ PASO 3: CONTROL DE FORMATO Y EJEMPLO (CRÍTICO):
-    - REGLA DEL LUNES: Después de "### Lunes", dale ENTER. No escribas en la misma línea.
-    - REGLA DE LONGITUD Y ESTILO: Para los puntos 3, 4 y 5, usa el siguiente ejemplo como TU ESTÁNDAR DE CALIDAD:
+                ⚠️ PASO 3: CONTROL DE FORMATO Y EJEMPLO (CRÍTICO):
+                - REGLA DEL LUNES: Después de "### Lunes", dale ENTER. No escribas en la misma línea.
+                - REGLA DE LONGITUD Y ESTILO: Para los puntos 3, 4 y 5, usa el siguiente ejemplo como TU ESTÁNDAR DE CALIDAD:
 
-    👇 EJEMPLO DE CÓMO REDACTAR (Imita este estilo humano y directo):
-    3. **EXPLORACIÓN:** Iniciamos con un conversatorio sobre la importancia del mantenimiento y servicios generales, invitando a los estudiantes a compartir experiencias. Mediante el diálogo interactivo, despertamos la curiosidad y la participación activa. Proyectamos un video sobre diversos escenarios de mantenimiento para que visualicen y comprendan mejor el concepto.
+                👇 EJEMPLO DE CÓMO REDACTAR (Imita este estilo humano y directo):
+                3. **EXPLORACIÓN:** Iniciamos con un conversatorio sobre la importancia del mantenimiento y servicios generales, invitando a los estudiantes a compartir experiencias. Mediante el diálogo interactivo, despertamos la curiosidad y la participación activa. Proyectamos un video sobre diversos escenarios de mantenimiento para que visualicen y comprendan mejor el concepto.
 
-    ESTRUCTURA DIARIA (Lunes a Viernes):
+                ESTRUCTURA DIARIA (Lunes a Viernes):
 
-    ### [DÍA]
+                ### [DÍA]
 
-    1. **TÍTULO:** [Creativo]
-    2. **COMPETENCIA:** [Máx 10 palabras]
+                1. **TÍTULO:** [Creativo]
+                2. **COMPETENCIA:** [Máx 10 palabras]
 
-    3. **EXPLORACIÓN:** [Párrafo humano. Imita el ejemplo anterior. VARÍA EL VERBO DE INICIO.]
+                3. **EXPLORACIÓN:** [Párrafo humano. Imita el ejemplo anterior. VARÍA EL VERBO DE INICIO.]
 
-    4. **DESARROLLO:** [Párrafo práctico. Enfocado en "Aprender a Hacer". Describe la acción real.]
+                4. **DESARROLLO:** [Párrafo práctico. Enfocado en "Aprender a Hacer". Describe la acción real.]
 
-    5. **REFLEXIÓN:** [Párrafo de cierre. Enfocado en "Aprender a Convivir".]
+                5. **REFLEXIÓN:** [Párrafo de cierre. Enfocado en "Aprender a Convivir".]
 
-    6. **MANTENIMIENTO:** [Acción concreta]
-    7. **ESTRATEGIAS:** [Técnicas]
-    8. **RECURSOS:** [Materiales]
+                6. **MANTENIMIENTO:** [Acción concreta]
+                7. **ESTRATEGIAS:** [Técnicas]
+                8. **RECURSOS:** [Materiales]
 
-    ---
-    (Repite para los 5 días. Si usas el mismo verbo de inicio dos días seguidos, fallarás la misión).
+                ---
+                (Repite para los 5 días. Si usas el mismo verbo de inicio dos días seguidos, fallarás la misión).
 
-    AL FINAL: 📚 FUNDAMENTACIÓN LEGAL: Cita el artículo específico de la LOE o la CRBV que respalda esta planificación particular que has creado.
-    """
+                AL FINAL: 📚 FUNDAMENTACIÓN LEGAL: Cita el artículo específico de la LOE o la CRBV que respalda esta planificación particular que has creado.
+                """
                 
-    mensajes = [
-    {"role": "system", "content": INSTRUCCIONES_TECNICAS},
-    {"role": "user", "content": prompt_inicial}
-]
+                mensajes = [
+                    {"role": "system", "content": INSTRUCCIONES_TECNICAS},
+                    {"role": "user", "content": prompt_inicial}
+                ]
 
-# Generamos y mostramos
-respuesta = generar_respuesta(mensajes, temperatura=0.4)
-st.session_state.plan_actual = respuesta
-st.rerun()
+                # Generamos y mostramos
+                respuesta = generar_respuesta(mensajes, temperatura=0.4)
+                st.session_state.plan_actual = respuesta
+                st.rerun()
+
     # --- MOSTRAR RESULTADO Y OPCIÓN DE GUARDAR ---
     if st.session_state.plan_actual:
         st.markdown("---")
@@ -376,4 +375,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión 1.3 (Fix Recursos)")
+st.caption("Desarrollado por Luis Atencio | Versión 1.4 (Final Fix)")
