@@ -225,51 +225,52 @@ if opcion == "📝 Planificación Profesional":
                 st.session_state.temp_rango = rango
                 st.session_state.temp_tema = notas
                 
-     # --- PROMPT "ANTI-PEGOSTES" (FORMATO PERFECTO) ---
+     # --- PROMPT MAESTRO (FUSIÓN: ESTRUCTURA + HUMANIDAD) ---
                 prompt_inicial = f"""
-                Actúa como Luis Atencio. Planificación técnica para: {rango}.
-                Aula: {aula}. Tema: {notas}.
+                Actúa como Luis Atencio, experto en Educación Especial (Taller Laboral).
+                Planificación para: {rango}. Aula: {aula}. Tema: {notas}.
 
-                ⚠️ REGLA DE ORO DE FORMATO (¡LEER ATENTAMENTE!):
-                - Cuando escribas "### Lunes", ESTÁ PROHIBIDO escribir el contenido en la misma línea.
-                - DEBES DARLE "ENTER" INMEDIATAMENTE después de "### Lunes".
-                - El "1. **TÍTULO**" siempre debe empezar en una línea nueva abajo.
-                
-                MAL (No hagas esto):
-                ### Lunes 1. **TÍTULO:** ...
+                ⚠️ PASO 1: INTRODUCCIÓN LEGAL (OBLIGATORIO):
+                Empieza la respuesta SIEMPRE con este texto exacto:
+                "📝 **Planificación Sugerida bajo lineamientos del MPPE:**
+                Esta propuesta didáctica se basa en los pilares del Currículo Nacional Bolivariano, adaptada a la realidad del Taller Laboral para fomentar la independencia y el trabajo productivo."
+                (Deja dos líneas vacías después de esto).
 
-                BIEN (Haz esto):
-                ### Lunes
-                (Espacio vacío)
-                1. **TÍTULO:** ...
+                ⚠️ PASO 2: HUMANIZACIÓN (¡NO SEAS ROBOT!):
+                - PROHIBIDO empezar todos los días con "Iniciamos...".
+                - VARÍA LOS VERBOS: "Damos apertura...", "Arrancamos el día...", "Mediante un conversatorio...", "Se presenta...".
+                - USA LENGUAJE DOCENTE VENEZOLANO: (Saberes, Hacer Social, P.A.).
 
-                ⚠️ INSTRUCCIONES DE LONGITUD (Puntos 3, 4 y 5):
-                - Mantén el tamaño sustancioso que ya lograste (aprox 40-50 palabras).
-                - Recuerda las etiquetas en negrita (Ej: **3. EXPLORACIÓN:**).
+                ⚠️ PASO 3: CONTROL DE FORMATO Y LONGITUD (CRÍTICO):
+                - REGLA DEL LUNES: Después de escribir "### Lunes", dale ENTER. Jamás escribas en esa misma línea.
+                - REGLA DE LONGITUD: Para los puntos 3, 4 y 5, IMITA EL TAMAÑO DEL SIGUIENTE EJEMPLO.
 
-                👇 EJEMPLO EXACTO DE FORMATO Y LONGITUD (IMITA ESTO):
-                
-                2. **COMPETENCIA:** Identificar herramientas básicas. (Corta)
-                3. **EXPLORACIÓN:** Iniciamos la jornada reuniendo a los estudiantes en el círculo de trabajo para presentar las herramientas físicas, permitiendo que cada uno las manipule, diga su nombre y describa su textura, activando así sus conocimientos previos sensoriales antes de pasar a la teoría.
-                (Nota: Párrafo sustancioso y con etiqueta en negrita).
+                👇 EJEMPLO MAESTRO (IMITA ESTE TAMAÑO Y FORMATO):
+                2. **COMPETENCIA:** Identificar herramientas de trabajo. (Así de corta)
+                3. **EXPLORACIÓN:** Damos apertura al encuentro pedagógico mostrando las herramientas reales sobre el mesón, invitando a los estudiantes a manipularlas y sentir su peso, para activar la curiosidad y rescatar sus saberes previos sobre el tema.
+                (Fíjate: Es un párrafo sustancioso de 3 oraciones, no repite palabras y tiene la etiqueta en negrita).
 
                 ESTRUCTURA DIARIA (Lunes a Viernes):
 
                 ### [DÍA]
 
-                1. **TÍTULO:** [Corto]
-                2. **COMPETENCIA:** [MUY CORTA]
-                3. **EXPLORACIÓN:** [Párrafo sustancioso. IMITA EL EJEMPLO.]
-                4. **DESARROLLO:** [Párrafo sustancioso. IMITA EL EJEMPLO.]
-                5. **REFLEXIÓN:** [Párrafo sustancioso. IMITA EL EJEMPLO.]
-                6. **MANTENIMIENTO:** [Acción]
+                1. **TÍTULO:** [Creativo]
+                2. **COMPETENCIA:** [Máx 10 palabras]
+                
+                3. **EXPLORACIÓN:** [Párrafo sustancioso (Imita el Ejemplo). VARÍA EL VERBO.]
+                
+                4. **DESARROLLO:** [Párrafo sustancioso (Imita el Ejemplo). Enfocado en "Aprender a Hacer".]
+                
+                5. **REFLEXIÓN:** [Párrafo sustancioso (Imita el Ejemplo). Enfocado en "Aprender a Convivir".]
+                
+                6. **MANTENIMIENTO:** [Acción concreta]
                 7. **ESTRATEGIAS:** [Técnicas]
-                8. **RECURSOS:** [Lista]
+                8. **RECURSOS:** [Materiales]
 
                 ---
-                (Repite estructura)
+                (Repite estructura variando verbos)
 
-                AL FINAL: 📚 FUNDAMENTACIÓN LEGAL (LOE/CNB).
+                AL FINAL: 📚 FUNDAMENTACIÓN LEGAL: Cita la LOE o CRBV.
                 """
                 
                 mensajes = [
