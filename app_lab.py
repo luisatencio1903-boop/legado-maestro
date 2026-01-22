@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: LEGADO PRUEBA 1.7 (Final: Archivo + Chat + BORRADO SEGURO)
+# VERSIÓN: LEGADO PRUEBA 1.8 (Final: Fix CSS Modo Oscuro + UI Borrado)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -117,13 +117,19 @@ hide_streamlit_style = """
                 line-height: 1.4;
             }
             
-            /* ESTILO PARA EL CONSULTOR DEL ARCHIVO */
+            /* ESTILO PARA EL CONSULTOR DEL ARCHIVO - FIX MODO OSCURO */
             .consultor-box {
-                background-color: #e8f4f8;
+                background-color: #e8f4f8 !important; /* Fondo claro forzado */
+                color: #000000 !important; /* LETRA NEGRA FORZADA */
                 padding: 15px;
                 border-radius: 8px;
                 border: 1px solid #b3d7ff;
                 margin-top: 10px;
+            }
+            
+            /* Asegurar que el texto dentro del consultor sea legible */
+            .consultor-box p, .consultor-box li, .consultor-box strong {
+                color: #000000 !important;
             }
             </style>
             """
@@ -374,7 +380,7 @@ elif opcion == "🌟 Mensaje Motivacional":
             """, unsafe_allow_html=True)
 
 # =========================================================
-# OPCIÓN 5: 📂 MI ARCHIVO PEDAGÓGICO (CON BORRADO SEGURO)
+# OPCIÓN 5: 📂 MI ARCHIVO PEDAGÓGICO (FIX UI EXPANDER + MODO OSCURO)
 # =========================================================
 elif opcion == "📂 Mi Archivo Pedagógico":
     st.subheader(f"📂 Expediente de: {st.session_state.u['NOMBRE']}")
@@ -394,7 +400,11 @@ elif opcion == "📂 Mi Archivo Pedagógico":
                 # Título del desplegable (Fecha y Tema)
                 etiqueta = f"📅 {row['FECHA']} | 📌 {str(row['TEMA'])[:40]}..."
                 
-                with st.expander(etiqueta):
+                # TRUCO DE LÓGICA: Si estamos en modo "confirmar borrado" para este item,
+                # forzamos que el expander se mantenga abierto (expanded=True).
+                esta_borrando = st.session_state.get(f"confirm_del_{index}", False)
+                
+                with st.expander(etiqueta, expanded=esta_borrando):
                     
                     # 1. VISUALIZACIÓN
                     contenido_plan = st.text_area("Contenido:", value=row['CONTENIDO'], height=300, key=f"txt_{index}")
@@ -424,26 +434,29 @@ elif opcion == "📂 Mi Archivo Pedagógico":
                         st.write("")
                         st.write("")
                         # Botón inicial de borrar
-                        if st.button("🗑️ Borrar", key=f"del_init_{index}"):
+                        if st.button("🗑️", key=f"del_init_{index}", help="Borrar planificación"):
                             st.session_state[f"confirm_del_{index}"] = True
+                            st.rerun() # Recargamos para que el expander se quede abierto
                     
-                    # CONFIRMACIÓN DE BORRADO (Aparece abajo si se activa)
+                    # CONFIRMACIÓN DE BORRADO (Solo visible si se activa el botón)
                     if st.session_state.get(f"confirm_del_{index}", False):
-                        st.warning("⚠️ ¿Estás seguro de eliminar esta planificación?")
+                        st.error("⚠️ ¿Estás seguro de eliminar esta planificación?")
                         col_si, col_no = st.columns(2)
                         
-                        if col_si.button("✅ SÍ, BORRAR", key=f"yes_{index}"):
+                        if col_si.button("✅ SÍ", key=f"yes_{index}"):
                             with st.spinner("Eliminando..."):
                                 # LEEMOS DE NUEVO LA BASE ACTUALIZADA (Evitar conflictos)
                                 df_root = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
                                 # Borramos por el índice original
                                 df_root = df_root.drop(index)
                                 conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_root)
+                                # Limpiamos el estado
+                                del st.session_state[f"confirm_del_{index}"]
                                 st.success("Eliminado.")
                                 time.sleep(1)
                                 st.rerun()
                         
-                        if col_no.button("❌ CANCELAR", key=f"no_{index}"):
+                        if col_no.button("❌ NO", key=f"no_{index}"):
                             st.session_state[f"confirm_del_{index}"] = False
                             st.rerun()
 
@@ -476,4 +489,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: LEGADO PRUEBA 1.7")
+st.caption("Desarrollado por Luis Atencio | Versión: LEGADO PRUEBA 1.8")
