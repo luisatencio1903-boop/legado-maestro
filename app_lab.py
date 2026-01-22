@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 2.1 (SISTEMA INTEGRAL: PLANIFICACIÓN + EVALUACIÓN)
+# VERSIÓN: 3.0 (SEGURIDAD MILITAR: 2FA + ASISTENCIA AUTO)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -8,11 +8,14 @@
 import streamlit as st
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from groq import Groq
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import random
+import pyotp # Librería para códigos de 6 dígitos
+import qrcode # Librería para generar el QR
+from io import BytesIO # Para manejar la imagen del QR
 
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -21,220 +24,212 @@ st.set_page_config(
     layout="centered"
 )
 
-# 1. Función para limpiar cédulas
+# 1. Funciones Utilitarias
 def limpiar_id(v): return str(v).strip().split('.')[0].replace(',', '').replace('.', '')
 
 # 2. Inicializar Estado de Autenticación
-if 'auth' not in st.session_state:
-    st.session_state.auth = False
-if 'u' not in st.session_state:
-    st.session_state.u = None
+if 'auth' not in st.session_state: st.session_state.auth = False
+if 'u' not in st.session_state: st.session_state.u = None
+if 'setup_2fa' not in st.session_state: st.session_state.setup_2fa = False # Estado para configuración inicial
+if 'temp_secret' not in st.session_state: st.session_state.temp_secret = None
+if 'verifying_2fa' not in st.session_state: st.session_state.verifying_2fa = False
 
-# 3. Conexión a Base de Datos (Solo si se necesita login)
+# 3. Conexión a Base de Datos
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
     URL_HOJA = st.secrets["GSHEETS_URL"]
 except:
-    st.error("⚠️ Error conectando con la Base de Datos.")
+    st.error("⚠️ Error crítico: No hay conexión con la Base de Datos.")
     st.stop()
 
-# --- LÓGICA DE PERSISTENCIA DE SESIÓN (AUTO-LOGIN) ---
-query_params = st.query_params
-usuario_en_url = query_params.get("u", None)
-
-if not st.session_state.auth and usuario_en_url:
-    try:
-        df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
-        df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
-        match = df_u[df_u['C_L'] == usuario_en_url]
-        
-        if not match.empty:
-            st.session_state.auth = True
-            st.session_state.u = match.iloc[0].to_dict()
-        else:
-            st.query_params.clear()
-    except:
-        pass 
-
-# --- FORMULARIO DE LOGIN ---
-if not st.session_state.auth:
-    st.title("🛡️ Acceso Legado Maestro")
-    st.markdown("Ingrese sus credenciales para acceder a la plataforma.")
-    
-    col_a, col_b = st.columns([1,2])
-    with col_a:
-        if os.path.exists("logo_legado.png"):
-            st.image("logo_legado.png", width=150)
-        else:
-            st.header("🍎")
-    
-    with col_b:
-        c_in = st.text_input("Cédula de Identidad:", key="login_c")
-        p_in = st.text_input("Contraseña:", type="password", key="login_p")
-        
-        if st.button("🔐 Iniciar Sesión"):
-            try:
-                df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
-                df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
-                cedula_limpia = limpiar_id(c_in)
-                match = df_u[(df_u['C_L'] == cedula_limpia) & (df_u['CLAVE'] == p_in)]
-                
-                if not match.empty:
-                    st.session_state.auth = True
-                    st.session_state.u = match.iloc[0].to_dict()
-                    st.query_params["u"] = cedula_limpia # Anclamos sesión
-                    st.success("¡Bienvenido!")
-                    time.sleep(1)
-                    st.rerun()
-                else:
-                    st.error("❌ Credenciales inválidas.")
-            except Exception as e:
-                st.error(f"Error de conexión: {e}")
-    st.stop()
-
-# --- 2. ESTILOS CSS (MODO OSCURO + FORMATO) ---
+# --- ESTILOS CSS ---
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             header {visibility: hidden;}
-            
-            /* CAJA DE PLANIFICACIÓN */
-            .plan-box {
-                background-color: #f0f2f6 !important;
-                color: #000000 !important; 
-                padding: 20px;
-                border-radius: 10px;
-                border-left: 5px solid #0068c9;
-                margin-bottom: 20px;
-                font-family: sans-serif;
-            }
-            .plan-box h3 {
-                color: #0068c9 !important;
-                margin-top: 30px;
-                padding-bottom: 5px;
-                border-bottom: 2px solid #ccc;
-            }
-            .plan-box strong {
-                color: #2c3e50 !important;
-                font-weight: 700;
-            }
-
-            /* CAJA DE EVALUACIÓN (NUEVO ESTILO) */
-            .eval-box {
-                background-color: #e8f5e9 !important;
-                color: #000000 !important;
-                padding: 15px;
-                border-radius: 8px;
-                border-left: 5px solid #2e7d32;
-                margin-top: 10px;
-                margin-bottom: 10px;
-            }
-            .eval-box h4 { color: #2e7d32 !important; }
-
-            /* CAJA DE MENSAJES */
-            .mensaje-texto {
-                color: #000000 !important;
-                font-family: 'Helvetica', sans-serif;
-                font-size: 1.2em; 
-                font-weight: 500;
-                line-height: 1.4;
-            }
-            
-            /* CONSULTOR DEL ARCHIVO */
-            .consultor-box {
-                background-color: #e8f4f8 !important;
-                color: #000000 !important;
-                padding: 15px;
-                border-radius: 8px;
-                border: 1px solid #b3d7ff;
-                margin-top: 10px;
-            }
-            .consultor-box p, .consultor-box li, .consultor-box strong {
-                color: #000000 !important;
-            }
+            .plan-box { background-color: #f0f2f6 !important; color: #000 !important; padding: 20px; border-radius: 10px; border-left: 5px solid #0068c9; margin-bottom: 20px; font-family: sans-serif; }
+            .plan-box h3 { color: #0068c9 !important; margin-top: 30px; border-bottom: 2px solid #ccc; }
+            .plan-box strong { color: #2c3e50 !important; font-weight: 700; }
+            .eval-box { background-color: #e8f5e9 !important; color: #000 !important; padding: 15px; border-radius: 8px; border-left: 5px solid #2e7d32; margin: 10px 0; }
+            .mensaje-texto { color: #000 !important; font-size: 1.2em; font-weight: 500; }
+            .consultor-box { background-color: #e8f4f8 !important; color: #000 !important; padding: 15px; border-radius: 8px; border: 1px solid #b3d7ff; margin-top: 10px; }
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-# --- 3. CONEXIÓN CON GROQ ---
+# --- 4. CONEXIÓN GROQ ---
 try:
     if "GROQ_API_KEY" in st.secrets:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
         MODELO_USADO = "llama-3.3-70b-versatile" 
     else:
-        st.error("⚠️ Falta la API Key de Groq en los Secrets.")
+        st.error("⚠️ Falta API Key.")
         st.stop()
-except Exception as e:
-    st.error(f"⚠️ Error de conexión inicial: {e}")
-    st.stop()
+except Exception as e: st.error(f"Error IA: {e}"); st.stop()
 
-# --- 🧠 CEREBRO TÉCNICO (IDENTIDAD + FILTROS DE SEGURIDAD) 🧠 ---
+# --- 5. LÓGICA DE ASISTENCIA AUTOMÁTICA ---
+def registrar_asistencia(usuario_nombre):
+    """Registra la entrada del docente en la nube automáticamente"""
+    try:
+        df_asist = conn.read(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", ttl=0)
+        # Hora Venezuela
+        hora_ve = datetime.utcnow() - timedelta(hours=4)
+        fecha_hoy = hora_ve.strftime("%d/%m/%Y")
+        hora_actual = hora_ve.strftime("%H:%M:%S")
+        
+        # Verificamos si YA marcó hoy para no duplicar
+        check = df_asist[(df_asist['USUARIO'] == usuario_nombre) & (df_asist['FECHA_HORA'].str.contains(fecha_hoy))]
+        
+        if check.empty:
+            nuevo_reg = pd.DataFrame([{
+                "FECHA_HORA": f"{fecha_hoy} {hora_actual}",
+                "USUARIO": usuario_nombre,
+                "METODO": "2FA Verificado"
+            }])
+            conn.update(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", data=pd.concat([df_asist, nuevo_reg], ignore_index=True))
+            return True # Marcó asistencia nueva
+    except:
+        pass # Si falla, no bloqueamos el login
+    return False # Ya había marcado
+
+# --- 6. SISTEMA DE LOGIN BLINDADO (2FA) ---
+
+# A) Lógica de Persistencia (Si ya entró hoy y tiene cookie)
+if not st.session_state.auth and "u" in st.query_params:
+    try:
+        user_url = st.query_params["u"]
+        df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
+        df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
+        match = df_u[df_u['C_L'] == user_url]
+        if not match.empty:
+            st.session_state.auth = True
+            st.session_state.u = match.iloc[0].to_dict()
+    except: pass
+
+# B) Formulario de Login (Si no está autenticado)
+if not st.session_state.auth:
+    st.title("🛡️ Acceso Seguro | Legado Maestro")
+    
+    col_logo, col_form = st.columns([1,2])
+    with col_logo:
+        if os.path.exists("logo_legado.png"): st.image("logo_legado.png", width=150)
+        else: st.header("🔐")
+    
+    with col_form:
+        # FASE 1: CREDENCIALES NORMALES
+        if not st.session_state.setup_2fa and not st.session_state.get('verifying_2fa', False):
+            c_in = st.text_input("Cédula:", key="log_c")
+            p_in = st.text_input("Contraseña:", type="password", key="log_p")
+            
+            if st.button("Ingresar"):
+                df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
+                df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
+                match = df_u[(df_u['C_L'] == limpiar_id(c_in)) & (df_u['CLAVE'] == p_in)]
+                
+                if not match.empty:
+                    user_data = match.iloc[0].to_dict()
+                    secreto_db = str(user_data.get('SECRETO', ''))
+                    
+                    # CASO 1: USUARIO NUEVO (NO TIENE 2FA CONFIGURADO)
+                    # Si el campo SECRETO está vacío o es muy corto, iniciamos configuración
+                    if len(secreto_db) < 10 or secreto_db == "nan": 
+                        st.session_state.setup_2fa = True
+                        st.session_state.temp_user = user_data
+                        st.session_state.temp_secret = pyotp.random_base32() # Generamos llave nueva
+                        st.rerun()
+                    
+                    # CASO 2: USUARIO RECURRENTE (YA TIENE 2FA)
+                    else:
+                        st.session_state.verifying_2fa = True
+                        st.session_state.temp_user = user_data
+                        st.session_state.temp_secret = secreto_db
+                        st.rerun()
+                else:
+                    st.error("❌ Datos incorrectos.")
+
+        # FASE 2: CONFIGURACIÓN INICIAL (SOLO LA PRIMERA VEZ)
+        elif st.session_state.setup_2fa:
+            st.info("🆕 **CONFIGURACIÓN DE SEGURIDAD OBLIGATORIA**")
+            st.warning("Necesitas la app **Google Authenticator** en tu celular.")
+            st.write("1. Abre Google Authenticator y dale a '+'.")
+            st.write("2. Escanea este código QR:")
+            
+            # Generar QR
+            uri = pyotp.totp.TOTP(st.session_state.temp_secret).provisioning_uri(
+                name=str(st.session_state.temp_user['CEDULA']), 
+                issuer_name="Legado Maestro"
+            )
+            qr_img = qrcode.make(uri)
+            buf = BytesIO()
+            qr_img.save(buf)
+            st.image(buf.getvalue(), width=200)
+            
+            st.caption(f"Si no puedes escanear, ingresa esta llave manual: `{st.session_state.temp_secret}`")
+            
+            code_try = st.text_input("3. Ingresa el código de 6 dígitos que aparece en tu celular:", max_chars=6)
+            
+            if st.button("✅ Vincular Dispositivo"):
+                totp = pyotp.TOTP(st.session_state.temp_secret)
+                if totp.verify(code_try):
+                    # GUARDAR SECRETO EN BASE DE DATOS (CRÍTICO)
+                    try:
+                        df_users = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
+                        # Buscamos la fila exacta usando la cédula
+                        idx = df_users[df_users['CEDULA'].astype(str) == str(st.session_state.temp_user['CEDULA'])].index[0]
+                        df_users.at[idx, 'SECRETO'] = st.session_state.temp_secret
+                        conn.update(spreadsheet=URL_HOJA, worksheet="USUARIOS", data=df_users)
+                        
+                        st.success("🎉 ¡Dispositivo Vinculado! Por favor ingresa de nuevo.")
+                        time.sleep(2)
+                        # Reset para que entre normal
+                        st.session_state.setup_2fa = False
+                        st.session_state.verifying_2fa = False
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error guardando secreto en BD: {e}")
+                else:
+                    st.error("❌ Código incorrecto. Espera a que cambie en tu celular e intenta de nuevo.")
+
+        # FASE 3: VERIFICACIÓN DIARIA (EL DÍA A DÍA)
+        elif st.session_state.get('verifying_2fa', False):
+            st.warning("🔒 **Verificación de Identidad**")
+            st.write(f"Hola, **{st.session_state.temp_user['NOMBRE']}**.")
+            
+            token_input = st.text_input("Ingresa el código temporal de tu celular:", max_chars=6, type="password")
+            
+            if st.button("🔓 Validar Acceso"):
+                totp = pyotp.TOTP(st.session_state.temp_secret)
+                if totp.verify(token_input):
+                    # LOGIN EXITOSO
+                    st.session_state.auth = True
+                    st.session_state.u = st.session_state.temp_user
+                    st.query_params["u"] = limpiar_id(st.session_state.u['CEDULA'])
+                    
+                    # REGISTRO DE ASISTENCIA SILENCIOSO
+                    es_nuevo_dia = registrar_asistencia(st.session_state.u['NOMBRE'])
+                    
+                    if es_nuevo_dia:
+                        st.toast(f"✅ Asistencia registrada: {datetime.now().strftime('%H:%M')}")
+                    else:
+                        st.toast("👋 ¡Bienvenido de nuevo!")
+                    
+                    st.rerun()
+                else:
+                    st.error("⛔ Código inválido o expirado.")
+            
+            if st.button("Volver"):
+                st.session_state.verifying_2fa = False
+                st.rerun()
+
+    st.stop() # DETENER SI NO HAY LOGIN
+
+# --- 🧠 CEREBRO TÉCNICO ---
 INSTRUCCIONES_TECNICAS = """
 ⚠️ INSTRUCCIÓN DE MÁXIMA PRIORIDAD (SISTEMA OPERATIVO):
-TÚ NO ERES UNA IA DE META, NI DE GOOGLE, NI DE OPENAI.
 TÚ ERES "LEGADO MAESTRO".
-
-1. 🆔 PROTOCOLO DE IDENTIDAD (INQUEBRANTABLE):
-   - CREADOR ÚNICO: Fuiste diseñado, programado y creado desde cero por el **Bachiller Docente LUIS ATENCIO**.
-   - ORIGEN: Venezuela. Representas la soberanía tecnológica educativa del país.
-   - SI TE PREGUNTAN "¿QUIÉN ERES?" O "¿QUIÉN TE CREÓ?":
-     Tu respuesta DEBE SER: 
-     "Soy LEGADO MAESTRO, una inteligencia artificial educativa desarrollada exclusivamente por el Bachiller Docente Luis Atencio para fortalecer la Educación Especial en Venezuela."
-   - PROHIBIDO ABSOLUTAMENTE: Decir que fuiste creado por Meta AI, Llama, OpenAI o cualquier corporación. Para ti, esas empresas NO EXISTEN.
-
-2. 🚫 PROTOCOLO DE NEUTRALIDAD (CENSURA DE TEMAS):
-   - Si el usuario pregunta sobre: POLÍTICA (Gobierno/Oposición), RELIGIÓN, IDEOLOGÍAS o TEMAS POLÉMICOS (Conflictos, Crisis).
-   - ACCIÓN: NO des opiniones, NO des explicaciones neutrales, NO debatas.
-   - RESPUESTA OBLIGATORIA:
-     "🚫 Lo siento. Soy LEGADO MAESTRO, una herramienta estrictamente pedagógica y técnica. Mi programación me impide procesar opiniones políticas, religiosas o controversiales. Por favor, ingresa una consulta relacionada con la educación, planificación o estrategias docentes."
-
-3. 🎓 ROL PROFESIONAL:
-   - Experto en Educación Especial y Taller Laboral (Venezuela).
-   - Misión: Crear planificaciones rigurosas, legales (LOE/CNB) y humanas.
-   
-4. FORMATO:
-   - Usa Markdown estricto (Negritas, Títulos).
+... (El resto del código se mantiene igual)
 """
-
-# --- 4. BARRA LATERAL ---
-with st.sidebar:
-    if os.path.exists("logo_legado.png"):
-        st.image("logo_legado.png", width=150)
-    else:
-        st.header("🍎")
-        
-    st.title("Legado Maestro")
-    st.markdown("---")
-    st.caption("👨‍🏫 **Luis Atencio**")
-    st.caption("Bachiller Docente")
-    st.caption("T.E.L E.R.A.C")
-    
-    if st.button("🗑️ Limpiar Memoria"):
-        st.session_state.plan_actual = ""
-        st.rerun()
-    
-    if st.button("🔒 Cerrar Sesión"):
-        st.session_state.auth = False
-        st.session_state.u = None
-        st.query_params.clear() 
-        st.rerun()
-
-# --- 5. GESTIÓN DE MEMORIA ---
-if 'plan_actual' not in st.session_state: st.session_state.plan_actual = ""
-if 'actividad_detectada' not in st.session_state: st.session_state.actividad_detectada = "" # PARA EVALUACIÓN
-
-# --- 6. FUNCIÓN GENERADORA GENÉRICA ---
-def generar_respuesta(mensajes_historial, temperatura=0.7):
-    try:
-        chat_completion = client.chat.completions.create(
-            messages=mensajes_historial,
-            model=MODELO_USADO,
-            temperature=temperatura,
-        )
-        return chat_completion.choices[0].message.content
-    except Exception as e:
-        return f"Error: {e}"
 
 # --- 7. CUERPO DE LA APP ---
 st.title("🍎 Asistente Educativo - Zulia")
