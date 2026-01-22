@@ -370,16 +370,13 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
         if st.button("🔄 Buscar Actividad"):
             try:
                 with st.spinner("Buscando en tus planes guardados..."):
-                    # Buscamos en los planes del usuario
                     df = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
                     mis_planes = df[df['USUARIO'] == st.session_state.u['NOMBRE']]
                     
                     if mis_planes.empty:
                         st.warning("No tienes planes guardados para buscar.")
                     else:
-                        # Unimos todos los planes para que la IA busque
                         contexto_planes = "\n\n".join(mis_planes['CONTENIDO'].astype(str).tolist())
-                        
                         dia_semana = fecha_eval.strftime("%A") 
                         prompt_busqueda = f"""
                         ACTÚA COMO UN BUSCADOR DE DATOS.
@@ -423,8 +420,6 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
                 **Nivel de Logro:** [Nivel]
                 """
                 res_ia = generar_respuesta([{"role": "system", "content": INSTRUCCIONES_TECNICAS}, {"role": "user", "content": prompt_eval}], 0.5)
-                
-                # Guardamos en estado para mostrar y luego guardar
                 st.session_state.eval_resultado = res_ia
         else:
             st.warning("Por favor completa todos los campos.")
@@ -435,66 +430,81 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
         
         if st.button("💾 GUARDAR EN REGISTRO"):
             try:
-                # Intentamos leer la hoja EVALUACIONES
                 try:
                     df_evals = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
                 except:
                     st.error("⚠️ No encontré la hoja 'EVALUACIONES'. Por favor créala en Google Sheets.")
                     st.stop()
                 
-                # Preparamos los datos
                 nueva_eval = pd.DataFrame([{
                     "FECHA": fecha_eval.strftime("%d/%m/%Y"),
                     "USUARIO": st.session_state.u['NOMBRE'],
                     "ESTUDIANTE": estudiante,
                     "ACTIVIDAD": actividad_final,
                     "ANECDOTA": anecdota,
-                    "EVALUACION_IA": st.session_state.eval_resultado,
+                    "EVALUACION_IA": st.session_state.eval_resultado, # AQUI SE GUARDA LA IA
                     "RESULTADO": "Registrado"
                 }])
                 
                 conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=pd.concat([df_evals, nueva_eval], ignore_index=True))
                 st.success(f"✅ Evaluación de {estudiante} registrada correctamente.")
-                del st.session_state.eval_resultado # Limpiar memoria
+                del st.session_state.eval_resultado 
                 time.sleep(2)
                 st.rerun()
             except Exception as e:
                 st.error(f"Error guardando: {e}")
 
 # =========================================================
-# 3. REGISTRO DE EVALUACIONES (EL REPORTE)
+# 3. REGISTRO DE EVALUACIONES (FIX VISUALIZACIÓN COMPLETA)
 # =========================================================
 elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
     st.subheader("Historial Académico")
     
     try:
+        # Leemos TODAS las columnas, incluyendo la EVALUACION_IA que es la importante
         df_e = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
         mis_evals = df_e[df_e['USUARIO'] == st.session_state.u['NOMBRE']]
         
         if mis_evals.empty:
             st.warning("No hay evaluaciones registradas aún.")
         else:
-            tab1, tab2 = st.tabs(["📅 Bitácora Diaria", "📈 Informe de Progreso"])
+            tab1, tab2 = st.tabs(["📅 Bitácora Detallada", "📈 Informe de Progreso"])
             
             with tab1:
-                # Mostramos una tabla limpia
-                st.dataframe(mis_evals[['FECHA', 'ESTUDIANTE', 'ACTIVIDAD', 'ANECDOTA']])
+                st.info("Despliega cada fila para ver la evaluación técnica completa.")
                 
+                # Iteramos para mostrar FICHAS en vez de una tabla cortada
+                # Invertimos ([::-1]) para ver la más reciente primero
+                for idx, row in mis_evals.iloc[::-1].iterrows():
+                    
+                    titulo_ficha = f"📅 {row['FECHA']} | 👤 {row['ESTUDIANTE']} | 📌 {str(row['ACTIVIDAD'])[:30]}..."
+                    
+                    with st.expander(titulo_ficha):
+                        st.markdown(f"**Actividad Completa:** {row['ACTIVIDAD']}")
+                        st.markdown(f"**Observación del Docente (Anécdota):**")
+                        st.info(f"_{row['ANECDOTA']}_")
+                        
+                        st.markdown("---")
+                        st.markdown("### 🤖 Evaluación Técnica (IA):")
+                        # AQUÍ ESTÁ LA CASILLA QUE PEDÍAS:
+                        st.markdown(f"""
+                        <div class="eval-box">
+                            {row['EVALUACION_IA']}
+                        </div>
+                        """, unsafe_allow_html=True)
+
             with tab2:
                 st.markdown("Genera un informe detallado basado en todas las evaluaciones previas.")
-                # Selección de alumno único
                 lista_alumnos = mis_evals['ESTUDIANTE'].unique().tolist()
                 alumno_sel = st.selectbox("Seleccionar Alumno:", lista_alumnos)
                 
                 if st.button(f"📈 Generar Informe para {alumno_sel}"):
                     with st.spinner(f"Compilando historial de {alumno_sel}..."):
-                        # Filtramos las notas de ese alumno
                         historial = mis_evals[mis_evals['ESTUDIANTE'] == alumno_sel]
                         texto_historial = historial[['FECHA', 'ACTIVIDAD', 'EVALUACION_IA']].to_string()
                         
                         prompt_informe = f"""
                         ACTÚA COMO SUPERVISOR PEDAGÓGICO.
-                        
                         Genera un INFORME DE PROGRESO CUALITATIVO para el estudiante: {alumno_sel}.
                         Basado en este historial de evaluaciones reales:
                         {texto_historial}
@@ -509,7 +519,7 @@ elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
                         st.markdown(f'<div class="plan-box"><h3>📊 Informe de Progreso: {alumno_sel}</h3>{informe}</div>', unsafe_allow_html=True)
                     
     except Exception as e:
-        st.info("⚠️ Error conectando con la hoja EVALUACIONES. Verifica que exista en Google Sheets.")
+        st.error(f"⚠️ Error cargando datos. Verifica que la hoja EVALUACIONES tenga la columna 'EVALUACION_IA'. Detalle: {e}")
 
 # =========================================================
 # 4. MI ARCHIVO PEDAGÓGICO (UI EXPANDER + BORRADO SEGURO)
@@ -616,4 +626,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 2.1 (Sistema Integral)")
+st.caption("Desarrollado por Luis Atencio | Versión: 2.2 (Corrección Registro)")
