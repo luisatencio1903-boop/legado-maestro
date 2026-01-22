@@ -354,22 +354,29 @@ if opcion == "📝 Planificación Profesional":
                     st.error(f"Error al guardar: {e}")
 
 # =========================================================
-# 2. EVALUAR ALUMNO (NUEVO CEREBRO)
+# 2. EVALUAR ALUMNO (FECHA BLINDADA ANTI-TRAMPA)
 # =========================================================
 elif opcion == "📝 Evaluar Alumno (NUEVO)":
     st.subheader("Evaluación Diaria Inteligente")
-    st.info("Selecciona la fecha para buscar qué actividad tocaba hoy.")
     
-    # 1. FECHA Y BÚSQUEDA AUTOMÁTICA
-    col_f, col_btn = st.columns([2,1])
-    with col_f:
-        fecha_eval = st.date_input("Fecha de Evaluación:", datetime.now())
+    # --- CÁLCULO DE FECHA SEGURA (HORA VENEZUELA) ---
+    from datetime import timedelta
+    # UTC menos 4 horas = Hora Venezuela
+    fecha_segura_ve = datetime.utcnow() - timedelta(hours=4)
+    fecha_hoy_str = fecha_segura_ve.strftime("%d/%m/%Y")
+    dia_semana_hoy = fecha_segura_ve.strftime("%A")
+    
+    # ALERTA DE SEGURIDAD VISUAL
+    st.warning(f"📅 FECHA DE HOY (Bloqueada por Sistema): **{fecha_hoy_str}**")
+    st.caption("🔒 *Por seguridad académica, solo se permite evaluar actividades correspondientes al día en curso.*")
+
+    col_btn, col_info = st.columns([1,2])
+    
     with col_btn:
-        st.write("")
-        st.write("")
-        if st.button("🔄 Buscar Actividad"):
+        st.write("") # Espacio
+        if st.button("🔄 Buscar Actividad de HOY"):
             try:
-                with st.spinner("Buscando en tus planes guardados..."):
+                with st.spinner(f"Buscando qué toca hoy ({dia_semana_hoy})..."):
                     df = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
                     mis_planes = df[df['USUARIO'] == st.session_state.u['NOMBRE']]
                     
@@ -377,44 +384,57 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
                         st.warning("No tienes planes guardados para buscar.")
                     else:
                         contexto_planes = "\n\n".join(mis_planes['CONTENIDO'].astype(str).tolist())
-                        dia_semana = fecha_eval.strftime("%A") 
+                        
                         prompt_busqueda = f"""
-                        ACTÚA COMO UN BUSCADOR DE DATOS.
-                        Tengo estos planes guardados del docente:
+                        ACTÚA COMO UN AUDITOR ACADÉMICO RIGUROSO.
+                        Tengo estos planes guardados:
                         {contexto_planes[:15000]} 
                         
-                        TAREA: Identifica qué actividad específica o competencia está planificada para la fecha: {fecha_eval} (Día: {dia_semana}).
-                        Responde SOLO con el nombre de la actividad o competencia. Se breve.
-                        Si no encuentras nada para esa fecha exacta, di "Actividad general del taller".
+                        TAREA: Identifica estrictamente qué actividad toca HOY: {fecha_hoy_str} (Día: {dia_semana_hoy}).
+                        
+                        REGLAS:
+                        1. Si encuentras la actividad exacta de HOY, responde SOLO con el nombre de la actividad.
+                        2. Si NO hay actividad para hoy, responde: "NO HAY ACTIVIDAD PLANIFICADA PARA HOY".
                         """
-                        resultado = generar_respuesta([{"role": "system", "content": "Eres un buscador exacto."}, {"role": "user", "content": prompt_busqueda}], 0.1)
+                        resultado = generar_respuesta([{"role": "system", "content": "Eres un auditor de fechas."}, {"role": "user", "content": prompt_busqueda}], 0.1)
                         st.session_state.actividad_detectada = resultado.replace('"', '')
-                        st.success("¡Búsqueda completada!")
+                        
+                        if "NO HAY ACTIVIDAD" in resultado:
+                            st.error("❌ El sistema no detectó planificación para hoy. No puedes evaluar.")
+                        else:
+                            st.success("¡Actividad del día encontrada!")
             except Exception as e:
                 st.error(f"Error buscando: {e}")
+    
+    with col_info:
+        st.info("El sistema verifica automáticamente tu planificación guardada.")
 
     # 2. DATOS DEL ALUMNO
-    actividad_final = st.text_input("Actividad Detectada:", value=st.session_state.actividad_detectada)
+    actividad_final = st.text_input("Actividad Detectada:", value=st.session_state.actividad_detectada, disabled=True) # Bloqueado para que no lo cambien
     estudiante = st.text_input("Nombre del Estudiante:")
-    anecdota = st.text_area("Descripción Anecdótica (¿Qué observaste hoy?):", height=100, placeholder="Ej: Juan se mostró participativo pero le costó manipular la escoba...")
+    anecdota = st.text_area("Descripción Anecdótica (¿Qué observaste hoy?):", height=100, placeholder="Ej: Juan se mostró participativo...")
     
     # 3. GENERACIÓN IA
-    if st.button("⚡ Generar Evaluación Técnica"):
-        if estudiante and anecdota and actividad_final:
+    # Solo permitimos el botón si hay actividad detectada válida
+    boton_habilitado = "NO HAY ACTIVIDAD" not in st.session_state.actividad_detectada and st.session_state.actividad_detectada != ""
+    
+    if st.button("⚡ Generar Evaluación Técnica", disabled=not boton_habilitado):
+        if estudiante and anecdota:
             with st.spinner("Analizando desempeño pedagógico..."):
                 prompt_eval = f"""
                 ACTÚA COMO EXPERTO EN EVALUACIÓN DE EDUCACIÓN ESPECIAL (VENEZUELA).
                 
                 DATOS:
+                - Fecha Real: {fecha_hoy_str}
                 - Estudiante: {estudiante}
                 - Actividad: {actividad_final}
-                - Observación del docente: "{anecdota}"
+                - Observación: "{anecdota}"
                 
                 TAREA:
-                1. Redacta una evaluación técnica y profesional basada en la observación. Usa lenguaje pedagógico (logros, indicadores).
+                1. Redacta una evaluación técnica.
                 2. Determina el nivel de logro: (Consolidado, En Proceso, Iniciado).
                 
-                FORMATO DE SALIDA (MARKDOWN):
+                FORMATO MARKDOWN:
                 **Evaluación Técnica:** [Texto]
                 
                 **Nivel de Logro:** [Nivel]
@@ -422,32 +442,32 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
                 res_ia = generar_respuesta([{"role": "system", "content": INSTRUCCIONES_TECNICAS}, {"role": "user", "content": prompt_eval}], 0.5)
                 st.session_state.eval_resultado = res_ia
         else:
-            st.warning("Por favor completa todos los campos.")
+            st.warning("Faltan datos.")
 
     # 4. VISUALIZACIÓN Y GUARDADO
     if 'eval_resultado' in st.session_state:
-        st.markdown(f'<div class="eval-box"><h4>🤖 Resultado del Análisis:</h4>{st.session_state.eval_resultado}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="eval-box"><h4>🤖 Resultado ({fecha_hoy_str}):</h4>{st.session_state.eval_resultado}</div>', unsafe_allow_html=True)
         
-        if st.button("💾 GUARDAR EN REGISTRO"):
+        if st.button("💾 GUARDAR EN REGISTRO OFICIAL"):
             try:
                 try:
                     df_evals = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
                 except:
-                    st.error("⚠️ No encontré la hoja 'EVALUACIONES'. Por favor créala en Google Sheets.")
+                    st.error("⚠️ Falta hoja EVALUACIONES.")
                     st.stop()
                 
                 nueva_eval = pd.DataFrame([{
-                    "FECHA": fecha_eval.strftime("%d/%m/%Y"),
+                    "FECHA": fecha_hoy_str, # FECHA DEL SISTEMA (NO EDITABLE)
                     "USUARIO": st.session_state.u['NOMBRE'],
                     "ESTUDIANTE": estudiante,
                     "ACTIVIDAD": actividad_final,
                     "ANECDOTA": anecdota,
-                    "EVALUACION_IA": st.session_state.eval_resultado, # AQUI SE GUARDA LA IA
+                    "EVALUACION_IA": st.session_state.eval_resultado,
                     "RESULTADO": "Registrado"
                 }])
                 
                 conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=pd.concat([df_evals, nueva_eval], ignore_index=True))
-                st.success(f"✅ Evaluación de {estudiante} registrada correctamente.")
+                st.success(f"✅ Asistencia y Evaluación de {estudiante} registrada con fecha {fecha_hoy_str}.")
                 del st.session_state.eval_resultado 
                 time.sleep(2)
                 st.rerun()
@@ -455,7 +475,7 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
                 st.error(f"Error guardando: {e}")
 
 # =========================================================
-# 3. REGISTRO DE EVALUACIONES (EXPEDIENTE 360° + ASISTENCIA)
+# 3. REGISTRO DE EVALUACIONES (FIX: PERSISTENCIA DE INFORME IA)
 # =========================================================
 elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
     st.subheader("🎓 Expediente Estudiantil 360°")
@@ -478,9 +498,6 @@ elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
             st.markdown("---")
             
             # 3. CÁLCULO DE ASISTENCIA INTELIGENTE
-            # Lógica: Total días de clase = Cantidad de fechas ÚNICAS registradas por el docente en general
-            # Lógica: Asistencia del alumno = Cantidad de fechas ÚNICAS donde aparece este alumno
-            
             total_dias_clase = len(mis_evals['FECHA'].unique())
             datos_alumno = mis_evals[mis_evals['ESTUDIANTE'] == alumno_sel]
             dias_asistidos = len(datos_alumno['FECHA'].unique())
@@ -507,7 +524,7 @@ elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
             else:
                 col_m3.error("🚨 CRÍTICO")
             
-            # 5. ALERTA DE REPRESENTANTE (La función que pediste)
+            # 5. ALERTA DE REPRESENTANTE
             if porcentaje_asistencia < 60:
                 st.error(f"""
                 🚨 **ALERTA DE DESERCIÓN ESCOLAR DETECTADA**
@@ -518,7 +535,7 @@ elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
             
             st.markdown("---")
             
-            # 6. HISTORIAL DE EVALUACIONES (Tus fichas desplegables, pero SOLO de este alumno)
+            # 6. HISTORIAL DE EVALUACIONES (Tus fichas desplegables)
             st.markdown(f"### 📑 Historial de Evaluaciones de {alumno_sel}")
             
             # Pestañas para organizar la vista
@@ -528,23 +545,26 @@ elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
                 if datos_alumno.empty:
                     st.write("No hay registros.")
                 else:
-                    # Iteramos solo sobre los datos de este alumno, del más reciente al más antiguo
+                    # Iteramos solo sobre los datos de este alumno
                     for idx, row in datos_alumno.iloc[::-1].iterrows():
                         fecha = row['FECHA']
                         actividad = row['ACTIVIDAD']
-                        # Emoji según resultado (si existiera columna nota, por ahora genérico)
                         
                         with st.expander(f"📅 {fecha} | {actividad}"):
                             st.markdown(f"**📝 Observación Docente:**")
                             st.info(f"_{row['ANECDOTA']}_")
                             
                             st.markdown(f"**🤖 Análisis Técnico (Legado Maestro):**")
-                            st.success(row['EVALUACION_IA'])
-                            
-                            # Aquí podríamos poner un botón de borrar evaluación específica en el futuro
+                            # Casilla verde destacada
+                            st.markdown(f'<div class="eval-box">{row["EVALUACION_IA"]}</div>', unsafe_allow_html=True)
             
             with tab_ia:
                 st.info("La IA analizará todo el historial de arriba para crear un informe de lapso.")
+                
+                # CLAVE ÚNICA PARA GUARDAR EL INFORME DE ESTE ALUMNO ESPECÍFICO
+                key_informe = f"informe_guardado_{alumno_sel}"
+                
+                # Botón para generar (o regenerar)
                 if st.button(f"⚡ Generar Informe de Progreso para {alumno_sel}"):
                     with st.spinner("Leyendo todas las evaluaciones del estudiante..."):
                         # Recopilamos todo el texto de las IAs previas
@@ -568,15 +588,24 @@ elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
                         5. **Recomendación Final:**
                         """
                         
-                        informe_final = generar_respuesta([
+                        # Guardamos el resultado en la memoria de sesión
+                        st.session_state[key_informe] = generar_respuesta([
                             {"role": "system", "content": INSTRUCCIONES_TECNICAS},
                             {"role": "user", "content": prompt_informe}
                         ], temperatura=0.6)
-                        
-                        st.markdown(f'<div class="plan-box"><h3>📄 Informe de Progreso: {alumno_sel}</h3>{informe_final}</div>', unsafe_allow_html=True)
+                
+                # MOSTRAR EL INFORME SI EXISTE EN MEMORIA (Así no se borra al recargar)
+                if key_informe in st.session_state:
+                    st.markdown(f'<div class="plan-box"><h3>📄 Informe de Progreso: {alumno_sel}</h3>{st.session_state[key_informe]}</div>', unsafe_allow_html=True)
+                    
+                    # Botón opcional para limpiar
+                    if st.button("Limpiar Informe", key=f"clean_{alumno_sel}"):
+                        del st.session_state[key_informe]
+                        st.rerun()
 
     except Exception as e:
         st.error(f"⚠️ Error conectando con la base de datos. Detalle: {e}")
+
 # =========================================================
 # 4. MI ARCHIVO PEDAGÓGICO (UI EXPANDER + BORRADO SEGURO)
 # =========================================================
@@ -682,4 +711,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 2.2 (Corrección Registro)")
+st.caption("Desarrollado por Luis Atencio | Versión: 2.3 (Sistema Blindado Anti-Trampa)")
