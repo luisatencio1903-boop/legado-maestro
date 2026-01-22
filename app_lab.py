@@ -3,104 +3,133 @@ import pandas as pd
 from datetime import datetime
 from groq import Groq
 from streamlit_gsheets import GSheetsConnection
+import time
 
-# --- 1. BASE DE DATOS DE USUARIOS (SISTEMA REAL) ---
-# En una fase avanzada, esto irá en una hoja oculta de Excel.
-USUARIOS = {
-    "latencio": {"clave": "luis2026", "nombre": "Luis Atencio", "rol": "DOCENTE"},
-    "dgabriela": {"clave": "zulia2026", "nombre": "Directora Gabriela", "rol": "DIRECTOR"},
-    "super_reg": {"clave": "regional2026", "nombre": "Supervisor Regional", "rol": "SUPERVISOR"}
-}
+# --- 1. CONFIGURACIÓN E INTERFAZ ---
+st.set_page_config(page_title="Legado Maestro - BETA SISTEMA", layout="wide")
 
-# --- 2. CONFIGURACIÓN INICIAL ---
-st.set_page_config(page_title="Legado Maestro - Seguridad", layout="wide")
+st.markdown("""
+    <style>
+    .main { background-color: #f5f7f9; }
+    .stButton>button { width: 100%; border-radius: 8px; height: 3em; font-weight: bold; }
+    .status-live { color: #2ecc71; font-weight: bold; animation: blinker 1.5s linear infinite; }
+    @keyframes blinker { 50% { opacity: 0; } }
+    </style>
+    """, unsafe_allow_html=True)
 
-# Conexión a Google Sheets
+# --- 2. CONEXIÓN Y FUNCIONES DE BASE DE DATOS ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 URL_HOJA = st.secrets["GSHEETS_URL"]
 
-# --- 3. LÓGICA DE SESIÓN ---
-if 'autenticado' not in st.session_state:
-    st.session_state.autenticado = False
-    st.session_state.user_data = None
+def obtener_usuarios():
+    return conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
 
-# --- 4. INTERFAZ DE LOGIN ---
-if not st.session_state.autenticado:
-    st.title("🛡️ Acceso Legado Maestro")
-    st.markdown("---")
+def actualizar_usuarios(df_users):
+    conn.update(spreadsheet=URL_HOJA, worksheet="USUARIOS", data=df_users)
+
+def registrar_actividad(fila):
+    df_act = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+    df_final = pd.concat([df_act, pd.DataFrame([fila])], ignore_index=True)
+    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_final)
+
+# --- 3. GESTIÓN DE SESIÓN ---
+if 'logueado' not in st.session_state:
+    st.session_state.logueado = False
+    st.session_state.datos_usuario = None
+
+# --- 4. INTERFAZ DE ACCESO (LOGIN Y REGISTRO) ---
+if not st.session_state.logueado:
+    st.title("🛡️ Sistema de Seguridad Legado Maestro")
     
-    with st.container():
-        col1, col2, col3 = st.columns([1,2,1])
-        with col2:
-            st.subheader("Inicio de Sesión")
-            input_user = st.text_input("Usuario (Cédula o ID)")
-            input_pass = st.text_input("Contraseña", type="password")
-            
-            if st.button("🔓 INGRESAR AL SISTEMA"):
-                if input_user in USUARIOS and USUARIOS[input_user]["clave"] == input_pass:
-                    st.session_state.autenticado = True
-                    st.session_state.user_data = USUARIOS[input_user]
-                    st.success(f"Bienvenido, {USUARIOS[input_user]['nombre']}")
-                    time.sleep(1) # Pequeña pausa para efecto visual
-                    st.rerun()
+    tab_login, tab_registro = st.tabs(["🔐 Iniciar Sesión", "📝 Registro Nuevo"])
+    
+    with tab_login:
+        u_cedula = st.text_input("Cédula de Identidad", key="login_ced")
+        u_clave = st.text_input("Contraseña", type="password", key="login_pass")
+        if st.button("INGRESAR"):
+            df_u = obtener_usuarios()
+            # Validar credenciales
+            user_match = df_u[(df_u['CEDULA'].astype(str) == u_cedula) & (df_u['CLAVE'] == u_clave)]
+            if not user_match.empty:
+                st.session_state.logueado = True
+                st.session_state.datos_usuario = user_match.iloc[0].to_dict()
+                st.success("Acceso concedido...")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("Cédula o clave incorrecta.")
+
+    with tab_registro:
+        st.subheader("Validación de Nómina")
+        r_cedula = st.text_input("Ingrese su Cédula para validar")
+        r_clave = st.text_input("Cree una contraseña segura", type="password")
+        if st.button("REGISTRAR CUENTA"):
+            df_u = obtener_usuarios()
+            if r_cedula in df_u['CEDULA'].astype(str).values:
+                idx = df_u.index[df_u['CEDULA'].astype(str) == r_cedula][0]
+                if pd.notna(df_u.loc[idx, 'CLAVE']) and df_u.loc[idx, 'CLAVE'] != "":
+                    st.warning("Usted ya está registrado. Vaya a Iniciar Sesión.")
                 else:
-                    st.error("❌ Credenciales incorrectas. Acceso denegado.")
+                    df_u.loc[idx, 'CLAVE'] = r_clave
+                    df_u.loc[idx, 'ESTADO'] = "ACTIVO"
+                    actualizar_usuarios(df_u)
+                    st.success("✅ Registro exitoso. Ya puede iniciar sesión.")
+            else:
+                st.error("🚫 Su cédula no está autorizada en la nómina. Contacte al Director.")
 
-# --- 5. SISTEMA UNA VEZ AUTENTICADO ---
+# --- 5. PANEL DE CONTROL (SEGÚN ROL) ---
 else:
-    # Barra lateral de control
-    st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=100)
-    st.sidebar.title(st.session_state.user_data["nombre"])
-    st.sidebar.write(f"Rol: **{st.session_state.user_data['rol']}**")
+    user = st.session_state.datos_usuario
+    st.sidebar.title(f"Bienvenido/a")
+    st.sidebar.write(f"**{user['NOMBRE']}**")
+    st.sidebar.info(f"Rol: {user['ROL']}")
     
-    if st.sidebar.button("🚪 Cerrar Sesión"):
-        st.session_state.autenticado = False
-        st.session_state.user_data = None
+    if st.sidebar.button("Cerrar Sesión"):
+        st.session_state.logueado = False
         st.rerun()
 
-    # Leer datos de Google Sheets
-    df = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-
-    # --- PRIVACIDAD: FILTRADO DE DATOS ---
-    if st.session_state.user_data["rol"] == "DOCENTE":
-        # EL MAESTRO SOLO VE SUS DATOS
-        df_mostrar = df[df['USUARIO'] == st.session_state.user_data["nombre"]]
-    else:
-        # EL DIRECTOR Y SUPERVISOR VEN TODO
-        df_mostrar = df
-
-    # --- PANEL DOCENTE ---
-    if st.session_state.user_data["rol"] == "DOCENTE":
-        st.header(f"👨‍🏫 Gestión de Aula: {st.session_state.user_data['nombre']}")
+    # --- VISTA DOCENTE ---
+    if user['ROL'] == "DOCENTE":
+        st.header("👨‍🏫 Panel de Planificación en Vivo")
+        tema = st.text_input("¿Qué actividad dará hoy?")
         
-        tab1, tab2 = st.tabs(["📝 Planificación", "📊 Mis Registros"])
+        col1, col2 = st.columns([2, 1])
         
-        with tab1:
-            tema = st.text_input("Tema de la actividad:")
-            if st.button("🧠 Generar Plan Técnico"):
-                # Aquí iría tu lógica de Groq ya configurada
-                st.session_state.plan_temp = "Planificación técnica de 8 puntos generada..." 
-                st.info(st.session_state.plan_temp)
-            
-            if st.button("🚀 INICIAR Y GUARDAR"):
-                # Lógica de guardado que ya probamos con los globos
-                st.balloons()
-                st.success("Actividad guardada en la nube.")
-
-        with tab2:
-            st.subheader("Mi Historial Pedagógico")
-            st.dataframe(df_mostrar)
-
-    # --- PANEL DIRECTOR / SUPERVISOR ---
-    elif st.session_state.user_data["rol"] in ["DIRECTOR", "SUPERVISOR"]:
-        st.header(f"📋 Panel de Supervisión: {st.session_state.user_data['rol']}")
-        
-        col1, col2 = st.columns(2)
         with col1:
-            st.metric("Total Actividades Registradas", len(df_mostrar))
+            if st.button("🧠 GENERAR GUÍA TÉCNICA (IA)"):
+                with st.spinner("Consultando inteligencia pedagógica..."):
+                    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+                    res = client.chat.completions.create(
+                        messages=[{"role": "user", "content": f"Genera 8 puntos para una clase de {tema}"}],
+                        model="llama-3.3-70b-versatile"
+                    )
+                    st.session_state.plan_ready = res.choices[0].message.content
+                    st.markdown(st.session_state.plan_ready)
+
         with col2:
-            activos = len(df_mostrar[df_mostrar['ESTADO'] == 'EN CURSO'])
-            st.metric("Maestros en Aula (En Vivo)", activos)
+            if 'plan_ready' in st.session_state:
+                if st.button("🚀 INICIAR CLASE Y REPORTAR"):
+                    nueva_act = {
+                        "FECHA": datetime.now().strftime("%d/%m/%Y"),
+                        "USUARIO": user['NOMBRE'],
+                        "ROL": user['ROL'],
+                        "AULA": "MANTENIMIENTO",
+                        "TEMA": tema,
+                        "CONTENIDO": st.session_state.plan_ready,
+                        "ESTADO": "EN CURSO",
+                        "HORA_INICIO": datetime.now().strftime("%H:%M")
+                    }
+                    registrar_actividad(nueva_act)
+                    st.balloons()
+                    st.success("Enviado al Director.")
+
+    # --- VISTA DIRECTOR / SUPERVISOR ---
+    elif user['ROL'] in ["DIRECTOR", "SUPERVISOR"]:
+        st.header(f"📊 Monitor de Gestión: {user['ROL']}")
+        df_ver = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
         
-        st.subheader("Reporte General de Institución")
-        st.dataframe(df_mostrar)
+        activos = len(df_ver[df_ver['ESTADO'] == 'EN CURSO'])
+        st.metric("Docentes Activos Ahora", activos)
+        
+        st.subheader("Reporte de Actividades en el Estado")
+        st.dataframe(df_ver)
