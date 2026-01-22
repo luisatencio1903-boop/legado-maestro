@@ -225,33 +225,37 @@ if opcion == "📝 Planificación Profesional":
                 st.session_state.temp_rango = rango
                 st.session_state.temp_tema = notas
                 
-       # --- PROMPT TÉCNICA "FEW-SHOT" (IMITAR EJEMPLO) ---
+      # --- PROMPT "EJEMPLO MAESTRO" (FORMATO + LONGITUD) ---
                 prompt_inicial = f"""
                 Actúa como Luis Atencio. Planificación técnica para: {rango}.
                 Aula: {aula}. Tema: {notas}.
 
                 ⚠️ INSTRUCCIONES DE FORMATO:
                 - Antes del título de cada día, deja UNA LÍNEA VACÍA.
+                - IMPORTANTE: No olvides las etiquetas en negrita (Ej: **3. EXPLORACIÓN:**).
 
-                ⚠️ CONTROL DE EXTENSIÓN (TÉCNICA DE IMITACIÓN):
-                Para los puntos 3, 4 y 5, NO cuentes palabras. SIMPLEMENTE IMITA EL TAMAÑO DEL SIGUIENTE EJEMPLO.
+                ⚠️ INSTRUCCIONES DE LONGITUD:
+                - COMPETENCIA (Punto 2): Debe ser CORTA y DIRECTA (Máximo 10 palabras).
+                - Puntos 3, 4 y 5: Deben ser PÁRRAFOS SUSTANCIOSOS (Imita el ejemplo de abajo).
+
+                👇 EJEMPLO EXACTO DE CÓMO DEBE VERSE (IMITA ESTE FORMATO):
                 
-                EJEMPLO PERFECTO DE LONGITUD (¡HAZLO ASÍ!):
-                "Iniciamos la jornada reuniendo a los estudiantes en el área de trabajo para presentar las herramientas de jardinería, permitiendo que cada uno las manipule y describa su textura y peso, activando así sus conocimientos previos sensoriales antes de la teoría."
-                (Fíjate que este texto es sustancioso, explica el QUÉ y el PARA QUÉ. ¡Copia esa extensión!)
+                2. **COMPETENCIA:** Identificar y clasificar herramientas básicas de limpieza. (¡ASÍ DE CORTA!)
+                3. **EXPLORACIÓN:** Iniciamos la jornada reuniendo a los estudiantes en el círculo de trabajo para presentar las herramientas físicas, permitiendo que cada uno las manipule, diga su nombre y describa su textura, activando así sus conocimientos previos sensoriales antes de pasar a la teoría.
+                (Nota: Fíjate que el punto 3 tiene la etiqueta en negrita y luego el texto largo. ¡Hazlo igual!)
 
                 ESTRUCTURA DIARIA (Lunes a Viernes):
 
                 ### [DÍA]
                 
                 1. **TÍTULO:** [Corto]
-                2. **COMPETENCIA:** [Objetivo]
-                3. **EXPLORACIÓN:** [Imita la longitud del ejemplo anterior.]
-                4. **DESARROLLO:** [Imita la longitud del ejemplo anterior. Detalla la acción.]
-                5. **REFLEXIÓN:** [Imita la longitud del ejemplo anterior. Cierre pedagógico.]
-                6. **MANTENIMIENTO:** [Acción]
-                7. **ESTRATEGIAS:** [Técnicas]
-                8. **RECURSOS:** [Lista]
+                2. **COMPETENCIA:** [MUY CORTA. Máx 10 palabras.]
+                3. **EXPLORACIÓN:** [Párrafo sustancioso igual al ejemplo. NO OLVIDES LA ETIQUETA EN NEGRITA.]
+                4. **DESARROLLO:** [Párrafo sustancioso igual al ejemplo. Describe la acción detallada.]
+                5. **REFLEXIÓN:** [Párrafo sustancioso igual al ejemplo. Cierre pedagógico.]
+                6. **MANTENIMIENTO:** [Acción corta]
+                7. **ESTRATEGIAS:** [Técnicas cortas]
+                8. **RECURSOS:** [Lista corta]
 
                 ---
                 (Repite estructura)
