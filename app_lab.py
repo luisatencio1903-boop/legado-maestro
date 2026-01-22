@@ -225,7 +225,7 @@ if opcion == "📝 Planificación Profesional":
                 st.session_state.temp_rango = rango
                 st.session_state.temp_tema = notas
                 
-              # --- PROMPT REFORZADO (REGLA DE LAS 3 FRASES) ---
+        # --- PROMPT CALIBRADO (OBJETIVO: 40 PALABRAS / 250 CARACTERES) ---
                 prompt_inicial = f"""
                 Actúa como Luis Atencio, experto en Educación Especial.
                 Planificación técnica para: {rango}.
@@ -234,24 +234,24 @@ if opcion == "📝 Planificación Profesional":
                 ⚠️ INSTRUCCIONES DE FORMATO:
                 - Antes del título de cada día (Ej: "### Lunes"), deja UNA LÍNEA VACÍA.
 
-                ⚠️ OBLIGATORIO: PROFUNDIDAD EN PUNTOS 3, 4 y 5:
-                - En EXPLORACIÓN, DESARROLLO y REFLEXIÓN está PROHIBIDO ser breve.
-                - Debes redactar UN PÁRRAFO DE 3 ORACIONES COMPLETAS (aprox 40 palabras) para cada uno:
-                   * Oración 1: Describe la actividad detalladamente.
-                   * Oración 2: Explica el método o la interacción con los estudiantes.
-                   * Oración 3: Justifica el propósito pedagógico.
-                - Ejemplo: "Iniciamos mostrando herramientas reales de jardinería, permitiendo que cada estudiante toque las texturas y diga su nombre en voz alta, para activar su memoria sensorial y vocabulario técnico." (¡Hazlo así de completo!)
+                ⚠️ CONTROL DE EXTENSIÓN (PUNTOS 3, 4 y 5):
+                - En EXPLORACIÓN, DESARROLLO y REFLEXIÓN:
+                - Tu objetivo es la PRECISIÓN.
+                - Redacta párrafos de ENTRE 35 y 45 PALABRAS EXACTAS.
+                - NO escribas menos de 30 palabras (es muy pobre).
+                - NO escribas más de 50 palabras (es muy largo).
+                - Sé directo. Elimina los saludos o introducciones innecesarias. Ve directo a la acción.
 
                 ESTRUCTURA DIARIA (Lunes a Viernes):
 
                 ### [DÍA]
                 
                 1. **TÍTULO:** [Corto]
-                2. **COMPETENCIA:** [Objetivo]
-                3. **EXPLORACIÓN:** [Párrafo de 3 oraciones completas. NO RESUMAS.]
-                4. **DESARROLLO:** [Párrafo de 3 oraciones completas. DETALLA PASOS.]
-                5. **REFLEXIÓN:** [Párrafo de 3 oraciones completas. CIERRE SIGNIFICATIVO.]
-                6. **MANTENIMIENTO:** [Acción]
+                2. **COMPETENCIA:** [Objetivo claro]
+                3. **EXPLORACIÓN:** [Párrafo de 35-45 palabras.]
+                4. **DESARROLLO:** [Párrafo de 35-45 palabras.]
+                5. **REFLEXIÓN:** [Párrafo de 35-45 palabras.]
+                6. **MANTENIMIENTO:** [Acción de orden]
                 7. **ESTRATEGIAS:** [Técnicas]
                 8. **RECURSOS:** [Lista]
 
