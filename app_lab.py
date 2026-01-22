@@ -41,7 +41,10 @@ if not st.session_state.auth:
     
     col_a, col_b = st.columns([1,2])
     with col_a:
-        st.image("logo_legado.png", width=150) if os.path.exists("logo_legado.png") else st.header("🍎")
+      if os.path.exists("logo_legado.png"):
+            st.image("logo_legado.png", width=150)
+        else:
+            st.header("🍎")
     
     with col_b:
         c_in = st.text_input("Cédula de Identidad:", key="login_c")
