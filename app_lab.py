@@ -5,162 +5,132 @@ from groq import Groq
 from streamlit_gsheets import GSheetsConnection
 import time
 
-# ==========================================
-# 1. CONFIGURACIÓN DE INTERFAZ Y ESTILOS
-# ==========================================
-st.set_page_config(page_title="Legado Maestro - Torre de Control Zulia", layout="wide")
+# --- 1. ESTILOS Y CONFIGURACIÓN ---
+st.set_page_config(page_title="Legado Maestro - Zulia 2026", layout="wide")
 
-# Forzamos alto contraste: Fondo Blanco, Letras Negras
 st.markdown("""
     <style>
     .stApp { background-color: #FFFFFF !important; }
-    h1, h2, h3, h4, p, span, label, .stMarkdown { color: #000000 !important; font-weight: 700 !important; }
-    .stButton>button { background-color: #004a99; color: white !important; font-weight: bold; border-radius: 10px; height: 3.5em; }
-    .card-aula { background: #f8f9fa; padding: 25px; border-radius: 15px; border-left: 10px solid #004a99; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); color: black !important; }
+    h1, h2, h3, p, label { color: #000000 !important; font-weight: 700 !important; }
+    .stButton>button { background-color: #004a99; color: white !important; font-weight: bold; border-radius: 10px; }
+    .card-aula { background: #f8f9fa; padding: 20px; border-radius: 12px; border-left: 10px solid #004a99; margin-bottom: 15px; color: black; }
     .status-vivo { color: #d9534f !important; font-weight: bold; animation: blinker 1.5s linear infinite; }
     @keyframes blinker { 50% { opacity: 0; } }
-    .stTabs [data-baseweb="tab-list"] { gap: 20px; }
-    .stTabs [data-baseweb="tab"] { background-color: #f1f3f5; border-radius: 5px 5px 0 0; padding: 10px 20px; }
     </style>
     """, unsafe_allow_html=True)
 
-# ==========================================
-# 2. CONEXIÓN Y UTILIDADES TÉCNICAS
-# ==========================================
+# --- 2. CONEXIÓN ---
 conn = st.connection("gsheets", type=GSheetsConnection)
 URL_HOJA = st.secrets["GSHEETS_URL"]
 
-def limpiar_id(v):
-    """Limpia la cédula de espacios, puntos y decimales de Google Sheets"""
-    return str(v).strip().split('.')[0].replace(',', '').replace('.', '')
+def limpiar(v): return str(v).strip().split('.')[0].replace(',', '').replace('.', '')
 
-# Inicialización de estados de sesión
+# --- 3. ESTADOS DE SESIÓN ---
 if 'auth' not in st.session_state:
     st.session_state.update({
         'auth': False, 'u': None, 'plan_edicion': "", 
-        'clase_activa': False, 'fin_meta': None, 
+        'clase_activa': False, 'fin_meta': None, 'meta_mins': 45, # Arregla el NameError
         'eval_tecnica': "", 'tema_actual': ""
     })
 
-# ==========================================
-# 3. SISTEMA DE ACCESO (LOGIN Y REGISTRO)
-# ==========================================
+# --- 4. ACCESO ---
 if not st.session_state.auth:
     st.title("🛡️ Seguridad Legado Maestro")
-    t_log, t_reg = st.tabs(["🔐 Iniciar Sesión", "📝 Registro de Nómina"])
-
-    with t_log:
-        c_in = st.text_input("Cédula de Identidad", key="login_c")
-        p_in = st.text_input("Contraseña", type="password", key="login_p")
-        if st.button("ACCEDER AL PANEL"):
+    t1, t2 = st.tabs(["🔐 Entrar", "📝 Registrarse"])
+    with t1:
+        c = st.text_input("Cédula", key="lc")
+        p = st.text_input("Clave", type="password", key="lp")
+        if st.button("INGRESAR"):
             df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
-            df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
-            match = df_u[(df_u['C_L'] == limpiar_id(c_in)) & (df_u['CLAVE'] == p_in)]
+            df_u['C_L'] = df_u['CEDULA'].apply(limpiar)
+            match = df_u[(df_u['C_L'] == limpiar(c)) & (df_u['CLAVE'] == p)]
             if not match.empty:
                 st.session_state.auth = True
                 st.session_state.u = match.iloc[0].to_dict()
                 st.rerun()
-            else: st.error("❌ Cédula o contraseña incorrecta.")
-
-    with t_reg:
-        st.subheader("Validación de Personal Autorizado")
-        c_re = st.text_input("Ingrese su Cédula para validar", key="reg_c")
-        p_re = st.text_input("Cree su Clave de Acceso", type="password", key="reg_p")
-        if st.button("ACTIVAR MI CUENTA"):
+            else: st.error("Cédula o clave incorrecta.")
+    with t2:
+        rc = st.text_input("Cédula Nómina", key="rc")
+        rp = st.text_input("Crear Clave", type="password", key="rp")
+        if st.button("ACTIVAR"):
             df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
-            df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
-            ced_limpia = limpiar_id(c_re)
-            if ced_limpia in df_u['C_L'].values:
-                idx = df_u.index[df_u['C_L'] == ced_limpia][0]
-                if pd.notna(df_u.loc[idx, 'CLAVE']) and str(df_u.loc[idx, 'CLAVE']) != "":
-                    st.warning("Usted ya tiene una cuenta activa.")
-                else:
-                    df_u.loc[idx, 'CLAVE'] = p_re
-                    df_u.loc[idx, 'ESTADO'] = "ACTIVO"
-                    conn.update(spreadsheet=URL_HOJA, worksheet="USUARIOS", data=df_u.drop(columns=['C_L']))
-                    st.success("✅ Cuenta activada exitosamente. Ya puede iniciar sesión.")
-            else: st.error("🚫 Su cédula no aparece en la nómina oficial.")
-
-# ==========================================
-# 4. PANEL DE CONTROL POST-AUTENTICACIÓN
-# ==========================================
+            df_u['C_L'] = df_u['CEDULA'].apply(limpiar)
+            if limpiar(rc) in df_u['C_L'].values:
+                idx = df_u.index[df_u['C_L'] == limpiar(rc)][0]
+                df_u.loc[idx, 'CLAVE'] = rp
+                df_u.loc[idx, 'ESTADO'] = "ACTIVO"
+                conn.update(spreadsheet=URL_HOJA, worksheet="USUARIOS", data=df_u.drop(columns=['C_L']))
+                st.success("Activado.")
+                # --- 5. PANEL DE CONTROL (POST-LOGIN) ---
 else:
-    user = st.session_state.u
-    st.sidebar.title(f"👤 {user['NOMBRE']}")
-    st.sidebar.info(f"Rol: {user['ROL']}")
-    if st.sidebar.button("🚪 Cerrar Sesión"):
+    u = st.session_state.u
+    st.sidebar.title(f"👤 {u['NOMBRE']}")
+    st.sidebar.write(f"Rol: **{u['ROL']}**")
+    if st.sidebar.button("Cerrar Sesión"):
         st.session_state.auth = False
         st.rerun()
 
-    # Leemos la base de actividades
+    # Leemos la base de actividades (Hoja1)
     df_act = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
 
-    # ==========================================
-    # MODULO DOCENTE
-    # ==========================================
-    if user['ROL'] == "DOCENTE":
-        st.header("👨‍🏫 Gestión Pedagógica del Aula")
-        p1, p2, p3 = st.tabs(["📅 Planificación Semanal", "🚀 Ejecución en Vivo", "📝 Evaluación Técnica IA"])
+    # ================= VISTA DOCENTE =================
+    if u['ROL'] == "DOCENTE":
+        st.header(f"👨‍🏫 Aula Virtual: {u['NOMBRE']}")
+        t_plan, t_ejec, t_eval, t_exp = st.tabs(["📅 Planificación", "🚀 Ejecución", "🪄 Evaluación IA", "📂 Expedientes"])
 
-        with p1:
-            # Verificamos si ya hay un plan pendiente o aprobado
-            plan_existente = df_act[(df_act['USUARIO'] == user['NOMBRE']) & (df_act['ESTADO'].isin(['PENDIENTE', 'APROBADO']))]
+        # --- PESTAÑA 1: PLANIFICACIÓN ---
+        with t_plan:
+            plan_activo = df_act[(df_act['USUARIO'] == u['NOMBRE']) & (df_act['ESTADO'].isin(['PENDIENTE', 'APROBADO']))]
             
-            if not plan_existente.empty:
-                status = plan_existente.iloc[-1]
-                st.markdown(f"<div class='card-aula'><h4>Plan actual: {status['TEMA']}</h4>Estado: <b>{status['ESTADO']}</b><br>Espere a finalizar este ciclo para enviar uno nuevo.</div>", unsafe_allow_html=True)
+            if not plan_activo.empty:
+                st.info(f"Usted tiene un plan de '{plan_activo.iloc[-1]['TEMA']}' en estado: {plan_activo.iloc[-1]['ESTADO']}.")
             else:
-                st.subheader("Crear Planificación")
-                st.session_state.tema_actual = st.text_input("Tema de la clase:", placeholder="Ej: Circuitos Eléctricos")
+                st.subheader("Elaboración de la Semana")
+                tema_clase = st.text_input("¿Qué tema desea planificar?")
                 
-                if st.button("🧠 GENERAR PROPUESTA CON IA"):
-                    with st.spinner("La IA está analizando estrategias pedagógicas..."):
-                        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-                        res = client.chat.completions.create(
-                            messages=[{"role":"user","content":f"Como especialista en educación especial, planifica 8 puntos técnicos para {st.session_state.tema_actual} incluyendo Exploración, Desarrollo y Reflexión."}],
-                            model="llama-3.3-70b-versatile"
-                        )
-                        st.session_state.plan_edicion = res.choices[0].message.content
+                if st.button("🧠 Generar Propuesta IA"):
+                    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+                    res = client.chat.completions.create(
+                        messages=[{"role":"user","content":f"Plan técnico de 8 puntos para {tema_clase} en educación especial."}],
+                        model="llama-3.3-70b-versatile"
+                    )
+                    st.session_state.plan_edicion = res.choices[0].message.content
                 
                 if st.session_state.plan_edicion:
-                    # EDITOR PEDAGÓGICO
-                    plan_final = st.text_area("Evalúe y modifique el plan según su aula:", value=st.session_state.plan_edicion, height=350)
-                    if st.button("📤 ENVIAR PARA APROBACIÓN DEL DIRECTOR"):
-                        nueva_fila = pd.DataFrame([{
+                    p_final = st.text_area("Evalúe y modifique su plan:", value=st.session_state.plan_edicion, height=300)
+                    if st.button("📤 ENVIAR A DIRECCIÓN"):
+                        nueva = pd.DataFrame([{
                             "FECHA": datetime.now().strftime("%d/%m/%Y"),
-                            "USUARIO": user['NOMBRE'],
-                            "ROL": user['ROL'],
-                            "AULA": "MANTENIMIENTO",
-                            "TEMA": st.session_state.tema_actual,
-                            "CONTENIDO": plan_final,
-                            "ESTADO": "PENDIENTE",
-                            "HORA_INICIO": "--:--",
-                            "HORA_FIN": "--:--"
+                            "USUARIO": u['NOMBRE'],
+                            "TEMA": tema_clase,
+                            "CONTENIDO": p_final,
+                            "ESTADO": "PENDIENTE"
                         }])
-                        df_final = pd.concat([df_act, nueva_fila], ignore_index=True)
-                        conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_final)
-                        st.session_state.plan_edicion = ""
-                        st.success("✅ Plan enviado. El Director ha sido notificado.")
+                        conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df_act, nueva], ignore_index=True))
+                        st.success("Plan enviado con éxito.")
                         st.rerun()
 
-        with p2:
-            st.subheader("Control de Actividad Diaria")
-            clase_hoy = df_act[(df_act['USUARIO'] == user['NOMBRE']) & (df_act['ESTADO'].isin(['APROBADO', 'EN CURSO']))]
+        # --- PESTAÑA 2: EJECUCIÓN (CRONÓMETRO) ---
+        with t_ejec:
+            st.subheader("Control de Clase en Vivo")
+            aprobado = df_act[(df_act['USUARIO']==u['NOMBRE']) & (df_act['ESTADO'].isin(['APROBADO', 'EN CURSO']))]
             
-            if clase_hoy.empty:
-                st.warning("⚠️ No tiene actividades aprobadas para hoy.")
+            if aprobado.empty:
+                st.warning("Esperando aprobación del Director para iniciar.")
             else:
-                act = clase_hoy.iloc[-1]
-                with st.expander("📖 Ver Planificación Aprobada", expanded=True):
-                    st.markdown(f"<div class='card-aula'>{act['CONTENIDO']}</div>", unsafe_allow_html=True)
+                act = aprobado.iloc[-1]
+                st.markdown(f"<div class='card-aula'><b>Tema Autorizado:</b> {act['TEMA']}</div>", unsafe_allow_html=True)
                 
                 if not st.session_state.clase_activa:
-                    meta_mins = st.number_input("Establecer duración de la clase (min):", 10, 180, 45)
-                    if st.button("▶️ INICIAR CLASE Y NOTIFICAR"):
+                    # Aquí usamos st.session_state para que el valor persista
+                    st.session_state.meta_mins = st.number_input("Establecer duración (min):", 10, 180, st.session_state.meta_mins)
+                    
+                    if st.button("▶️ INICIAR ACTIVIDAD"):
                         st.session_state.clase_activa = True
-                        st.session_state.fin_meta = datetime.now() + timedelta(minutes=meta_mins)
-                        # Actualizar estado en Excel
-                        idx = clase_hoy.index[-1]
+                        st.session_state.fin_meta = datetime.now() + timedelta(minutes=st.session_state.meta_mins)
+                        
+                        # Actualizar en Excel para que el Director vea "EN CURSO"
+                        idx = aprobado.index[-1]
                         df_act.loc[idx, 'ESTADO'] = 'EN CURSO'
                         df_act.loc[idx, 'HORA_INICIO'] = datetime.now().strftime("%H:%M")
                         conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_act)
@@ -169,67 +139,157 @@ else:
                     restante = st.session_state.fin_meta - datetime.now()
                     if restante.total_seconds() > 0:
                         mins, segs = divmod(int(restante.total_seconds()), 60)
-                        st.markdown(f"### <span class='status-vivo'>⏳ TIEMPO RESTANTE: {mins:02d}:{segs:02d}</span>", unsafe_allow_html=True)
-                        st.progress(max(0.0, min(1.0, 1 - (restante.total_seconds() / (meta_mins*60)))))
-                    else: st.error("⏰ ¡TIEMPO CUMPLIDO! Por favor, culmine la actividad.")
-                    
+                        st.markdown(f"### ⏳ Tiempo Restante: {mins:02d}:{segs:02d}")
+                        st.progress(max(0.0, min(1.0, 1 - (restante.total_seconds() / (st.session_state.meta_mins * 60)))))
+                    else:
+                        st.error("⏰ ¡TIEMPO CUMPLIDO!")
+
                     if st.button("⏹️ CULMINAR ACTIVIDAD"):
                         st.session_state.clase_activa = False
-                        idx = df_act[df_act['USUARIO'] == user['NOMBRE']].index[-1]
+                        idx = df_act[df_act['USUARIO']==u['NOMBRE']].index[-1]
                         df_act.loc[idx, 'ESTADO'] = 'FINALIZADO'
                         df_act.loc[idx, 'HORA_FIN'] = datetime.now().strftime("%H:%M")
                         conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_act)
                         st.balloons()
+                        st.success("Actividad finalizada. Reporte enviado al Director.")
                         st.rerun()
-
-        with p3:
-            st.subheader("Transformador Anecdótico (IA)")
-            alumno = st.text_input("Nombre del Alumno:")
-            nota_prose = st.text_area("Describa lo observado en lenguaje natural:")
-            if st.button("🪄 PROCESAR EVALUACIÓN TÉCNICA"):
-                with st.spinner("Traduciendo a terminología pedagógica..."):
-                    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
-                    res = client.chat.completions.create(
-                        messages=[{"role":"user","content":f"Traduce esto a un informe técnico pedagógico para {alumno}: {nota_prose}"}],
-                        model="llama-3.3-70b-versatile"
-                    )
-                    st.session_state.eval_tecnica = res.choices[0].message.content
+                        # --- PESTAÑA 3: EVALUACIÓN IA (TRANSFORMADOR) ---
+        with t_eval:
+            st.subheader("🪄 Transformador de Lenguaje Pedagógico")
+            st.info("Escriba lo que observó en clase y la IA lo redactará de forma técnica.")
             
+            nombre_alumno = st.text_input("Nombre del Alumno:", placeholder="Ej: Greilyz Flores")
+            nota_natural = st.text_area("Descripción anecdótica (Cómo se comportó, qué logró):", height=150)
+            
+            if st.button("🪄 PROCESAR INFORME TÉCNICO"):
+                if nombre_alumno and nota_natural:
+                    with st.spinner("Traduciendo a terminología profesional..."):
+                        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+                        res = client.chat.completions.create(
+                            messages=[{"role":"user","content":f"Convierte esta observación informal en un informe técnico pedagógico profesional para el alumno {nombre_alumno}. Sé preciso y usa lenguaje de educación especial. Nota: {nota_natural}"}],
+                            model="llama-3.3-70b-versatile"
+                        )
+                        st.session_state.eval_tecnica = res.choices[0].message.content
+                else:
+                    st.warning("Por favor ingrese el nombre y la nota.")
+
             if st.session_state.eval_tecnica:
-                st.markdown(f"<div class='card-aula'><b>Evaluación Técnica:</b><br>{st.session_state.eval_tecnica}</div>", unsafe_allow_html=True)
-                st.file_uploader("📸 Cargar Evidencia Fotográfica Final")
+                st.markdown(f"<div class='card-aula'><b>Informe Generado:</b><br>{st.session_state.eval_tecnica}</div>", unsafe_allow_html=True)
+                
+                if st.button("💾 GUARDAR EN EXPEDIENTE DIGITAL"):
+                    # Guardar en la pestaña EVALUACIONES
+                    df_ev = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
+                    nueva_ev = pd.DataFrame([{
+                        "FECHA": datetime.now().strftime("%d/%m/%Y"),
+                        "DOCENTE": u['NOMBRE'],
+                        "ALUMNO": nombre_alumno.upper(),
+                        "TEMA": act['TEMA'] if not aprobado.empty else "Actividad General",
+                        "ANECDOTA": nota_natural,
+                        "INFORME_TECNICO": st.session_state.eval_tecnica
+                    }])
+                    conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=pd.concat([df_ev, nueva_ev], ignore_index=True))
+                    st.success(f"Registro guardado en el expediente de {nombre_alumno}")
+                    st.balloons()
 
+        # --- PESTAÑA 4: EXPEDIENTES (EL BOLETÍN) ---
+        with t_exp:
+            st.subheader("📂 Consulta de Historial y Boletín")
+            df_hist = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
+            
+            if df_hist.empty:
+                st.write("Aún no hay evaluaciones registradas.")
+            else:
+                lista_estudiantes = df_hist['ALUMNO'].unique()
+                sel_estudiante = st.selectbox("Seleccione Alumno para ver historial:", lista_estudiantes)
+                
+                registros = df_hist[df_hist['ALUMNO'] == sel_estudiante]
+                st.write(f"Evaluaciones encontradas: **{len(registros)}**")
+                
+                with st.expander("Ver todas las notas técnicas"):
+                    st.table(registros[['FECHA', 'TEMA', 'INFORME_TECNICO']])
+                
+                if st.button("📜 GENERAR SÍNTESIS DE LAPSO (IA)"):
+                    with st.spinner("Analizando historial para el boletín..."):
+                        toda_la_data = " ".join(registros['INFORME_TECNICO'].tolist())
+                        client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+                        res = client.chat.completions.create(
+                            messages=[{"role":"user","content":f"Basado en este historial de informes técnicos: {toda_la_data}, redacta una síntesis pedagógica final para el boletín del alumno {sel_estudiante}."}],
+                            model="llama-3.3-70b-versatile"
+                        )
+                        st.markdown(f"<div style='background:#e3f2fd; padding:20px; border-radius:10px; color:black;'>{res.choices[0].message.content}</div>", unsafe_allow_html=True)
+                        # ==========================================
+    # MODULO DIRECTOR / SUPERVISOR
     # ==========================================
-    # MODULO DIRECTOR
-    # ==========================================
-    elif user['ROL'] == "DIRECTOR":
+    elif u['ROL'] in ["DIRECTOR", "SUPERVISOR"]:
         st.title("🏛️ Torre de Control Institucional")
-        f_sel = st.date_input("Consultar Fecha:", datetime.now()).strftime("%d/%m/%Y")
-        df_dia = df_act[df_act['FECHA'] == f_sel]
+        
+        # Filtro de Fecha para ver Pasado, Hoy y Futuro
+        col_f1, col_f2 = st.columns([1, 2])
+        with col_f1:
+            fecha_consulta = st.date_input("📅 Consultar Fecha:", datetime.now())
+            f_str = fecha_consulta.strftime("%d/%m/%Y")
+        
+        df_dia = df_act[df_act['FECHA'] == f_str]
+        
+        # Métricas rápidas
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Planes en Revisión", len(df_dia[df_dia['ESTADO'] == 'PENDIENTE']))
+        m2.metric("Clases en Vivo", len(df_dia[df_dia['ESTADO'] == 'EN CURSO']))
+        m3.metric("Objetivos Cumplidos", len(df_dia[df_dia['ESTADO'] == 'FINALIZADO']))
 
-        c_a, c_b = st.columns(2)
-        with c_a:
-            st.subheader("📥 Planes por Revisar")
+        st.markdown("---")
+
+        col_izq, col_der = st.columns(2)
+
+        # --- COLUMNA IZQUIERDA: APROBACIONES (FUTURO/PENDIENTE) ---
+        with col_izq:
+            st.subheader("📥 Planificaciones por Aprobar")
             pendientes = df_dia[df_dia['ESTADO'] == 'PENDIENTE']
-            if pendientes.empty: st.write("No hay planes pendientes.")
-            for i, r in pendientes.iterrows():
-                with st.expander(f"Plan de {r['USUARIO']} - {r['TEMA']}"):
-                    st.write(r['CONTENIDO'])
-                    obs = st.text_input("Sugerencia de cambio:", key=f"obs_{i}")
-                    if st.button("✅ APROBAR PLAN", key=f"btn_{i}"):
-                        df_act.loc[i, 'ESTADO'] = 'APROBADO'
-                        conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_act)
-                        st.rerun()
-        with c_b:
-            st.subheader("👀 Monitor en Vivo")
+            
+            if pendientes.empty:
+                st.write("No hay planes pendientes para esta fecha.")
+            else:
+                for i, row in pendientes.iterrows():
+                    with st.container():
+                        st.markdown(f"""
+                            <div class='card-aula'>
+                                <b>Docente:</b> {row['USUARIO']}<br>
+                                <b>Tema:</b> {row['TEMA']}
+                            </div>
+                        """, unsafe_allow_html=True)
+                        with st.expander("🔍 Revisar Contenido Técnico"):
+                            st.write(row['CONTENIDO'])
+                            # Cuadro de sugerencias que pediste
+                            sugerencia = st.text_input("Sugerencias de modificación:", key=f"sug_{i}")
+                            
+                            if st.button("✅ APROBAR PLANIFICACIÓN", key=f"btn_ap_{i}"):
+                                df_act.loc[i, 'ESTADO'] = 'APROBADO'
+                                # Si hay sugerencia, la guardamos (opcional, podrías añadir columna OBSERVACIONES)
+                                conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_act)
+                                st.success(f"Plan de {row['USUARIO']} aprobado.")
+                                st.rerun()
+
+        # --- COLUMNA DERECHA: MONITOR EN VIVO (HOY/PRESENTE) ---
+        with col_der:
+            st.subheader("👀 Monitor de Actividad en Tiempo Real")
             vivos = df_dia[df_dia['ESTADO'] == 'EN CURSO']
-            if vivos.empty: st.write("No hay clases activas en este momento.")
-            for _, r in vivos.iterrows():
-                st.markdown(f"""
-                    <div class='card-aula'>
-                        <h4>{r['USUARIO']}</h4>
-                        <span class='status-vivo'>● EN VIVO</span><br>
-                        <b>Tema:</b> {r['TEMA']}<br>
-                        <b>Inició:</b> {r['HORA_INICIO']}
-                    </div>
-                """, unsafe_allow_html=True)
+            
+            if vivos.empty:
+                st.write("No hay docentes en aula en este momento.")
+            else:
+                for _, r in vivos.iterrows():
+                    st.markdown(f"""
+                        <div class='card-aula'>
+                            <h4 style='margin:0;'>{r['USUARIO']}</h4>
+                            <span class='status-vivo'>● EN VIVO (Dando clase)</span><br>
+                            <b>Tema:</b> {r['TEMA']}<br>
+                            <b>Hora de Inicio:</b> {r['HORA_INICIO']}
+                        </div>
+                    """, unsafe_allow_html=True)
+
+        # --- SECCIÓN INFERIOR: HISTORIAL DE EVALUACIONES (PASADO) ---
+        st.markdown("---")
+        if st.checkbox("📜 Ver Memoria de Evaluaciones Técnicas"):
+            df_evals_dir = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
+            st.subheader("Registros Anecdóticos del Plantel")
+            st.dataframe(df_evals_dir)
