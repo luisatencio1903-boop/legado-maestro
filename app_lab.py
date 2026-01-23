@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 2.4.2 (BARRA LATERAL DINÁMICA + PLANIFICACIÓN ACTIVA)
+# VERSIÓN: 2.4.3 (CON MIGRACIÓN Y DESELECCIÓN)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -8,7 +8,7 @@
 import streamlit as st
 import os
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from groq import Groq
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
@@ -39,7 +39,74 @@ except:
     st.error("⚠️ Error conectando con la Base de Datos.")
     st.stop()
 
-# --- SISTEMA DE PLANIFICACIÓN ACTIVA (VERSIÓN ROBUSTA) ---
+# --- SISTEMA DE PLANIFICACIÓN ACTIVA MEJORADO ---
+def migrar_planificaciones_activas():
+    """Migra planificaciones activas desde evaluaciones recientes si PLAN_ACTIVA está vacía"""
+    try:
+        # Verificar si PLAN_ACTIVA está vacía
+        df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=5)
+        
+        # Si tiene datos, no hacer migración
+        if not df_activa.empty and 'USUARIO' in df_activa.columns:
+            return False
+        
+        st.info("🔍 Detectando planificaciones en uso recientemente...")
+        
+        # Leer evaluaciones de los últimos 7 días
+        df_eval = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=5)
+        if df_eval.empty:
+            return False
+        
+        # Convertir fecha a datetime
+        try:
+            df_eval['FECHA_DT'] = pd.to_datetime(df_eval['FECHA'], format='%d/%m/%Y', errors='coerce')
+        except:
+            return False
+        
+        # Filtrar evaluaciones de los últimos 7 días
+        fecha_limite = datetime.now() - timedelta(days=7)
+        eval_recientes = df_eval[df_eval['FECHA_DT'] >= fecha_limite]
+        
+        if eval_recientes.empty:
+            return False
+        
+        # Para cada usuario, encontrar la planificación más reciente usada
+        usuarios_unicos = eval_recientes['USUARIO'].unique()
+        
+        for usuario in usuarios_unicos:
+            eval_usuario = eval_recientes[eval_recientes['USUARIO'] == usuario]
+            # Ordenar por fecha descendente
+            eval_usuario = eval_usuario.sort_values('FECHA_DT', ascending=False)
+            
+            # Tomar la evaluación más reciente
+            ultima_eval = eval_usuario.iloc[0]
+            
+            # Buscar la planificación correspondiente en Hoja1
+            df_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=5)
+            if df_planes.empty:
+                continue
+            
+            # Buscar planificaciones del usuario
+            planes_usuario = df_planes[df_planes['USUARIO'] == usuario]
+            
+            if not planes_usuario.empty:
+                # Tomar la planificación más reciente del usuario
+                plan_reciente = planes_usuario.sort_values('FECHA', ascending=False).iloc[0]
+                
+                # Establecer como activa
+                establecer_plan_activa(
+                    usuario_nombre=usuario,
+                    id_plan=plan_reciente.name,  # índice
+                    contenido=plan_reciente['CONTENIDO'],
+                    rango="Migrado automáticamente",
+                    aula="Taller Laboral"
+                )
+        
+        return True
+    except Exception as e:
+        st.error(f"Error en migración: {e}")
+        return False
+
 def inicializar_hoja_plan_activa():
     """Inicializa la hoja PLAN_ACTIVA si está vacía o no existe"""
     try:
@@ -48,12 +115,15 @@ def inicializar_hoja_plan_activa():
         
         # Si está vacía o no tiene columnas, inicializarla
         if df_activa.empty or 'USUARIO' not in df_activa.columns:
-            columnas = ["USUARIO", "FECHA_ACTIVACION", "ID_PLAN", "CONTENIDO_PLAN", "RANGO", "AULA", "ACTIVO"]
+            columnas = ["USUARIO", "FECHA_ACTIVACION", "ID_PLAN", "CONTENIDO_PLAN", "RANGO", "AULA", "ACTIVO", "FINALIZADA"]
             df_inicial = pd.DataFrame(columns=columnas)
             conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_inicial)
+            
+            # Intentar migrar planificaciones existentes
+            migrar_planificaciones_activas()
     except Exception as e:
         # Si la hoja no existe, crearla
-        columnas = ["USUARIO", "FECHA_ACTIVACION", "ID_PLAN", "CONTENIDO_PLAN", "RANGO", "AULA", "ACTIVO"]
+        columnas = ["USUARIO", "FECHA_ACTIVACION", "ID_PLAN", "CONTENIDO_PLAN", "RANGO", "AULA", "ACTIVO", "FINALIZADA"]
         df_inicial = pd.DataFrame(columns=columnas)
         conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_inicial)
 
@@ -70,17 +140,21 @@ def obtener_plan_activa_usuario(usuario_nombre):
         if df_activa.empty:
             return None
         
-        # Asegurar que la columna ACTIVO existe y es booleana/string
-        if 'ACTIVO' not in df_activa.columns:
-            return None
+        # Asegurar que las columnas necesarias existen
+        columnas_necesarias = ['USUARIO', 'ACTIVO', 'FINALIZADA']
+        for col in columnas_necesarias:
+            if col not in df_activa.columns:
+                return None
         
-        # Convertir ACTIVO a string y buscar 'True' o 'TRUE'
+        # Convertir ACTIVO y FINALIZADA a string para comparación
         df_activa['ACTIVO_STR'] = df_activa['ACTIVO'].astype(str).str.upper()
+        df_activa['FINALIZADA_STR'] = df_activa['FINALIZADA'].astype(str).str.upper()
         
-        # Filtrar
+        # Filtrar: usuario, activo=True, finalizada=False o vacío
         plan_activa = df_activa[
             (df_activa['USUARIO'] == usuario_nombre) & 
-            (df_activa['ACTIVO_STR'] == 'TRUE')
+            (df_activa['ACTIVO_STR'] == 'TRUE') &
+            (df_activa['FINALIZADA_STR'].isin(['FALSE', 'NAN', '']))
         ]
         
         if not plan_activa.empty:
@@ -101,7 +175,6 @@ def establecer_plan_activa(usuario_nombre, id_plan, contenido, rango, aula):
         
         # 1. Desactivar cualquier planificación activa previa del mismo usuario
         if not df_activa.empty:
-            # Crear máscara para usuario
             mask_usuario = df_activa['USUARIO'] == usuario_nombre
             if mask_usuario.any():
                 df_activa.loc[mask_usuario, 'ACTIVO'] = False
@@ -114,15 +187,35 @@ def establecer_plan_activa(usuario_nombre, id_plan, contenido, rango, aula):
             "CONTENIDO_PLAN": str(contenido),
             "RANGO": str(rango),
             "AULA": str(aula),
-            "ACTIVO": True
+            "ACTIVO": True,
+            "FINALIZADA": False
         }])
         
         # Combinar y actualizar
         df_actualizado = pd.concat([df_activa, nueva_activa], ignore_index=True)
         conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_actualizado)
+        
+        # Mostrar mensaje de éxito
+        st.success(f"✅ Planificación establecida como ACTIVA: {rango}")
         return True
     except Exception as e:
-        st.error(f"Error al establecer plan activa: {e}")
+        st.error(f"❌ Error al establecer plan activa: {e}")
+        return False
+
+def finalizar_plan_activa(usuario_nombre):
+    """Marca la planificación activa como finalizada (completada)"""
+    try:
+        df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=0)
+        if not df_activa.empty:
+            # Encontrar la planificación activa del usuario
+            mask = (df_activa['USUARIO'] == usuario_nombre) & (df_activa['ACTIVO'].astype(str).str.upper() == 'TRUE')
+            if mask.any():
+                df_activa.loc[mask, 'FINALIZADA'] = True
+                df_activa.loc[mask, 'ACTIVO'] = False
+                conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_activa)
+                return True
+        return False
+    except:
         return False
 
 def desactivar_plan_activa(usuario_nombre):
@@ -183,7 +276,7 @@ if not st.session_state.auth:
                     st.session_state.auth = True
                     st.session_state.u = match.iloc[0].to_dict()
                     st.query_params["u"] = cedula_limpia
-                    # Inicializar hoja al iniciar sesión
+                    # Inicializar hoja y migrar si es necesario
                     inicializar_hoja_plan_activa()
                     st.success("¡Bienvenido!")
                     time.sleep(1)
@@ -271,6 +364,13 @@ hide_streamlit_style = """
                 border-radius: 5px;
                 margin-bottom: 10px;
             }
+            
+            /* BOTÓN FINALIZAR */
+            .boton-finalizar {
+                background-color: #6c757d !important;
+                color: white !important;
+                border: 1px solid #495057 !important;
+            }
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -353,14 +453,17 @@ with st.sidebar:
         st.caption(f"Activada: {plan_activa.get('FECHA_ACTIVACION', 'Fecha no disponible').split()[0]}")
         
         with st.expander("Acciones", expanded=False):
-            if st.button("Cambiar Planificación", key="sidebar_cambiar"):
-                st.session_state.redirigir_a_archivo = True
-                st.rerun()
-            if st.button("Desactivar", key="sidebar_desactivar"):
-                if desactivar_plan_activa(st.session_state.u['NOMBRE']):
-                    st.success("Planificación desactivada")
-                    time.sleep(1)
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("🔄 Cambiar", key="sidebar_cambiar"):
+                    st.session_state.redirigir_a_archivo = True
                     st.rerun()
+            with col2:
+                if st.button("🗓️ Finalizar", key="sidebar_finalizar"):
+                    if finalizar_plan_activa(st.session_state.u['NOMBRE']):
+                        st.success("✅ Planificación marcada como finalizada")
+                        time.sleep(1)
+                        st.rerun()
     else:
         st.warning("⚠️ **Sin planificación activa**")
         st.caption("Ve a 'Mi Archivo' para activar una")
@@ -525,7 +628,6 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
     st.subheader("Evaluación Diaria Inteligente")
     
     # --- CÁLCULO DE FECHA SEGURA (HORA VENEZUELA) ---
-    from datetime import timedelta
     fecha_segura_ve = datetime.utcnow() - timedelta(hours=4)
     fecha_hoy_str = fecha_segura_ve.strftime("%d/%m/%Y")
     dia_semana_hoy = fecha_segura_ve.strftime("%A")
@@ -866,9 +968,9 @@ elif opcion == "📂 Mi Archivo Pedagógico":
     
     with col_accion:
         if plan_activa_actual:
-            if st.button("❌ Desactivar", help="Dejar de usar esta planificación para evaluar"):
-                if desactivar_plan_activa(st.session_state.u['NOMBRE']):
-                    st.success("Planificación desactivada.")
+            if st.button("🗓️ Finalizar Esta Semana", help="Marcar esta planificación como completada"):
+                if finalizar_plan_activa(st.session_state.u['NOMBRE']):
+                    st.success("✅ Planificación marcada como finalizada.")
                     time.sleep(1)
                     st.rerun()
     
@@ -954,8 +1056,7 @@ elif opcion == "📂 Mi Archivo Pedagógico":
                                     rango=rango,
                                     aula=aula
                                 ):
-                                    st.success("✅ ¡Planificación establecida como ACTIVA!")
-                                    st.balloons()
+                                    # El mensaje de éxito ya se muestra en la función
                                     time.sleep(2)
                                     st.rerun()
                     
@@ -1028,6 +1129,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 2.4.2 (Barra Lateral Dinámica)")
-# --- EL RESTO DEL CÓDIGO PERMANECE IGUAL (planificador, evaluador, etc.) ---
-# ... [Aquí va todo el resto del código que ya tienes funcionando] ...
+st.caption("Desarrollado por Luis Atencio | Versión: 2.4.3 (Con Migración y Deselección)")
