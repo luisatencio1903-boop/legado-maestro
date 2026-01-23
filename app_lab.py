@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 2.5 (SISTEMA CON NAVEGACIÓN MEJORADA)
+# VERSIÓN: 2.6 (SISTEMA CON MEJORAS VISUALES Y DESCRIPCIÓN)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -105,6 +105,57 @@ def desactivar_plan_activa(usuario_nombre):
     except:
         return False
 
+# --- FUNCIÓN PARA EXTRAER DESCRIPCIÓN DETALLADA DE PLANIFICACIÓN ---
+def extraer_descripcion_dias(contenido_planificacion):
+    """Extrae una descripción resumida de los días de la planificación"""
+    try:
+        # Buscar secciones por día
+        dias_info = []
+        lineas = contenido_planificacion.split('\n')
+        
+        for i, linea in enumerate(lineas):
+            linea = linea.strip()
+            # Buscar encabezados de días
+            if linea.startswith('###') or linea.startswith('##'):
+                # Verificar si es un día de la semana
+                dia_keywords = ['LUNES', 'MARTES', 'MIÉRCOLES', 'MIERCOLES', 'JUEVES', 'VIERNES']
+                for keyword in dia_keywords:
+                    if keyword in linea.upper():
+                        # Buscar el título de la actividad (generalmente después de "TÍTULO:")
+                        for j in range(i+1, min(i+10, len(lineas))):
+                            if 'TÍTULO:' in lineas[j].upper() or 'TITULO:' in lineas[j].upper():
+                                titulo = lineas[j].split(':', 1)[-1].strip()
+                                # Limpiar formato markdown
+                                titulo = titulo.replace('**', '').replace('*', '').strip()
+                                if titulo:
+                                    # Obtener día limpio
+                                    dia = keyword.capitalize()
+                                    if keyword == 'MIERCOLES':
+                                        dia = 'Miércoles'
+                                    dias_info.append(f"{dia}: {titulo}")
+                                break
+                        break
+        
+        # Si encontramos información, formatear
+        if dias_info:
+            return " | ".join(dias_info[:5])  # Máximo 5 días
+        else:
+            # Intentar extraer de otra manera
+            import re
+            patron = r'\*\*TÍTULO:\*\*\s*(.+?)(?:\n|$)'
+            titulos = re.findall(patron, contenido_planificacion, re.IGNORECASE)
+            if titulos:
+                dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes']
+                resultado = []
+                for i, titulo in enumerate(titulos[:5]):
+                    titulo_limpio = titulo.strip().replace('**', '').replace('*', '')
+                    resultado.append(f"{dias[i]}: {titulo_limpio}")
+                return " | ".join(resultado)
+            
+            return "Descripción no disponible"
+    except Exception as e:
+        return "Error extrayendo descripción"
+
 # --- LÓGICA DE PERSISTENCIA DE SESIÓN (AUTO-LOGIN) ---
 query_params = st.query_params
 usuario_en_url = query_params.get("u", None)
@@ -159,7 +210,7 @@ if not st.session_state.auth:
                 st.error(f"Error de conexión: {e}")
     st.stop()
 
-# --- 2. ESTILOS CSS (MODO OSCURO + FORMATO) ---
+# --- 2. ESTILOS CSS MEJORADOS ---
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
@@ -221,6 +272,19 @@ hide_streamlit_style = """
                 color: #000000 !important;
             }
 
+            /* ESTILO PARA PLANIFICACIÓN ACTIVA EN VERDE */
+            .plan-activa-box {
+                background-color: #e8f5e9 !important;
+                color: #000000 !important;
+                padding: 15px;
+                border-radius: 8px;
+                border-left: 5px solid #2e7d32;
+                border-top: 2px solid #2e7d32;
+                border-right: 2px solid #2e7d32;
+                border-bottom: 2px solid #2e7d32;
+                margin-bottom: 15px;
+            }
+            
             /* ESTILO PARA BOTÓN ACTIVO */
             .boton-activo {
                 background-color: #ffd700 !important;
@@ -235,6 +299,32 @@ hide_streamlit_style = """
             .stButton button:hover {
                 transform: translateY(-2px);
                 box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            
+            /* ESTILO PARA TEXTO RESALTADO EN VERDE */
+            .texto-verde {
+                color: #2e7d32 !important;
+                font-weight: 700 !important;
+            }
+            
+            /* ESTILO PARA TARJETA DE PLANIFICACIÓN ACTIVA */
+            .tarjeta-activa {
+                background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+                border-radius: 10px;
+                padding: 15px;
+                border: 2px solid #2e7d32;
+                margin-bottom: 20px;
+            }
+            
+            /* BADGE PARA PLANIFICACIÓN ACTIVA */
+            .badge-activa {
+                background-color: #2e7d32 !important;
+                color: white !important;
+                padding: 3px 10px;
+                border-radius: 12px;
+                font-size: 0.8em;
+                font-weight: bold;
+                margin-left: 10px;
             }
             </style>
             """
@@ -298,11 +388,24 @@ with st.sidebar:
     plan_activa = obtener_plan_activa_usuario(st.session_state.u['NOMBRE'])
     
     if plan_activa:
+        st.markdown('<div class="tarjeta-activa">', unsafe_allow_html=True)
         st.success("📌 **PLANIFICACIÓN ACTIVA**")
-        with st.expander("📋 Ver detalles de la semana", expanded=False):
-            st.caption(f"**📅 Rango:** {plan_activa['RANGO']}")
-            st.caption(f"**🏫 Aula:** {plan_activa['AULA']}")
-            st.caption(f"**⏰ Activada:** {plan_activa['FECHA_ACTIVACION'].split()[0]}")
+        
+        # Extraer descripción detallada
+        descripcion_detallada = extraer_descripcion_dias(plan_activa['CONTENIDO_PLAN'])
+        
+        with st.expander("📋 Ver detalles completos", expanded=False):
+            st.markdown(f"**📅 Rango de fechas:**")
+            st.caption(f"`{plan_activa['RANGO']}`")
+            
+            st.markdown(f"**🏫 Aula/Taller:**")
+            st.caption(f"`{plan_activa['AULA']}`")
+            
+            st.markdown(f"**⏰ Activada el:**")
+            st.caption(f"`{plan_activa['FECHA_ACTIVACION'].split()[0]}`")
+            
+            st.markdown(f"**📝 Descripción detallada:**")
+            st.info(descripcion_detallada)
             
             # BOTÓN DE EMERGENCIA PARA DESACTIVAR
             st.markdown("---")
@@ -328,6 +431,8 @@ with st.sidebar:
                         st.rerun()
             
             st.caption("⚠️ **Nota:** Si el MPPE envía una planificación oficial, desactiva esta primero y luego activa la nueva.")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.warning("⚠️ **SIN PLANIFICACIÓN ACTIVA**")
         st.caption("Ve a 'Mi Archivo' para activar una")
@@ -452,7 +557,7 @@ else:
     )
 
 # =========================================================
-# 1. PLANIFICADOR (FLUJO: BORRADOR -> GUARDAR)
+# 1. PLANIFICADOR (FLUJO: BORRADOR -> GUARDAR) - MODIFICADO
 # =========================================================
 if opcion == "📝 Planificación Profesional":
     st.subheader("Planificación Técnica (Taller Laboral)")
@@ -464,27 +569,41 @@ if opcion == "📝 Planificación Profesional":
     
     st.markdown("---")
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        rango = st.text_input("Lapso:", placeholder="Ej: 19 al 23 de Enero")
+        fecha_inicio = st.text_input("Fecha inicio:", placeholder="Ej: 19/01/26")
     with col2:
+        fecha_fin = st.text_input("Fecha fin:", placeholder="Ej: 23/01/26")
+    with col3:
         aula = st.text_input("Aula/Taller:", value="Mantenimiento y Servicios Generales")
     
-    notas = st.text_area("Notas del Docente / Tema:", height=150)
+    # Mostrar rango formateado
+    if fecha_inicio and fecha_fin:
+        rango = f"{fecha_inicio} al {fecha_fin}"
+        st.info(f"📅 **Rango de planificación:** {rango}")
+    else:
+        rango = ""
+    
+    notas = st.text_area("Tema/Contenido principal:", height=150, placeholder="Describe el tema principal de la semana...")
 
     # --- PASO 1: GENERAR BORRADOR ---
     if st.button("🚀 Generar Borrador con IA"):
-        if rango and notas:
+        if fecha_inicio and fecha_fin and notas:
             with st.spinner('Analizando Currículo Nacional y redactando...'):
                 
                 st.session_state.temp_rango = rango
                 st.session_state.temp_tema = notas
+                st.session_state.temp_fecha_inicio = fecha_inicio
+                st.session_state.temp_fecha_fin = fecha_fin
                 
-                # --- PROMPT MAESTRO ---
+                # --- PROMPT MAESTRO MEJORADO ---
                 prompt_inicial = f"""
                 Actúa como Luis Atencio, experto en Educación Especial (Taller Laboral) en Venezuela.
                 Planificación para: {rango}. Aula: {aula}. Tema: {notas}.
 
+                ⚠️ IMPORTANTE: INCLUYE SIEMPRE EL RANGO DE FECHAS EN LA PRIMERA LÍNEA:
+                "📅 **Rango:** {rango} | 🏫 **Aula:** {aula}"
+                
                 ⚠️ PASO 0: INTRODUCCIÓN OBLIGATORIA Y CERTIFICADA:
                 Antes de empezar el lunes, DEBES escribir textualmente este párrafo de certificación:
                 "📝 **Planificación Sugerida y Certificada:** Esta propuesta ha sido verificada internamente para asegurar su cumplimiento con los lineamientos del **Ministerio del Poder Popular para la Educación (MPPE)** y el **Currículo Nacional Bolivariano**, adaptada específicamente para Taller Laboral."
@@ -501,9 +620,9 @@ if opcion == "📝 Planificación Profesional":
 
                 ⚠️ PASO 3: ESTRUCTURA DIARIA (Sigue este formato exacto):
 
-                ### [DÍA]
+                ### [DÍA - FECHA ESPECÍFICA]
 
-                1. **TÍTULO:** [Creativo]
+                1. **TÍTULO:** [Creativo y específico]
                 2. **COMPETENCIA:** [Redacta la habilidad técnica específica]
 
                 3. **EXPLORACIÓN:** [Párrafo humano. EJEMPLO: Iniciamos con un conversatorio sobre... invitando a los estudiantes a compartir experiencias. Mediante el diálogo interactivo, despertamos la curiosidad.]
@@ -520,6 +639,8 @@ if opcion == "📝 Planificación Profesional":
                 (Repite para los 5 días).
 
                 AL FINAL: 📚 FUNDAMENTACIÓN LEGAL: Cita el artículo específico de la LOE o la CRBV.
+                
+                AL FINAL 2: 🗓️ **RANGO COMPLETO:** {rango}
                 """
                 
                 mensajes = [
@@ -529,6 +650,8 @@ if opcion == "📝 Planificación Profesional":
                 respuesta = generar_respuesta(mensajes, temperatura=0.4)
                 st.session_state.plan_actual = respuesta
                 st.rerun()
+        else:
+            st.warning("⚠️ Completa las fechas de inicio, fin y el tema para generar la planificación.")
 
     # --- PASO 2: GUARDAR ---
     if st.session_state.plan_actual:
@@ -543,14 +666,24 @@ if opcion == "📝 Planificación Profesional":
                     with st.spinner("Archivando en el expediente..."):
                         df_act = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
                         tema_guardar = st.session_state.get('temp_tema', notas)
+                        fecha_inicio_guardar = st.session_state.get('temp_fecha_inicio', fecha_inicio)
+                        fecha_fin_guardar = st.session_state.get('temp_fecha_fin', fecha_fin)
+                        rango_completo = f"{fecha_inicio_guardar} al {fecha_fin_guardar}"
+                        
                         nueva_fila = pd.DataFrame([{
                             "FECHA": datetime.now().strftime("%d/%m/%Y"),
+                            "FECHA_INICIO": fecha_inicio_guardar,
+                            "FECHA_FIN": fecha_fin_guardar,
+                            "RANGO": rango_completo,
                             "USUARIO": st.session_state.u['NOMBRE'], 
                             "TEMA": tema_guardar,
                             "CONTENIDO": st.session_state.plan_actual,
                             "ESTADO": "GUARDADO",
-                            "HORA_INICIO": "--", "HORA_FIN": "--"
+                            "HORA_INICIO": "--", 
+                            "HORA_FIN": "--",
+                            "AULA": aula
                         }])
+                        
                         datos_actualizados = pd.concat([df_act, nueva_fila], ignore_index=True)
                         conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=datos_actualizados)
                         st.success("✅ ¡Planificación archivada con éxito!")
@@ -600,10 +733,19 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
             st.rerun()
         st.stop()
     
-    # --- MOSTRAR PLANIFICACIÓN ACTIVA ---
+    # --- MOSTRAR PLANIFICACIÓN ACTIVA CON DESCRIPCIÓN ---
     with st.container():
+        st.markdown('<div class="tarjeta-activa">', unsafe_allow_html=True)
         st.success(f"**📌 EVALUANDO CONTRA:** {plan_activa['RANGO']}")
-        st.caption(f"Aula: {plan_activa['AULA']} | Activada: {plan_activa['FECHA_ACTIVACION']}")
+        
+        # Extraer descripción detallada
+        descripcion_detallada = extraer_descripcion_dias(plan_activa['CONTENIDO_PLAN'])
+        
+        with st.expander("📋 Ver detalles de la planificación activa", expanded=False):
+            st.caption(f"**🏫 Aula:** {plan_activa['AULA']}")
+            st.caption(f"**⏰ Activada:** {plan_activa['FECHA_ACTIVACION']}")
+            st.caption(f"**📝 Descripción:** {descripcion_detallada}")
+        st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown("---")
     
@@ -766,7 +908,7 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
                 st.error(f"Error al guardar: {e}")
 
 # =========================================================
-# 3. REGISTRO DE EVALUACIONES (FIX: PERSISTENCIA DE INFORME IA)
+# 3. REGISTRO DE EVALUACIONES
 # =========================================================
 elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
     st.subheader("🎓 Expediente Estudiantil 360°")
@@ -908,7 +1050,7 @@ elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
         st.error(f"⚠️ Error conectando con la base de datos. Detalle: {e}")
 
 # =========================================================
-# 4. MI ARCHIVO PEDAGÓGICO (CON SISTEMA DE PLANIFICACIÓN ACTIVA)
+# 4. MI ARCHIVO PEDAGÓGICO (COMPLETAMENTE MODIFICADO)
 # =========================================================
 elif opcion == "📂 Mi Archivo Pedagógico":
     st.subheader(f"📂 Expediente de: {st.session_state.u['NOMBRE']}")
@@ -923,18 +1065,24 @@ elif opcion == "📂 Mi Archivo Pedagógico":
     # OBTENER PLANIFICACIÓN ACTIVA ACTUAL
     plan_activa_actual = obtener_plan_activa_usuario(st.session_state.u['NOMBRE'])
     
-    # PANEL INFORMATIVO SUPERIOR
-    col_info, col_accion = st.columns([3, 1])
-    with col_info:
-        if plan_activa_actual:
-            st.success(f"**📌 PLANIFICACIÓN ACTIVA ACTUAL:** {plan_activa_actual['RANGO']}")
-            st.caption(f"Aula: {plan_activa_actual['AULA']} | Activada: {plan_activa_actual['FECHA_ACTIVACION'].split()[0]}")
-        else:
-            st.warning("⚠️ **No tienes una planificación activa para esta semana.**")
-            st.caption("Selecciona una planificación y haz clic en '⭐ Usar Esta Semana'")
-    
-    with col_accion:
-        if plan_activa_actual:
+    # PANEL INFORMATIVO SUPERIOR MEJORADO
+    if plan_activa_actual:
+        st.markdown('<div class="plan-activa-box">', unsafe_allow_html=True)
+        col_info, col_accion = st.columns([3, 1])
+        with col_info:
+            st.markdown("### 🟢 **PLANIFICACIÓN ACTIVA ACTUAL**")
+            st.markdown(f"**📅 Rango:** `{plan_activa_actual['RANGO']}`")
+            st.markdown(f"**🏫 Aula:** `{plan_activa_actual['AULA']}`")
+            st.markdown(f"**⏰ Activada:** `{plan_activa_actual['FECHA_ACTIVACION'].split()[0]}`")
+            
+            # Extraer descripción detallada
+            descripcion_detallada = extraer_descripcion_dias(plan_activa_actual['CONTENIDO_PLAN'])
+            with st.expander("📝 Ver descripción detallada de la semana"):
+                st.info(descripcion_detallada)
+        
+        with col_accion:
+            st.write("")  # Espacio
+            st.write("")  # Espacio
             if st.button("❌ Desactivar", 
                         help="Dejar de usar esta planificación para evaluar",
                         type="secondary"):
@@ -942,6 +1090,11 @@ elif opcion == "📂 Mi Archivo Pedagógico":
                     st.success("✅ Planificación desactivada.")
                     time.sleep(1)
                     st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    else:
+        st.warning("⚠️ **No tienes una planificación activa para esta semana.**")
+        st.caption("Selecciona una planificación y haz clic en '⭐ Usar Esta Semana'")
     
     st.markdown("---")
     st.info("Selecciona una planificación para **trabajar esta semana**. El sistema de evaluación usará **solo esta**.")
@@ -963,12 +1116,21 @@ elif opcion == "📂 Mi Archivo Pedagógico":
                 # DETERMINAR SI ESTA ES LA ACTIVA
                 es_activa = (contenido_activo_actual == row['CONTENIDO'])
                 
-                # CREAR ETIQUETA CON INDICADOR
-                etiqueta_base = f"📅 {row['FECHA']} | 📌 {str(row['TEMA'])[:40]}..."
-                if es_activa:
-                    etiqueta = f"⭐ **ACTIVA** | {etiqueta_base}"
+                # OBTENER RANGO (nueva columna) o usar fechas individuales
+                if 'RANGO' in row and pd.notna(row['RANGO']):
+                    rango_display = row['RANGO']
+                elif 'FECHA_INICIO' in row and 'FECHA_FIN' in row and pd.notna(row['FECHA_INICIO']) and pd.notna(row['FECHA_FIN']):
+                    rango_display = f"{row['FECHA_INICIO']} al {row['FECHA_FIN']}"
                 else:
-                    etiqueta = etiqueta_base
+                    rango_display = f"Creada: {row['FECHA']}"
+                
+                # CREAR ETIQUETA CON INDICADOR
+                tema_corto = str(row['TEMA'])[:40] + "..." if len(str(row['TEMA'])) > 40 else str(row['TEMA'])
+                
+                if es_activa:
+                    etiqueta = f"🟢 **ACTIVA** | 📅 {rango_display} | 📌 {tema_corto}"
+                else:
+                    etiqueta = f"📅 {rango_display} | 📌 {tema_corto}"
                 
                 # EXPANDER PARA CADA PLANIFICACIÓN
                 with st.expander(etiqueta, expanded=es_activa):
@@ -977,9 +1139,24 @@ elif opcion == "📂 Mi Archivo Pedagógico":
                         st.success("✅ **ESTA ES TU PLANIFICACIÓN ACTIVA PARA LA SEMANA**")
                         st.markdown("El sistema de evaluación buscará actividades **solo en esta planificación**.")
                     
-                    # CONTENIDO (solo lectura para mantener integridad)
-                    st.markdown(f"**Contenido de la planificación:**")
-                    st.markdown(f'<div class="plan-box" style="padding:10px; font-size:0.9em;">{row["CONTENIDO"]}</div>', unsafe_allow_html=True)
+                    # Mostrar información básica
+                    col_info1, col_info2 = st.columns(2)
+                    with col_info1:
+                        st.caption(f"**Rango:** {rango_display}")
+                        if 'AULA' in row and pd.notna(row['AULA']):
+                            st.caption(f"**Aula:** {row['AULA']}")
+                    
+                    with col_info2:
+                        st.caption(f"**Creada:** {row['FECHA']}")
+                        st.caption(f"**Estado:** {row['ESTADO']}")
+                    
+                    # Extraer y mostrar descripción detallada
+                    descripcion = extraer_descripcion_dias(row['CONTENIDO'])
+                    st.info(f"**📝 Descripción de la semana:** {descripcion}")
+                    
+                    # CONTENIDO COMPLETO
+                    with st.expander("📄 Ver contenido completo de la planificación", expanded=False):
+                        st.markdown(f'<div class="plan-box" style="padding:10px; font-size:0.9em;">{row["CONTENIDO"]}</div>', unsafe_allow_html=True)
                     
                     # BOTONES DE ACCIÓN
                     col_acciones = st.columns([2, 1, 1])
@@ -1009,17 +1186,10 @@ elif opcion == "📂 Mi Archivo Pedagógico":
                                        help="Establece esta planificación como la oficial para evaluar esta semana",
                                        type="secondary"):
                                 
-                                # Extraer información básica (intento automático)
+                                # Extraer información básica
                                 contenido = row['CONTENIDO']
-                                rango = "Semana Actual"
-                                aula = "Taller Laboral"
-                                
-                                # Intentar extraer rango del contenido
-                                import re
-                                patron_rango = r'Planificación para:\s*(.*?)(?:\n|$)'
-                                match_rango = re.search(patron_rango, contenido, re.IGNORECASE)
-                                if match_rango:
-                                    rango = match_rango.group(1)
+                                rango = rango_display
+                                aula = row['AULA'] if 'AULA' in row and pd.notna(row['AULA']) else "Taller Laboral"
                                 
                                 # Establecer como activa
                                 if establecer_plan_activa(
@@ -1140,4 +1310,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 2.5 (Sistema con Navegación Mejorada) | 🍎 Legado Maestro")
+st.caption("Desarrollado por Luis Atencio | Versión: 2.6 (Sistema con Mejoras Visuales y Descripción) | 🍎 Legado Maestro")
