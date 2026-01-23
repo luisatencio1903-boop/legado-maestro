@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 2.8 (SIN ACCESO RÁPIDO + MEJORAS VISUALES)
+# VERSIÓN: 3.0 (SISTEMA SIMPLIFICADO Y MEJORADO)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -276,10 +276,6 @@ hide_streamlit_style = """
             .plan-activa-verde {
                 color: #2e7d32 !important;
                 font-weight: 700 !important;
-                background-color: #e8f5e9 !important;
-                padding: 5px 10px;
-                border-radius: 5px;
-                border-left: 3px solid #2e7d32;
             }
             
             /* ESTILO PARA BOTÓN ACTIVO */
@@ -357,7 +353,7 @@ TÚ ERES "LEGADO MAESTRO".
    - Si el usuario pregunta sobre: POLÍTICA (Gobierno/Oposición), RELIGIÓN, IDEOLOGÍAS o TEMAS POLÉMICOS (Conflictos, Crisis).
    - ACCIÓN: NO des opiniones, NO des explicaciones neutrales, NO debatas.
    - RESPUESTA OBLIGATORIA:
-     "🚫 Lo siento. Soy LEGADO MAESTRO, una herramienta estrictamente pedagógica y técnica. Mi programación me impide procesar opiniones políticos, religiosos o controversiales. Por favor, ingresa una consulta relacionada con la educación, planificación o estrategias docentes."
+     "🚫 Lo siento. Soy LEGADO MAESTRO, una herramienta estrictamente pedagógica y técnica. Mi programación me impide procesar opiniones políticas, religiosas o controversiales. Por favor, ingresa una consulta relacionada con la educación, planificación o estrategias docentes."
 
 3. 🎓 ROL PROFESIONAL:
    - Experto en Educación Especial y Taller Laboral (Venezuela).
@@ -420,8 +416,6 @@ with st.sidebar:
                  use_container_width=True,
                  type="primary"):
         st.session_state.redirigir_a_archivo = False
-        if 'menu_directo' in st.session_state:
-            del st.session_state.menu_directo
         st.rerun()
     
     st.markdown("---")
@@ -587,7 +581,6 @@ with st.sidebar:
 if 'plan_actual' not in st.session_state: st.session_state.plan_actual = ""
 if 'actividad_detectada' not in st.session_state: st.session_state.actividad_detectada = ""
 if 'redirigir_a_archivo' not in st.session_state: st.session_state.redirigir_a_archivo = False
-if 'menu_directo' not in st.session_state: st.session_state.menu_directo = None
 if 'selected_option' not in st.session_state: 
     st.session_state.selected_option = "📝 Planificación Profesional"
 if 'mostrar_conversor_ministerial' not in st.session_state:
@@ -1190,29 +1183,28 @@ elif st.session_state.selected_option == "📂 Mi Archivo Pedagógico":
                 # CREAR ETIQUETA CON INDICADOR
                 tema_corto = str(row['TEMA'])[:40] + "..." if len(str(row['TEMA'])) > 40 else str(row['TEMA'])
                 
-                # AQUÍ ESTÁ EL CAMBIO: Si es activa, usar clase CSS con letras verdes
+                # AQUÍ ESTÁ EL CAMBIO: Si es activa, mostrar en verde
                 if es_activa:
-                    # Usamos HTML para aplicar el estilo verde
-                    etiqueta_html = f'<span class="plan-activa-verde">🟢 ACTIVA | 📅 {rango_display} | 📌 {tema_corto}</span>'
-                    # Creamos un marcador con HTML
-                    st.markdown(etiqueta_html, unsafe_allow_html=True)
-                    # Necesitamos un contenedor para el expander
-                    with st.expander("", expanded=True):  # Expander vacío pero expandido
-                        pass  # El contenido va después
-                    # Ahora ponemos el contenido real (esto es un workaround)
-                    expander_key = f"exp_{index}"
-                    with st.expander("", expanded=True, key=expander_key):
-                        contenido_expander(index, row, es_activa, rango_display, tema_corto, plan_activa_actual)
+                    # Usar HTML para aplicar el estilo verde
+                    etiqueta = f'<span style="color: #2e7d32; font-weight: bold;">🟢 ACTIVA | 📅 {rango_display} | 📌 {tema_corto}</span>'
+                    # Mostrar la etiqueta con HTML
+                    st.markdown(etiqueta, unsafe_allow_html=True)
+                    # Expander vacío para mantener la estructura
+                    with st.expander("", expanded=True):
+                        pass
+                    # Ahora mostrar el contenido real
+                    with st.expander("", expanded=True):
+                        contenido_expander(index, row, es_activa, rango_display)
                 else:
                     etiqueta = f"📅 {rango_display} | 📌 {tema_corto}"
                     with st.expander(etiqueta, expanded=False):
-                        contenido_expander(index, row, es_activa, rango_display, tema_corto, plan_activa_actual)
+                        contenido_expander(index, row, es_activa, rango_display)
 
     except Exception as e:
         st.error(f"Error cargando archivo: {e}")
 
 # Función auxiliar para contenido del expander (evita duplicar código)
-def contenido_expander(index, row, es_activa, rango_display, tema_corto, plan_activa_actual):
+def contenido_expander(index, row, es_activa, rango_display):
     """Contenido del expander para planificaciones"""
     # ENCABEZADO SI ES ACTIVA
     if es_activa:
@@ -1316,7 +1308,7 @@ def contenido_expander(index, row, es_activa, rango_display, tema_corto, plan_ac
                     st.rerun()
 
 # =========================================================
-# OTROS MÓDULOS (EXTRAS)
+# 5. OTROS MÓDULOS (EXTRAS)
 # =========================================================
 elif st.session_state.selected_option == "🌟 Mensaje Motivacional":
     st.subheader("Dosis de Ánimo Express ⚡")
@@ -1372,4 +1364,4 @@ elif st.session_state.selected_option == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 2.8 (Sin Acceso Rápido + Mejoras Visuales) | 🍎 Legado Maestro")
+st.caption("Desarrollado por Luis Atencio | Versión: 3.0 (Sistema Simplificado y Mejorado) | 🍎 Legado Maestro")
