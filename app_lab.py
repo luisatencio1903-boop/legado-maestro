@@ -1,11 +1,11 @@
 # -----------------------------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 3.3 (EDICIÓN COMPETENCIAS TÉCNICAS COMPLETAS)
+# VERSIÓN: 3.4 (CORRECCIÓN DE SINTAXIS)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio (Bachiller Docente)
 # INSTITUCIÓN: T.E.L E.R.A.C
 # DESCRIPCIÓN: Asistente con IA para Educación Especial. 
-# CORRECCIÓN V3.3: Competencias descriptivas (Acción + Objeto + Condición).
+# CORRECCIÓN V3.4: Solución de error de paréntesis en línea 606.
 # -----------------------------------------------------------------------------
 
 import streamlit as st
@@ -603,7 +603,7 @@ else:
     # -----------------------------------------------------------------------------------
     # BLOQUE DE GUARDADO (COMÚN)
     # -----------------------------------------------------------------------------------
-    if st.session_state.plan_actual and (opcion == "🧠 PLANIFICADOR INTELIGENTE" or opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)":
+    if st.session_state.plan_actual and (opcion == "🧠 PLANIFICADOR INTELIGENTE" or opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)"):
         st.markdown("---")
         st.info("👀 Revisa el borrador abajo. Fíjate en las competencias detalladas.")
         st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
@@ -866,4 +866,4 @@ else:
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 3.3 (Edición Competencias Técnicas)")
+st.caption("Desarrollado por Luis Atencio | Versión: 3.4 (Corrección de Sintaxis)")
