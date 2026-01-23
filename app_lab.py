@@ -1,11 +1,11 @@
 # -----------------------------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 3.4 (CORRECCIÓN DE SINTAXIS)
+# VERSIÓN: 3.6 (EDICIÓN MAESTRA: ROBUSTA + FORMATO MINISTERIAL)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio (Bachiller Docente)
 # INSTITUCIÓN: T.E.L E.R.A.C
-# DESCRIPCIÓN: Asistente con IA para Educación Especial. 
-# CORRECCIÓN V3.4: Solución de error de paréntesis en línea 606.
+# DESCRIPCIÓN: Asistente con IA para Educación Especial.
+# CAMBIOS: Código expandido (800+ líneas), formato vertical forzado en IA.
 # -----------------------------------------------------------------------------
 
 import streamlit as st
@@ -324,8 +324,8 @@ except Exception as e:
     st.error(f"⚠️ Error de conexión inicial con IA: {e}")
     st.stop()
 
-# --- PROMPTS DE SISTEMA (CEREBRO TÉCNICO V3.3) ---
-# Se han actualizado las reglas para exigir competencias descriptivas.
+# --- PROMPTS DE SISTEMA (CEREBRO TÉCNICO V3.6) ---
+# Se han actualizado las reglas para exigir competencias descriptivas y formato limpio.
 
 INSTRUCCIONES_TECNICAS = """
 ⚠️ ERES "LEGADO MAESTRO". 
@@ -339,7 +339,6 @@ TU ROL: Experto en Educación Especial y Taller Laboral (Estudiantes con Discapa
    - La competencia debe describir: LA ACCIÓN + EL OBJETO + LA CONDICIÓN.
    - EJEMPLO CORRECTO: "Selecciona y utiliza adecuadamente los materiales de limpieza".
    - EJEMPLO CORRECTO: "Manipula con precisión tijeras y pega para crear manualidades".
-   - EJEMPLO CORRECTO: "Participa en juegos grupales respetando las normas de convivencia".
 
 2. **ACTIVIDADES CONCRETAS (NO ABSTRACTAS):**
    - PROHIBIDO mandar a "Investigar", "Hacer resúmenes", o "Leer textos densos".
@@ -348,7 +347,9 @@ TU ROL: Experto en Educación Especial y Taller Laboral (Estudiantes con Discapa
 3. **VARIEDAD DE LENGUAJE:**
    - NO empieces siempre con "Invitamos". Usa: "Hoy descubrimos", "Manos a la obra", "Jugamos a".
 
-4. **TONO HUMANO:** Cálido y motivador.
+4. **FORMATO VISUAL (CRÍTICO):**
+   - Usa saltos de línea (doble espacio) entre secciones.
+   - NO escribas todo pegado en un bloque.
 """
 
 # --- FUNCIÓN GENERADORA GENÉRICA ---
@@ -549,7 +550,7 @@ else:
     # -----------------------------------------------------------------------------------
     elif opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)":
         st.markdown("**Adaptación y Humanización de Lineamientos**")
-        st.info("Pega aquí el mensaje del Ministerio. Legado Maestro lo adaptará para el Taller Laboral con competencias correctas.")
+        st.info("Pega aquí el mensaje del Ministerio. Legado Maestro lo adaptará con encabezado oficial y formato ordenado.")
         
         aula_min = st.text_input("Aula/Taller:", value="Mantenimiento y Servicios Generales")
         texto_whatsapp = st.text_area("Pegue aquí el texto (WhatsApp/Correo):", height=300)
@@ -564,29 +565,43 @@ else:
                     st.session_state.temp_rango = rango_detectado
                     st.session_state.temp_tema = "Adaptación Ministerial Enriquecida"
                     
-                    # --- PROMPT DE ADAPTACIÓN CORREGIDO ---
+                    # --- PROMPT DE ADAPTACIÓN CORREGIDO (CON ENCABEZADO Y ESPACIADO) ---
                     prompt_adaptacion = f"""
                     ERES UN EXPERTO EN ADAPTACIÓN CURRICULAR (TALLER LABORAL).
                     TEXTO MINISTERIO: "{texto_whatsapp}"
                     
-                    **INSTRUCCIONES CLAVE:**
-                    1. **ADAPTACIÓN:** Si el texto pide cosas abstractas (Investigar), cámbialo a cosas concretas (Ver, Tocar, Pintar).
-                    2. **COMPETENCIAS TÉCNICAS (MUY IMPORTANTE):**
-                       - PROHIBIDO poner solo "Diseñar" o "Investigar".
-                       - DEBES ESCRIBIR LA FRASE COMPLETA: "Selecciona y manipula materiales para decorar...", "Participa en juegos tradicionales respetando normas...".
-                    3. **VARIEDAD:** Si dice "Limpieza" todos los días, varía: "Conocer herramientas", "Normas de seguridad", "Práctica guiada".
+                    **INSTRUCCIONES CLAVE DE FORMATO:**
+                    1. **ENCABEZADO OBLIGATORIO:**
+                       "📝 **Planificación del Ministerio de Educación (Adaptada para Taller Laboral)**"
+                       "Adaptación para el Taller: {aula_min}"
+                    2. **ESPACIADO:** Usa DOBLE ESPACIO entre cada punto para que se vea una lista vertical ordenada.
                     
-                    **SALIDA OBLIGATORIA (MARKDOWN):**
+                    **INSTRUCCIONES PEDAGÓGICAS:**
+                    1. **COMPETENCIAS TÉCNICAS:** Frase completa (Acción + Objeto + Condición).
+                    2. **VARIEDAD:** Si dice "Limpieza" siempre, varía (Conocer, Seguridad, Práctica).
+                    3. **LENGUAJE:** Humano, no robótico.
                     
-                    ### [DÍA Y FECHA DETECTADA]
-                    1. **LINEAMIENTO ORIGINAL:** [Resumen]
+                    **SALIDA OBLIGATORIA (MARKDOWN VERTICAL):**
+                    
+                    ---
+                    ### 📅 [DÍA Y FECHA DETECTADA]
+                    
+                    1. **LINEAMIENTO ORIGINAL:** [Resumen breve]
+                    
                     2. **NUESTRA ADAPTACIÓN:** [Título atractivo]
+                    
                     3. **COMPETENCIA TÉCNICA:** [Frase completa describiendo la habilidad y la acción]
+                    
                     4. **EXPLORACIÓN:** [Inicio motivador]
+                    
                     5. **DESARROLLO:** [Actividad práctica paso a paso]
+                    
                     6. **REFLEXIÓN:** [Cierre vivencial]
+                    
                     7. **ESTRATEGIAS:** [Técnicas docentes]
+                    
                     8. **RECURSOS:** [Materiales]
+                    ---
                     """
                     
                     mensajes = [
@@ -601,11 +616,11 @@ else:
                 st.warning("⚠️ Por favor pegue el texto de la planificación.")
 
     # -----------------------------------------------------------------------------------
-    # BLOQUE DE GUARDADO (COMÚN)
+    # BLOQUE DE GUARDADO (COMÚN) - CORREGIDO
     # -----------------------------------------------------------------------------------
     if st.session_state.plan_actual and (opcion == "🧠 PLANIFICADOR INTELIGENTE" or opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)"):
         st.markdown("---")
-        st.info("👀 Revisa el borrador abajo. Fíjate en las competencias detalladas.")
+        st.info("👀 Revisa el borrador abajo. Fíjate en las competencias detalladas y el orden.")
         st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
         
         col_save_1, col_save_2 = st.columns([2,1])
@@ -866,4 +881,4 @@ else:
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 3.4 (Corrección de Sintaxis)")
+st.caption("Desarrollado por Luis Atencio | Versión: 3.6 (Edición Maestra Final)")
