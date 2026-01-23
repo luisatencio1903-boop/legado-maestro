@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 2.5 (EDICIÓN GESTIÓN MINISTERIAL)
+# VERSIÓN: 2.7 (EDICIÓN INTEGRAL MÓVIL + MINISTERIAL)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -13,6 +13,7 @@ from groq import Groq
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import random
+import re # Necesario para detectar fechas en el texto ministerial
 
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -227,6 +228,13 @@ hide_streamlit_style = """
                 color: #000000 !important;
                 border: 2px solid #ffa500 !important;
             }
+            
+            /* ESTILO PARA SELECTBOX (BARRA DE HERRAMIENTAS) */
+            .stSelectbox label {
+                font-size: 1.2rem;
+                font-weight: bold;
+                color: #0068c9;
+            }
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -271,7 +279,9 @@ TÚ ERES "LEGADO MAESTRO".
    - Usa Markdown estricto (Negritas, Títulos).
 """
 
-# --- 4. BARRA LATERAL (MODIFICADA: DOS BARRAS DE HERRAMIENTAS) ---
+# --- 4. BARRA LATERAL (MODO INFORMACIÓN SOLAMENTE) ---
+# Se han eliminado los botones de navegación de aquí para pasarlos al panel principal
+# Se mantiene solo la información de usuario y estado.
 with st.sidebar:
     if os.path.exists("logo_legado.png"):
         st.image("logo_legado.png", width=150)
@@ -302,41 +312,6 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # --- BARRA DE HERRAMIENTAS 1: GESTIÓN PRINCIPAL ---
-    st.markdown("### 🛠️ GESTIÓN DOCENTE")
-    menu_principal = st.selectbox(
-        "Herramientas Principales:",
-        [
-            "🧠 PLANIFICADOR INTELIGENTE",
-            "📜 PLANIFICADOR MINISTERIAL (NUEVO)",
-            "📂 Mi Archivo Pedagógico",
-            "📝 Evaluar Alumno",
-            "📊 Registro de Evaluaciones"
-        ],
-        key="menu_1"
-    )
-
-    st.markdown("### 🧩 RECURSOS EXTRA")
-    # --- BARRA DE HERRAMIENTAS 2: FUNCIONES SECUNDARIAS ---
-    menu_secundario = st.selectbox(
-        "Herramientas de Apoyo:",
-        [
-            "(Sin Selección)",
-            "💡 Ideas de Actividades", 
-            "❓ Consultas Técnicas",
-            "🌟 Mensaje Motivacional"
-        ],
-        key="menu_2"
-    )
-    
-    # Lógica para determinar qué opción mostrar
-    if menu_secundario != "(Sin Selección)":
-        opcion = menu_secundario
-    else:
-        opcion = menu_principal
-
-    st.markdown("---")
-    
     if st.button("🗑️ Limpiar Memoria"):
         st.session_state.plan_actual = ""
         st.session_state.actividad_detectada = ""
@@ -365,19 +340,54 @@ def generar_respuesta(mensajes_historial, temperatura=0.7):
     except Exception as e:
         return f"Error: {e}"
 
-# --- 7. CUERPO DE LA APP ---
+# --- 7. CUERPO DE LA APP (NAVEGACIÓN MÓVIL) ---
 st.title("🍎 Asistente Educativo - Zulia")
+
+# --- BARRA DE HERRAMIENTAS SUPERIOR (ESTILO TOOLBAR) ---
+st.markdown("### 🛠️ GESTIÓN DOCENTE")
+menu_principal = st.selectbox(
+    "Seleccione herramienta principal:",
+    [
+        "🧠 PLANIFICADOR INTELIGENTE", 
+        "📜 PLANIFICADOR MINISTERIAL (NUEVO)",
+        "📝 Evaluar Alumno (NUEVO)",
+        "📊 Registro de Evaluaciones (NUEVO)",
+        "📂 Mi Archivo Pedagógico"
+    ],
+    label_visibility="collapsed" # Ocultamos la etiqueta para que parezca una barra
+)
+
+st.markdown("### 🧩 RECURSOS EXTRA")
+menu_secundario = st.selectbox(
+    "Seleccione recurso de apoyo:",
+    [
+        "(Sin Selección)",
+        "🌟 Mensaje Motivacional", 
+        "💡 Ideas de Actividades", 
+        "❓ Consultas Técnicas"
+    ],
+    label_visibility="collapsed"
+)
+
+# Lógica de navegación prioritaria
+if menu_secundario != "(Sin Selección)":
+    opcion = menu_secundario
+else:
+    opcion = menu_principal
 
 # Redirección automática si se solicita desde sidebar
 if st.session_state.get('redirigir_a_archivo', False):
     opcion = "📂 Mi Archivo Pedagógico"
     st.session_state.redirigir_a_archivo = False
 
+# SEPARADOR VISUAL
+st.divider()
+
 # =========================================================
 # 1. PLANIFICADOR INTELIGENTE (ANTES PLAN PROFESIONAL)
 # =========================================================
 if opcion == "🧠 PLANIFICADOR INTELIGENTE":
-    st.subheader("Planificación Técnica (Taller Laboral)")
+    st.subheader("Planificación Técnica (Desde Cero)")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -395,7 +405,7 @@ if opcion == "🧠 PLANIFICADOR INTELIGENTE":
                 st.session_state.temp_rango = rango
                 st.session_state.temp_tema = notas
                 
-                # --- PROMPT MAESTRO ---
+                # --- PROMPT MAESTRO (COMPLETO ORIGINAL) ---
                 prompt_inicial = f"""
                 Actúa como Luis Atencio, experto en Educación Especial (Taller Laboral) en Venezuela.
                 Planificación para: {rango}. Aula: {aula}. Tema: {notas}.
@@ -445,89 +455,69 @@ if opcion == "🧠 PLANIFICADOR INTELIGENTE":
                 st.session_state.plan_actual = respuesta
                 st.rerun()
 
-    # --- PASO 2: GUARDAR (BLOQUE DE GUARDADO COMPARTIDO) ---
-    if st.session_state.plan_actual:
-        st.markdown("---")
-        st.info("👀 Revisa el borrador abajo. Si te gusta, guárdalo en tu carpeta.")
-        st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
-        
-        col_save_1, col_save_2 = st.columns([2,1])
-        with col_save_1:
-            if st.button("💾 SÍ, GUARDAR EN MI CARPETA"):
-                try:
-                    with st.spinner("Archivando en el expediente..."):
-                        df_act = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-                        tema_guardar = st.session_state.get('temp_tema', notas)
-                        nueva_fila = pd.DataFrame([{
-                            "FECHA": datetime.now().strftime("%d/%m/%Y"),
-                            "USUARIO": st.session_state.u['NOMBRE'], 
-                            "TEMA": tema_guardar,
-                            "CONTENIDO": st.session_state.plan_actual,
-                            "ESTADO": "GUARDADO",
-                            "HORA_INICIO": "--", "HORA_FIN": "--"
-                        }])
-                        datos_actualizados = pd.concat([df_act, nueva_fila], ignore_index=True)
-                        conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=datos_actualizados)
-                        st.success("✅ ¡Planificación archivada con éxito!")
-                        time.sleep(2)
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Error al guardar: {e}")
-
 # =========================================================
-# 2. PLANIFICADOR MINISTERIAL (NUEVO MÓDULO SOLICITADO)
+# 2. PLANIFICADOR MINISTERIAL (NUEVO: LÓGICA ENRIQUECIDA)
 # =========================================================
 elif opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)":
-    st.subheader("📜 Planificación desde Lineamiento Ministerial")
-    st.markdown("""
-    Esta herramienta te permite **copiar y pegar el mensaje de WhatsApp o texto** enviado por la dirección/zona educativa, 
-    y Legado Maestro lo **adaptará automáticamente** al formato pedagógico correcto.
-    """)
+    st.subheader("📜 Adaptación Inteligente de Lineamientos")
+    st.info("Pegue el mensaje de WhatsApp. Legado Maestro extraerá las fechas y **enriquecerá las actividades repetitivas** para adaptarlas a su Taller.")
     
-    st.markdown("---")
-    
-    col_min_1, col_min_2 = st.columns(2)
-    with col_min_1:
-        rango_min = st.text_input("Lapso de la planificación:", placeholder="Ej: Semana del 20/01")
-    with col_min_2:
-        aula_min = st.text_input("Aula/Taller:", value="Taller Laboral")
+    # Solo pedimos el Aula, la fecha viene en el texto
+    aula_min = st.text_input("Aula/Taller (Contexto para la adaptación):", value="Mantenimiento y Servicios Generales")
         
-    texto_whatsapp = st.text_area("Pegue aquí el texto de la planificación (WhatsApp/Correo):", height=200, 
-                                  placeholder="Ejemplo: Lunes: Efemérides del maestro. Martes: Manos a la siembra (Traer semillas). Miércoles: Proyecto de vida...")
+    texto_whatsapp = st.text_area("Pegue aquí el texto (WhatsApp/Correo):", height=300, 
+                                  placeholder="Ej: ✨ PLAN ESTRATÉGICO SUGERIDO... SEMANA 01/12 al 05/12/25...")
     
-    if st.button("🪄 Adaptar al Formato Legado Maestro"):
-        if texto_whatsapp and rango_min:
-            with st.spinner("Analizando texto crudo y estructurando pedagógicamente..."):
+    if st.button("🪄 Adaptar y Enriquecer"):
+        if texto_whatsapp:
+            with st.spinner(f"Analizando lineamientos y adaptando para el taller de {aula_min}..."):
                 
-                st.session_state.temp_rango = rango_min
-                st.session_state.temp_tema = "Adaptación Ministerial"
+                # Intentamos extraer una fecha aproximada para guardar en el registro
+                # Busca patrones dd/mm o dd-mm
+                fechas_encontradas = re.findall(r'\d{1,2}[/-]\d{1,2}', texto_whatsapp)
+                rango_detectado = f"Semana {fechas_encontradas[0]}" if fechas_encontradas else "Semana Ministerial"
                 
+                st.session_state.temp_rango = rango_detectado
+                st.session_state.temp_tema = "Adaptación Ministerial Enriquecida"
+                
+                # PROMPT MEJORADO PARA ENRIQUECER ACTIVIDADES REPETITIVAS
                 prompt_adaptacion = f"""
                 ERES UN EXPERTO EN ADAPTACIÓN CURRICULAR (TALLER LABORAL VENEZUELA).
                 
-                **TAREA:**
-                Recibiste el siguiente texto crudo (posiblemente de WhatsApp) con la planificación enviada por el directivo:
+                **CONTEXTO:**
+                Eres el asistente pedagógico del Taller: **{aula_min}**.
+                Recibiste este lineamiento ministerial (Texto crudo):
                 ---
                 "{texto_whatsapp}"
                 ---
                 
-                **INSTRUCCIONES:**
-                1. Analiza cada actividad mencionada en el texto.
-                2. SIN CAMBIAR la esencia de lo que pide el ministerio, REDACTA la planificación completa siguiendo el formato estricto de Legado Maestro.
-                3. Si el texto es muy breve (Ej: "Lunes: Efemérides"), tú debes CREAR el Inicio, Desarrollo y Cierre pedagógico para esa actividad.
+                **PROBLEMA A RESOLVER:**
+                Los lineamientos ministeriales suelen ser genéricos y repetitivos (ej: dicen "Limpiar y organizar el aula" todos los días). Si el docente copia eso textual, la planificación será mediocre.
                 
-                **ESTRUCTURA DE SALIDA OBLIGATORIA:**
+                **TU MISIÓN (INTELIGENCIA PEDAGÓGICA):**
+                1. Detecta las fechas y efemérides del texto (Mantenlas OBLIGATORIAMENTE, ej: Día de la Discapacidad).
+                2. Si la actividad sugerida es repetitiva (ej: "Limpieza"), **TRANSFÓRMALA** en una secuencia pedagógica lógica para el taller de **{aula_min}**.
+                   - Ejemplo MALO: Lunes: Limpiar, Martes: Limpiar.
+                   - Ejemplo BUENO (Adaptado): 
+                     - Lunes: Identificación y clasificación de herramientas de limpieza.
+                     - Martes: Normas de seguridad e higiene al usar productos químicos.
+                     - Miércoles: Ejecución práctica de limpieza profunda (siguiendo el evento ministerial).
+                     - Jueves: Mantenimiento preventivo de mobiliario.
                 
-                "📝 **Planificación Ministerial Adaptada:** Cumplimiento de lineamientos recibidos."
+                **ESTRUCTURA DE SALIDA OBLIGATORIA (MARKDOWN):**
                 
-                ### [DÍA]
-                1. **ACTIVIDAD MINISTERIAL:** [Lo que decía el mensaje original]
-                2. **COMPETENCIA TÉCNICA:** [Redactada por ti]
-                3. **EXPLORACIÓN:** [Inicio de la clase]
-                4. **DESARROLLO:** [Actividad práctica]
-                5. **REFLEXIÓN:** [Cierre]
+                "📝 **Planificación Ministerial Adaptada y Enriquecida**"
+                "Adaptación específica para el Taller: {aula_min}"
                 
-                (Hazlo para todos los días mencionados o completa la semana si falta).
+                ### [DÍA Y FECHA DETECTADA]
+                1. **LINEAMIENTO ORIGINAL:** [Breve resumen de lo que pedía el mensaje original]
+                2. **ACTIVIDAD ADAPTADA:** [Título creativo y técnico para el taller]
+                3. **COMPETENCIA:** [Verbo de acción técnica]
+                4. **EXPLORACIÓN:** [Inicio motivador]
+                5. **DESARROLLO:** [Desarrollo práctico integrando la efeméride con el oficio]
+                6. **REFLEXIÓN:** [Cierre]
+                
+                (Haz esto para todos los días del texto).
                 """
                 
                 mensajes = [
@@ -535,42 +525,51 @@ elif opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)":
                     {"role": "user", "content": prompt_adaptacion}
                 ]
                 
-                respuesta_adaptada = generar_respuesta(mensajes, temperatura=0.5)
+                respuesta_adaptada = generar_respuesta(mensajes, temperatura=0.6) # Un poco más creativo para variar actividades
                 st.session_state.plan_actual = respuesta_adaptada
                 st.rerun()
         else:
-            st.warning("⚠️ Por favor ingrese el lapso y pegue el texto de la planificación.")
+            st.warning("⚠️ Por favor pegue el texto de la planificación.")
 
-    # --- REUTILIZAMOS EL MISMO SISTEMA DE GUARDADO ---
-    if st.session_state.plan_actual and opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)":
-        st.markdown("---")
-        st.success("✅ **Adaptación Completada**")
-        st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
-        
-        if st.button("💾 GUARDAR ADAPTACIÓN EN MI CARPETA"):
+# --- BLOQUE DE GUARDADO COMPARTIDO (PARA AMBOS PLANIFICADORES) ---
+if st.session_state.plan_actual and (opcion == "🧠 PLANIFICADOR INTELIGENTE" or opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)"):
+    st.markdown("---")
+    st.info("👀 Revisa el borrador abajo. Si te gusta, guárdalo en tu carpeta.")
+    st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
+    
+    col_save_1, col_save_2 = st.columns([2,1])
+    with col_save_1:
+        if st.button("💾 SÍ, GUARDAR EN MI CARPETA"):
             try:
-                with st.spinner("Archivando adaptación..."):
+                with st.spinner("Archivando en el expediente..."):
                     df_act = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                    
+                    # Definir tema (si viene del ministerial, usar el rango detectado)
+                    tema_guardar = st.session_state.get('temp_tema', 'Planificación General')
+                    
+                    # Recortar tema si es muy largo para la hoja
+                    if len(tema_guardar) > 50: tema_guardar = tema_guardar[:50] + "..."
+                    
                     nueva_fila = pd.DataFrame([{
                         "FECHA": datetime.now().strftime("%d/%m/%Y"),
                         "USUARIO": st.session_state.u['NOMBRE'], 
-                        "TEMA": f"Ministerial: {rango_min}",
+                        "TEMA": tema_guardar,
                         "CONTENIDO": st.session_state.plan_actual,
                         "ESTADO": "GUARDADO",
                         "HORA_INICIO": "--", "HORA_FIN": "--"
                     }])
                     datos_actualizados = pd.concat([df_act, nueva_fila], ignore_index=True)
                     conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=datos_actualizados)
-                    st.success("✅ ¡Planificación ministerial guardada con éxito!")
+                    st.success("✅ ¡Planificación archivada con éxito!")
                     time.sleep(2)
                     st.rerun()
             except Exception as e:
                 st.error(f"Error al guardar: {e}")
 
 # =========================================================
-# 3. EVALUAR ALUMNO (USANDO PLANIFICACIÓN ACTIVA)
+# 3. EVALUAR ALUMNO (NUEVO)
 # =========================================================
-elif opcion == "📝 Evaluar Alumno":
+elif opcion == "📝 Evaluar Alumno (NUEVO)":
     st.subheader("Evaluación Diaria Inteligente")
     
     # --- CÁLCULO DE FECHA SEGURA (HORA VENEZUELA) ---
@@ -765,7 +764,7 @@ elif opcion == "📝 Evaluar Alumno":
 # =========================================================
 # 4. REGISTRO DE EVALUACIONES (FIX: PERSISTENCIA DE INFORME IA)
 # =========================================================
-elif opcion == "📊 Registro de Evaluaciones":
+elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
     st.subheader("🎓 Expediente Estudiantil 360°")
     
     try:
@@ -1041,7 +1040,7 @@ elif opcion == "📂 Mi Archivo Pedagógico":
         st.error(f"Error cargando archivo: {e}")
 
 # =========================================================
-# OTROS MÓDULOS (HERRAMIENTAS DE APOYO)
+# OTROS MÓDULOS (EXTRAS)
 # =========================================================
 elif opcion == "🌟 Mensaje Motivacional":
     st.subheader("Dosis de Ánimo Express ⚡")
@@ -1078,4 +1077,4 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 2.5 (Gestión Ministerial)")
+st.caption("Desarrollado por Luis Atencio | Versión: 2.7 (Edición Móvil Integral)")
