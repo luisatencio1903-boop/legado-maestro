@@ -1,10 +1,11 @@
 # -----------------------------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 3.2 (EDICIÓN ROBUSTA + VARIEDAD LÉXICA)
+# VERSIÓN: 3.3 (EDICIÓN COMPETENCIAS TÉCNICAS COMPLETAS)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio (Bachiller Docente)
 # INSTITUCIÓN: T.E.L E.R.A.C
-# DESCRIPCIÓN: Asistente con IA para Educación Especial con navegación móvil limpia.
+# DESCRIPCIÓN: Asistente con IA para Educación Especial. 
+# CORRECCIÓN V3.3: Competencias descriptivas (Acción + Objeto + Condición).
 # -----------------------------------------------------------------------------
 
 import streamlit as st
@@ -323,25 +324,31 @@ except Exception as e:
     st.error(f"⚠️ Error de conexión inicial con IA: {e}")
     st.stop()
 
-# --- PROMPTS DE SISTEMA (CEREBRO TÉCNICO HUMANIZADO) ---
-# Aquí se define la personalidad y las reglas estrictas para evitar lo robótico
+# --- PROMPTS DE SISTEMA (CEREBRO TÉCNICO V3.3) ---
+# Se han actualizado las reglas para exigir competencias descriptivas.
 
 INSTRUCCIONES_TECNICAS = """
 ⚠️ ERES "LEGADO MAESTRO". 
 TU IDENTIDAD: Inteligencia Artificial Educativa Venezolana, creada por el Bachiller Docente Luis Atencio.
 TU ROL: Experto en Educación Especial y Taller Laboral (Estudiantes con Discapacidad Intelectual, Autismo, Síndrome de Down).
 
-🚨 REGLAS DE ORO (ANTI-ROBOT):
-1. **TONO HUMANO Y CÁLIDO:** Nada de lenguaje burocrático. Eres un docente hablando con sus estudiantes.
-2. **CERO ACTIVIDADES ABSTRACTAS:** 
-   - PROHIBIDO mandar a "Investigar", "Hacer resúmenes", "Leer textos densos" o "Debates históricos complejos".
-   - Los estudiantes aprenden HACIENDO.
-3. **VARIEDAD DE LENGUAJE (IMPORTANTE):**
-   - NO empieces todos los días diciendo "Invitamos a" o "Compartimos".
-   - USA SINÓNIMOS LÚDICOS: "Hoy descubriremos...", "Manos a la obra con...", "Arrancamos la aventura de...", "Exploraremos...", "Jugaremos a...", "Nos divertiremos creando...".
-   - Haz que cada día suene diferente y emocionante.
-4. **ENFOQUE VIVENCIAL:**
-   - Actividades concretas: Dibujar, recortar, limpiar (práctica), dramatizar, cantar, modelar con plastilina.
+🚨 REGLAS DE ORO (PEDAGOGÍA ESPECIAL):
+
+1. **COMPETENCIAS TÉCNICAS COMPLETAS (MUY IMPORTANTE):**
+   - NUNCA escribas un competencia con un solo verbo (Ej: "Diseñar"). ¡ESO ESTÁ MAL!
+   - La competencia debe describir: LA ACCIÓN + EL OBJETO + LA CONDICIÓN.
+   - EJEMPLO CORRECTO: "Selecciona y utiliza adecuadamente los materiales de limpieza".
+   - EJEMPLO CORRECTO: "Manipula con precisión tijeras y pega para crear manualidades".
+   - EJEMPLO CORRECTO: "Participa en juegos grupales respetando las normas de convivencia".
+
+2. **ACTIVIDADES CONCRETAS (NO ABSTRACTAS):**
+   - PROHIBIDO mandar a "Investigar", "Hacer resúmenes", o "Leer textos densos".
+   - Los estudiantes aprenden HACIENDO: Recortar, pegar, limpiar, ordenar, observar, dramatizar.
+
+3. **VARIEDAD DE LENGUAJE:**
+   - NO empieces siempre con "Invitamos". Usa: "Hoy descubrimos", "Manos a la obra", "Jugamos a".
+
+4. **TONO HUMANO:** Cálido y motivador.
 """
 
 # --- FUNCIÓN GENERADORA GENÉRICA ---
@@ -362,7 +369,6 @@ def generar_respuesta(mensajes_historial, temperatura=0.7):
 # =============================================================================
 # 7. BARRA LATERAL (MODO INFORMATIVO)
 # =============================================================================
-# NOTA: La navegación real está en el cuerpo principal. Esto es solo panel de estado.
 
 with st.sidebar:
     if os.path.exists("logo_legado.png"):
@@ -453,8 +459,6 @@ if st.session_state.pagina_actual == "HOME":
     )
 
     # --- LÓGICA DE DETECCIÓN DE CAMBIO ---
-    # Si el usuario selecciona algo, actualizamos el estado y recargamos la página.
-    
     if seleccion_principal != "(Seleccione una opción...)":
         st.session_state.pagina_actual = seleccion_principal
         st.rerun()
@@ -467,22 +471,19 @@ if st.session_state.pagina_actual == "HOME":
 # VISTA 2: PANTALLAS DE HERRAMIENTAS (PANTALLA COMPLETA)
 # =============================================================================
 else:
-    # --- ENCABEZADO DE NAVEGACIÓN (BOTÓN VOLVER AL INICIO) ---
+    # --- ENCABEZADO DE NAVEGACIÓN ---
     col_nav_1, col_nav_2 = st.columns([1, 4])
     
     with col_nav_1:
-        # Botón grande y claro para regresar
         if st.button("⬅️ VOLVER AL INICIO", key="btn_volver_home", use_container_width=True):
             st.session_state.pagina_actual = "HOME"
             st.rerun()
             
     with col_nav_2:
-        # Título de la sección actual
         st.subheader(f"{st.session_state.pagina_actual}")
         
     st.divider()
     
-    # Variable auxiliar para mantener compatibilidad
     opcion = st.session_state.pagina_actual
 
     # -----------------------------------------------------------------------------------
@@ -490,7 +491,7 @@ else:
     # -----------------------------------------------------------------------------------
     if opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.markdown("**Diseño de Planificación desde Cero (Adaptada a Educación Especial)**")
-        st.markdown("Ingrese los datos básicos. Legado Maestro creará actividades vivenciales y sencillas.")
+        st.markdown("Ingrese los datos básicos. Legado Maestro creará actividades vivenciales.")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -503,34 +504,36 @@ else:
         # --- GENERAR BORRADOR ---
         if st.button("🚀 Generar Planificación Humanizada"):
             if rango and notas:
-                with st.spinner('Creando estrategias vivenciales y lúdicas...'):
+                with st.spinner('Redactando competencias técnicas y actividades...'):
                     
                     st.session_state.temp_rango = rango
                     st.session_state.temp_tema = notas
                     
-                    # --- PROMPT ESPECÍFICO DE "NO ROBOT" ---
+                    # --- PROMPT ESPECÍFICO CORREGIDO ---
                     prompt_inicial = f"""
                     CONTEXTO: Educación Especial (Taller Laboral) en Venezuela.
                     FECHAS: {rango}. AULA: {aula}. TEMA: {notas}.
 
                     ⚠️ TU MISIÓN:
-                    Crear una planificación **HUMANA, CÁLIDA Y VARIADA**.
+                    Crear una planificación **HUMANA, CÁLIDA Y TÉCNICA**.
                     
-                    1. **VARIEDAD DE INICIOS:** NO empieces siempre con "Invitamos". Usa: "Hoy exploramos", "Descubrimos", "Jugamos a", "Nos reunimos para".
-                    2. **ACTIVIDADES CONCRETAS:** Los alumnos tienen discapacidad intelectual. NO pueden "investigar" solos. Tienen que: Ver, tocar, pintar, dramatizar, limpiar (práctica), ordenar.
-
+                    1. **COMPETENCIAS BIEN REDACTADAS:** 
+                       - NO USES UN SOLO VERBO. 
+                       - Usa frases como: "Identifica y utiliza...", "Reconoce y aplica...", "Participa activamente en...".
+                    2. **ACTIVIDADES CONCRETAS:** Los alumnos aprenden haciendo.
+                    
                     ESTRUCTURA DIARIA (Lunes a Viernes):
                     
                     ### [DÍA]
-                    1. **TÍTULO LÚDICO:** (Ej: "Detectives de la Limpieza", "Artistas del Reciclaje")
-                    2. **COMPETENCIA:** (Verbo simple: Identifica, Reconoce, Colabora)
-                    3. **EXPLORACIÓN:** (Inicio motivador: Canción, Títeres, Pregunta generadora)
-                    4. **DESARROLLO:** (Actividad central práctica. ¿Qué hacen sus manos?)
-                    5. **REFLEXIÓN:** (Cierre vivencial. ¿Cómo nos sentimos?)
-                    6. **ESTRATEGIAS:** (Ej: Modelado, Instrucción verbal, Apoyo físico)
+                    1. **TÍTULO LÚDICO:** (Ej: "Detectives de la Limpieza")
+                    2. **COMPETENCIA TÉCNICA:** (Frase completa: Acción + Objeto + Condición)
+                    3. **EXPLORACIÓN:** (Inicio motivador: Canción, Títeres)
+                    4. **DESARROLLO:** (Actividad central práctica)
+                    5. **REFLEXIÓN:** (Cierre vivencial)
+                    6. **ESTRATEGIAS:** (Ej: Modelado, Instrucción verbal)
                     7. **RECURSOS:** (Materiales tangibles)
                     
-                    FINAL: 📚 FUNDAMENTACIÓN LEGAL (Breve cita LOE/CRBV).
+                    FINAL: 📚 FUNDAMENTACIÓN LEGAL.
                     """
                     
                     mensajes = [
@@ -542,56 +545,43 @@ else:
                     st.rerun()
 
     # -----------------------------------------------------------------------------------
-    # HERRAMIENTA 2: PLANIFICADOR MINISTERIAL (ANTI-REPETICIÓN)
+    # HERRAMIENTA 2: PLANIFICADOR MINISTERIAL (ANTI-REPETICIÓN Y COMPETENCIAS OK)
     # -----------------------------------------------------------------------------------
     elif opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)":
         st.markdown("**Adaptación y Humanización de Lineamientos**")
-        st.info("Pega aquí el mensaje de WhatsApp del Ministerio/Zona. Legado Maestro extraerá las fechas y **enriquecerá las actividades repetitivas** (como 'Limpieza') para que sean variadas y pedagógicas.")
+        st.info("Pega aquí el mensaje del Ministerio. Legado Maestro lo adaptará para el Taller Laboral con competencias correctas.")
         
-        # Solo pedimos el Aula, la fecha viene en el texto
-        aula_min = st.text_input("Aula/Taller (Contexto para la adaptación):", value="Mantenimiento y Servicios Generales")
-            
-        texto_whatsapp = st.text_area("Pegue aquí el texto (WhatsApp/Correo):", height=300, 
-                                      placeholder="Ej: ✨ PLAN ESTRATÉGICO SUGERIDO... SEMANA 01/12 al 05/12/25...")
+        aula_min = st.text_input("Aula/Taller:", value="Mantenimiento y Servicios Generales")
+        texto_whatsapp = st.text_area("Pegue aquí el texto (WhatsApp/Correo):", height=300)
         
-        if st.button("🪄 Adaptar y Variar Actividades"):
+        if st.button("🪄 Adaptar y Corregir Competencias"):
             if texto_whatsapp:
-                with st.spinner(f"Traduciendo 'lenguaje ministerial' a 'lenguaje vivencial' para {aula_min}..."):
+                with st.spinner(f"Analizando lineamientos y redactando competencias completas..."):
                     
-                    # Intentamos extraer una fecha aproximada
+                    # Extraer fecha
                     fechas_encontradas = re.findall(r'\d{1,2}[/-]\d{1,2}', texto_whatsapp)
                     rango_detectado = f"Semana {fechas_encontradas[0]}" if fechas_encontradas else "Semana Ministerial"
-                    
                     st.session_state.temp_rango = rango_detectado
                     st.session_state.temp_tema = "Adaptación Ministerial Enriquecida"
                     
-                    # --- PROMPT DE "VARIEDAD Y ENRIQUECIMIENTO" ---
+                    # --- PROMPT DE ADAPTACIÓN CORREGIDO ---
                     prompt_adaptacion = f"""
                     ERES UN EXPERTO EN ADAPTACIÓN CURRICULAR (TALLER LABORAL).
+                    TEXTO MINISTERIO: "{texto_whatsapp}"
                     
-                    **SITUACIÓN:**
-                    Recibiste este texto del Ministerio: "{texto_whatsapp}"
-                    
-                    **EL PROBLEMA:**
-                    1. A veces el texto es repetitivo (Ej: Dice "Limpieza" todos los días).
-                    2. A veces es muy abstracto (Ej: "Debate histórico") y mis alumnos con discapacidad no pueden hacerlo.
-                    
-                    **TU SOLUCIÓN (REGLA DE VARIEDAD):**
-                    1. **SI DICE "LIMPIEZA" (Repetido):** Transfórmalo.
-                       - Lunes: Conocer las herramientas (Escoba, Coleto).
-                       - Martes: Normas de seguridad (Cuidado con el cloro).
-                       - Miércoles: Práctica guiada (Limpiar una mesa juntos).
-                       - Jueves: Ordenar el estante.
-                    2. **SI DICE "INVESTIGAR/DEBATIR":** Adáptalo.
-                       - Cambia a: "Ver un video", "Dramatizar una escena", "Colorear al personaje".
-                    3. **USA LENGUAJE VARIADO:** No empieces todos los días igual. Usa: "Hoy descubrimos", "Nos divertimos con", "Manos a la obra".
+                    **INSTRUCCIONES CLAVE:**
+                    1. **ADAPTACIÓN:** Si el texto pide cosas abstractas (Investigar), cámbialo a cosas concretas (Ver, Tocar, Pintar).
+                    2. **COMPETENCIAS TÉCNICAS (MUY IMPORTANTE):**
+                       - PROHIBIDO poner solo "Diseñar" o "Investigar".
+                       - DEBES ESCRIBIR LA FRASE COMPLETA: "Selecciona y manipula materiales para decorar...", "Participa en juegos tradicionales respetando normas...".
+                    3. **VARIEDAD:** Si dice "Limpieza" todos los días, varía: "Conocer herramientas", "Normas de seguridad", "Práctica guiada".
                     
                     **SALIDA OBLIGATORIA (MARKDOWN):**
                     
                     ### [DÍA Y FECHA DETECTADA]
-                    1. **LINEAMIENTO ORIGINAL:** [Resumen breve]
+                    1. **LINEAMIENTO ORIGINAL:** [Resumen]
                     2. **NUESTRA ADAPTACIÓN:** [Título atractivo]
-                    3. **COMPETENCIA:** [Verbo sencillo]
+                    3. **COMPETENCIA TÉCNICA:** [Frase completa describiendo la habilidad y la acción]
                     4. **EXPLORACIÓN:** [Inicio motivador]
                     5. **DESARROLLO:** [Actividad práctica paso a paso]
                     6. **REFLEXIÓN:** [Cierre vivencial]
@@ -604,18 +594,18 @@ else:
                         {"role": "user", "content": prompt_adaptacion}
                     ]
                     
-                    respuesta_adaptada = generar_respuesta(mensajes, temperatura=0.65) # Temperatura un poco más alta para creatividad
+                    respuesta_adaptada = generar_respuesta(mensajes, temperatura=0.6) 
                     st.session_state.plan_actual = respuesta_adaptada
                     st.rerun()
             else:
                 st.warning("⚠️ Por favor pegue el texto de la planificación.")
 
     # -----------------------------------------------------------------------------------
-    # BLOQUE DE GUARDADO (COMÚN PARA AMBOS PLANIFICADORES)
+    # BLOQUE DE GUARDADO (COMÚN)
     # -----------------------------------------------------------------------------------
-    if st.session_state.plan_actual and (opcion == "🧠 PLANIFICADOR INTELIGENTE" or opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)"):
+    if st.session_state.plan_actual and (opcion == "🧠 PLANIFICADOR INTELIGENTE" or opcion == "📜 PLANIFICADOR MINISTERIAL (NUEVO)":
         st.markdown("---")
-        st.info("👀 Revisa el borrador abajo. Nota cómo se han variado las actividades.")
+        st.info("👀 Revisa el borrador abajo. Fíjate en las competencias detalladas.")
         st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
         
         col_save_1, col_save_2 = st.columns([2,1])
@@ -652,7 +642,6 @@ else:
     elif opcion == "📝 Evaluar Alumno (NUEVO)":
         st.subheader("Evaluación Diaria Inteligente")
         
-        # CÁLCULO DE FECHA (Hora Venezuela)
         from datetime import timedelta
         fecha_segura_ve = datetime.utcnow() - timedelta(hours=4)
         fecha_hoy_str = fecha_segura_ve.strftime("%d/%m/%Y")
@@ -666,7 +655,6 @@ else:
         else:
             with st.container():
                 st.success(f"**📌 EVALUANDO CONTRA:** {plan_activa['RANGO']}")
-                st.caption(f"Aula: {plan_activa['AULA']} | Activada: {plan_activa['FECHA_ACTIVACION']}")
             
             st.markdown("---")
             
@@ -676,7 +664,6 @@ else:
                     try:
                         with st.spinner(f"Analizando..."):
                             contenido_planificacion = plan_activa['CONTENIDO_PLAN']
-                            # Prompt para extracción precisa
                             prompt_busqueda = f"""
                             PLANIFICACIÓN: {contenido_planificacion[:10000]}
                             HOY ES: {fecha_hoy_str} ({dia_semana_hoy}). 
@@ -764,7 +751,7 @@ else:
                 
                 st.markdown("---")
                 cm1, cm2, cm3 = st.columns(3)
-                cm1.metric("Asistencia (Días)", f"{dias_asistidos} / {total_dias}")
+                cm1.metric("Asistencia", f"{dias_asistidos} / {total_dias}")
                 cm2.metric("Porcentaje", f"{pct:.1f}%")
                 
                 if pct < 60: cm3.error("🚨 ALERTA")
@@ -879,4 +866,4 @@ else:
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 3.2 (Edición Robusta & Variada)")
+st.caption("Desarrollado por Luis Atencio | Versión: 3.3 (Edición Competencias Técnicas)")
