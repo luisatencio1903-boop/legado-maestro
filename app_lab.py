@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 2.4 (SISTEMA CON PLANIFICACIÓN ACTIVA)
+# VERSIÓN: 2.4.2 (BARRA LATERAL DINÁMICA + PLANIFICACIÓN ACTIVA)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -13,6 +13,7 @@ from groq import Groq
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import random
+import re
 
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(
@@ -38,14 +39,48 @@ except:
     st.error("⚠️ Error conectando con la Base de Datos.")
     st.stop()
 
-# --- SISTEMA DE PLANIFICACIÓN ACTIVA ---
+# --- SISTEMA DE PLANIFICACIÓN ACTIVA (VERSIÓN ROBUSTA) ---
+def inicializar_hoja_plan_activa():
+    """Inicializa la hoja PLAN_ACTIVA si está vacía o no existe"""
+    try:
+        # Intentar leer la hoja
+        df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=0)
+        
+        # Si está vacía o no tiene columnas, inicializarla
+        if df_activa.empty or 'USUARIO' not in df_activa.columns:
+            columnas = ["USUARIO", "FECHA_ACTIVACION", "ID_PLAN", "CONTENIDO_PLAN", "RANGO", "AULA", "ACTIVO"]
+            df_inicial = pd.DataFrame(columns=columnas)
+            conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_inicial)
+    except Exception as e:
+        # Si la hoja no existe, crearla
+        columnas = ["USUARIO", "FECHA_ACTIVACION", "ID_PLAN", "CONTENIDO_PLAN", "RANGO", "AULA", "ACTIVO"]
+        df_inicial = pd.DataFrame(columns=columnas)
+        conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_inicial)
+
 def obtener_plan_activa_usuario(usuario_nombre):
     """Obtiene la planificación activa actual del usuario desde la nube"""
     try:
+        # Inicializar hoja primero
+        inicializar_hoja_plan_activa()
+        
+        # Leer la hoja
         df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=5)
+        
+        # Verificar si tiene datos
+        if df_activa.empty:
+            return None
+        
+        # Asegurar que la columna ACTIVO existe y es booleana/string
+        if 'ACTIVO' not in df_activa.columns:
+            return None
+        
+        # Convertir ACTIVO a string y buscar 'True' o 'TRUE'
+        df_activa['ACTIVO_STR'] = df_activa['ACTIVO'].astype(str).str.upper()
+        
+        # Filtrar
         plan_activa = df_activa[
             (df_activa['USUARIO'] == usuario_nombre) & 
-            (df_activa['ACTIVO'] == True)
+            (df_activa['ACTIVO_STR'] == 'TRUE')
         ]
         
         if not plan_activa.empty:
@@ -53,35 +88,32 @@ def obtener_plan_activa_usuario(usuario_nombre):
             return plan_activa.sort_values('FECHA_ACTIVACION', ascending=False).iloc[0].to_dict()
         return None
     except Exception as e:
-        # Si la hoja no existe, retornar None (se creará al activar primera planificación)
         return None
 
 def establecer_plan_activa(usuario_nombre, id_plan, contenido, rango, aula):
     """Establece una planificación como la activa para el usuario"""
     try:
+        # Inicializar hoja primero
+        inicializar_hoja_plan_activa()
+        
         # Leer datos actuales
-        try:
-            df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=0)
-        except:
-            # Crear DataFrame vacío si la hoja no existe
-            df_activa = pd.DataFrame(columns=[
-                "USUARIO", "FECHA_ACTIVACION", "ID_PLAN", 
-                "CONTENIDO_PLAN", "RANGO", "AULA", "ACTIVO"
-            ])
+        df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=0)
         
         # 1. Desactivar cualquier planificación activa previa del mismo usuario
-        mask_usuario = df_activa['USUARIO'] == usuario_nombre
-        if not df_activa[mask_usuario].empty:
-            df_activa.loc[mask_usuario, 'ACTIVO'] = False
+        if not df_activa.empty:
+            # Crear máscara para usuario
+            mask_usuario = df_activa['USUARIO'] == usuario_nombre
+            if mask_usuario.any():
+                df_activa.loc[mask_usuario, 'ACTIVO'] = False
         
         # 2. Agregar la nueva planificación activa
         nueva_activa = pd.DataFrame([{
             "USUARIO": usuario_nombre,
             "FECHA_ACTIVACION": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-            "ID_PLAN": id_plan,
-            "CONTENIDO_PLAN": contenido,
-            "RANGO": rango,
-            "AULA": aula,
+            "ID_PLAN": str(id_plan),
+            "CONTENIDO_PLAN": str(contenido),
+            "RANGO": str(rango),
+            "AULA": str(aula),
             "ACTIVO": True
         }])
         
@@ -97,10 +129,11 @@ def desactivar_plan_activa(usuario_nombre):
     """Desactiva cualquier planificación activa del usuario"""
     try:
         df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=0)
-        mask_usuario = df_activa['USUARIO'] == usuario_nombre
-        if not df_activa[mask_usuario].empty:
-            df_activa.loc[mask_usuario, 'ACTIVO'] = False
-            conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_activa)
+        if not df_activa.empty:
+            mask_usuario = df_activa['USUARIO'] == usuario_nombre
+            if mask_usuario.any():
+                df_activa.loc[mask_usuario, 'ACTIVO'] = False
+                conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_activa)
         return True
     except:
         return False
@@ -149,7 +182,9 @@ if not st.session_state.auth:
                 if not match.empty:
                     st.session_state.auth = True
                     st.session_state.u = match.iloc[0].to_dict()
-                    st.query_params["u"] = cedula_limpia # Anclamos sesión
+                    st.query_params["u"] = cedula_limpia
+                    # Inicializar hoja al iniciar sesión
+                    inicializar_hoja_plan_activa()
                     st.success("¡Bienvenido!")
                     time.sleep(1)
                     st.rerun()
@@ -227,6 +262,15 @@ hide_streamlit_style = """
                 color: #000000 !important;
                 border: 2px solid #ffa500 !important;
             }
+            
+            /* INDICADOR DE ACTIVA */
+            .indicador-activa {
+                background-color: #d4edda !important;
+                border-left: 5px solid #28a745 !important;
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 10px;
+            }
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -271,7 +315,7 @@ TÚ ERES "LEGADO MAESTRO".
    - Usa Markdown estricto (Negritas, Títulos).
 """
 
-# --- 4. BARRA LATERAL ---
+# --- 4. BARRA LATERAL DINÁMICA ---
 with st.sidebar:
     if os.path.exists("logo_legado.png"):
         st.image("logo_legado.png", width=150)
@@ -280,22 +324,43 @@ with st.sidebar:
         
     st.title("Legado Maestro")
     st.markdown("---")
-    st.caption("👨‍🏫 **Luis Atencio**")
-    st.caption("Bachiller Docente")
-    st.caption("T.E.L E.R.A.C")
+    
+    # --- INFORMACIÓN DEL USUARIO AUTENTICADO ---
+    if st.session_state.u:
+        # Obtener nombre y rol del usuario actual
+        nombre_usuario = st.session_state.u.get('NOMBRE', 'Usuario')
+        rol_usuario = st.session_state.u.get('ROL', 'DOCENTE')
+        
+        # Mostrar información dinámica
+        st.caption(f"👤 **{nombre_usuario}**")
+        st.caption(f"🔧 {rol_usuario}")
+        
+        # Mostrar información adicional solo para Luis Atencio
+        if nombre_usuario.upper() == "LUIS ATENCIO":
+            st.caption("Bachiller Docente")
+            st.caption("T.E.L E.R.A.C")
+    else:
+        st.caption("👤 **Usuario no identificado**")
+        st.caption("🔧 Rol desconocido")
     
     # --- INDICADOR DE PLANIFICACIÓN ACTIVA ---
     st.markdown("---")
     plan_activa = obtener_plan_activa_usuario(st.session_state.u['NOMBRE'])
     if plan_activa:
         st.success("📌 **Planificación Activa**")
-        with st.expander("Ver detalles", expanded=False):
-            st.caption(f"**Rango:** {plan_activa['RANGO']}")
-            st.caption(f"**Aula:** {plan_activa['AULA']}")
-            st.caption(f"Activada: {plan_activa['FECHA_ACTIVACION'].split()[0]}")
+        st.caption(f"**Rango:** {plan_activa.get('RANGO', 'No especificado')}")
+        st.caption(f"**Aula:** {plan_activa.get('AULA', 'Taller Laboral')}")
+        st.caption(f"Activada: {plan_activa.get('FECHA_ACTIVACION', 'Fecha no disponible').split()[0]}")
+        
+        with st.expander("Acciones", expanded=False):
             if st.button("Cambiar Planificación", key="sidebar_cambiar"):
                 st.session_state.redirigir_a_archivo = True
                 st.rerun()
+            if st.button("Desactivar", key="sidebar_desactivar"):
+                if desactivar_plan_activa(st.session_state.u['NOMBRE']):
+                    st.success("Planificación desactivada")
+                    time.sleep(1)
+                    st.rerun()
     else:
         st.warning("⚠️ **Sin planificación activa**")
         st.caption("Ve a 'Mi Archivo' para activar una")
@@ -303,8 +368,9 @@ with st.sidebar:
     st.markdown("---")
     
     if st.button("🗑️ Limpiar Memoria"):
-        st.session_state.plan_actual = ""
-        st.session_state.actividad_detectada = ""
+        for key in list(st.session_state.keys()):
+            if key not in ['auth', 'u', 'redirigir_a_archivo']:
+                del st.session_state[key]
         st.rerun()
     
     if st.button("🔒 Cerrar Sesión"):
@@ -484,8 +550,8 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
     
     # --- MOSTRAR PLANIFICACIÓN ACTIVA ---
     with st.container():
-        st.success(f"**📌 EVALUANDO CONTRA:** {plan_activa['RANGO']}")
-        st.caption(f"Aula: {plan_activa['AULA']} | Activada: {plan_activa['FECHA_ACTIVACION']}")
+        st.success(f"**📌 EVALUANDO CONTRA:** {plan_activa.get('RANGO', 'Planificación activa')}")
+        st.caption(f"Aula: {plan_activa.get('AULA', 'Taller Laboral')} | Activada: {plan_activa.get('FECHA_ACTIVACION', 'Fecha no disponible')}")
     
     st.markdown("---")
     
@@ -499,7 +565,7 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
             try:
                 with st.spinner(f"Analizando planificación activa ({dia_semana_hoy})..."):
                     # USAR EXCLUSIVAMENTE LA PLANIFICACIÓN ACTIVA
-                    contenido_planificacion = plan_activa['CONTENIDO_PLAN']
+                    contenido_planificacion = plan_activa.get('CONTENIDO_PLAN', '')
                     
                     # PROMPT MEJORADO PARA IDENTIFICAR ACTIVIDADES
                     prompt_busqueda = f"""
@@ -626,7 +692,7 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
                     "ACTIVIDAD": actividad_final,
                     "ANECDOTA": st.session_state.anecdota_guardada,
                     "EVALUACION_IA": st.session_state.eval_resultado,
-                    "PLANIFICACION_ACTIVA": plan_activa['RANGO'],
+                    "PLANIFICACION_ACTIVA": plan_activa.get('RANGO', ''),
                     "RESULTADO": "Registrado"
                 }])
                 
@@ -792,8 +858,8 @@ elif opcion == "📂 Mi Archivo Pedagógico":
     col_info, col_accion = st.columns([3, 1])
     with col_info:
         if plan_activa_actual:
-            st.success(f"**📌 PLANIFICACIÓN ACTIVA ACTUAL:** {plan_activa_actual['RANGO']}")
-            st.caption(f"Aula: {plan_activa_actual['AULA']} | Activada: {plan_activa_actual['FECHA_ACTIVACION'].split()[0]}")
+            st.success(f"**📌 PLANIFICACIÓN ACTIVA ACTUAL:** {plan_activa_actual.get('RANGO', 'No especificado')}")
+            st.caption(f"Aula: {plan_activa_actual.get('AULA', 'Taller Laboral')} | Activada: {plan_activa_actual.get('FECHA_ACTIVACION', 'Fecha no disponible').split()[0]}")
         else:
             st.warning("⚠️ **No tienes una planificación activa para esta semana.**")
             st.caption("Selecciona una planificación y haz clic en '⭐ Usar Esta Semana'")
@@ -817,11 +883,11 @@ elif opcion == "📂 Mi Archivo Pedagógico":
             st.warning("Aún no tienes planificaciones guardadas.")
         else:
             # IDENTIFICAR CUÁL ES LA ACTIVA ACTUAL (por contenido)
-            contenido_activo_actual = plan_activa_actual['CONTENIDO_PLAN'] if plan_activa_actual else None
+            contenido_activo_actual = plan_activa_actual.get('CONTENIDO_PLAN', '') if plan_activa_actual else ''
             
             for index, row in mis_planes.iloc[::-1].iterrows():
                 # DETERMINAR SI ESTA ES LA ACTIVA
-                es_activa = (contenido_activo_actual == row['CONTENIDO'])
+                es_activa = (str(contenido_activo_actual).strip() == str(row['CONTENIDO']).strip())
                 
                 # CREAR ETIQUETA CON INDICADOR
                 etiqueta_base = f"📅 {row['FECHA']} | 📌 {str(row['TEMA'])[:40]}..."
@@ -875,9 +941,8 @@ elif opcion == "📂 Mi Archivo Pedagógico":
                                 aula = "Taller Laboral"
                                 
                                 # Intentar extraer rango del contenido
-                                import re
                                 patron_rango = r'Planificación para:\s*(.*?)(?:\n|$)'
-                                match_rango = re.search(patron_rango, contenido, re.IGNORECASE)
+                                match_rango = re.search(patron_rango, str(contenido), re.IGNORECASE)
                                 if match_rango:
                                     rango = match_rango.group(1)
                                 
@@ -963,4 +1028,6 @@ elif opcion == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 2.4 (Sistema de Planificación Activa)")
+st.caption("Desarrollado por Luis Atencio | Versión: 2.4.2 (Barra Lateral Dinámica)")
+# --- EL RESTO DEL CÓDIGO PERMANECE IGUAL (planificador, evaluador, etc.) ---
+# ... [Aquí va todo el resto del código que ya tienes funcionando] ...
