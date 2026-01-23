@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 2.4 (SISTEMA CON PLANIFICACIÓN ACTIVA)
+# VERSIÓN: 2.5 (SISTEMA CON NAVEGACIÓN MEJORADA)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -227,6 +227,15 @@ hide_streamlit_style = """
                 color: #000000 !important;
                 border: 2px solid #ffa500 !important;
             }
+            
+            /* BOTONES DE NAVEGACIÓN */
+            .stButton button {
+                transition: all 0.3s ease;
+            }
+            .stButton button:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
@@ -271,7 +280,7 @@ TÚ ERES "LEGADO MAESTRO".
    - Usa Markdown estricto (Negritas, Títulos).
 """
 
-# --- 4. BARRA LATERAL ---
+# --- 4. BARRA LATERAL MEJORADA ---
 with st.sidebar:
     if os.path.exists("logo_legado.png"):
         st.image("logo_legado.png", width=150)
@@ -287,22 +296,107 @@ with st.sidebar:
     # --- INDICADOR DE PLANIFICACIÓN ACTIVA ---
     st.markdown("---")
     plan_activa = obtener_plan_activa_usuario(st.session_state.u['NOMBRE'])
+    
     if plan_activa:
-        st.success("📌 **Planificación Activa**")
-        with st.expander("Ver detalles", expanded=False):
-            st.caption(f"**Rango:** {plan_activa['RANGO']}")
-            st.caption(f"**Aula:** {plan_activa['AULA']}")
-            st.caption(f"Activada: {plan_activa['FECHA_ACTIVACION'].split()[0]}")
-            if st.button("Cambiar Planificación", key="sidebar_cambiar"):
-                st.session_state.redirigir_a_archivo = True
-                st.rerun()
+        st.success("📌 **PLANIFICACIÓN ACTIVA**")
+        with st.expander("📋 Ver detalles de la semana", expanded=False):
+            st.caption(f"**📅 Rango:** {plan_activa['RANGO']}")
+            st.caption(f"**🏫 Aula:** {plan_activa['AULA']}")
+            st.caption(f"**⏰ Activada:** {plan_activa['FECHA_ACTIVACION'].split()[0]}")
+            
+            # BOTÓN DE EMERGENCIA PARA DESACTIVAR
+            st.markdown("---")
+            st.warning("**🔄 CAMBIO DE PLANIFICACIÓN**")
+            
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("🔄 Cambiar", 
+                           key="sidebar_cambiar_emergencia",
+                           help="Ir a Mi Archivo para seleccionar otra planificación"):
+                    st.session_state.redirigir_a_archivo = True
+                    st.rerun()
+            
+            with col_btn2:
+                if st.button("❌ Desactivar", 
+                           key="sidebar_desactivar_emergencia",
+                           type="secondary",
+                           help="Desactivar COMPLETAMENTE esta planificación (Para casos de emergencia ministerial)"):
+                    if desactivar_plan_activa(st.session_state.u['NOMBRE']):
+                        st.success("✅ ¡Planificación desactivada!")
+                        st.balloons()
+                        time.sleep(1.5)
+                        st.rerun()
+            
+            st.caption("⚠️ **Nota:** Si el MPPE envía una planificación oficial, desactiva esta primero y luego activa la nueva.")
     else:
-        st.warning("⚠️ **Sin planificación activa**")
+        st.warning("⚠️ **SIN PLANIFICACIÓN ACTIVA**")
         st.caption("Ve a 'Mi Archivo' para activar una")
     
     st.markdown("---")
     
-    if st.button("🗑️ Limpiar Memoria"):
+    # --- 🚀 NUEVO: NAVEGACIÓN RÁPIDA ENTRE HERRAMIENTAS ---
+    st.subheader("🚀 Acceso Rápido")
+    
+    # BOTÓN PARA VOLVER AL MENÚ
+    if st.button("🏠 **Volver al Menú Principal**", 
+                 help="Regresar al selector de herramientas principal",
+                 use_container_width=True,
+                 type="primary"):
+        st.session_state.redirigir_a_archivo = False
+        if 'menu_directo' in st.session_state:
+            del st.session_state.menu_directo
+        st.rerun()
+    
+    st.caption("Ir directamente a:")
+    
+    col_nav1, col_nav2 = st.columns(2)
+    with col_nav1:
+        if st.button("📝 Evaluar", 
+                    help="Ir directamente a Evaluar Alumno",
+                    key="nav_evaluar"):
+            st.session_state.menu_directo = "📝 Evaluar Alumno (NUEVO)"
+            st.rerun()
+        
+        if st.button("📊 Registros", 
+                    help="Ir directamente a Registro de Evaluaciones",
+                    key="nav_registros"):
+            st.session_state.menu_directo = "📊 Registro de Evaluaciones (NUEVO)"
+            st.rerun()
+    
+    with col_nav2:
+        if st.button("📂 Archivo", 
+                    help="Ir directamente a Mi Archivo Pedagógico",
+                    key="nav_archivo"):
+            st.session_state.menu_directo = "📂 Mi Archivo Pedagógico"
+            st.rerun()
+        
+        if st.button("💡 Ideas", 
+                    help="Ir directamente a Ideas de Actividades",
+                    key="nav_ideas"):
+            st.session_state.menu_directo = "💡 Ideas de Actividades"
+            st.rerun()
+    
+    st.markdown("---")
+    
+    # BOTÓN DE EMERGENCIA
+    with st.expander("🚨 **Panel de Emergencia**", expanded=False):
+        if plan_activa:
+            st.error("**¿Cambio ministerial inesperado?**")
+            if st.button("DESACTIVAR PLANIFICACIÓN ACTUAL", 
+                        type="primary",
+                        key="emergencia_desactivar"):
+                if desactivar_plan_activa(st.session_state.u['NOMBRE']):
+                    st.success("✅ **Planificación desactivada**")
+                    st.info("Ahora puedes activar la nueva planificación ministerial en 'Mi Archivo'")
+                    time.sleep(2)
+                    st.rerun()
+        else:
+            st.info("No hay planificación activa para desactivar")
+    
+    st.markdown("---")
+    
+    # BOTONES DE SISTEMA
+    if st.button("🗑️ Limpiar Memoria Temporal"):
         st.session_state.plan_actual = ""
         st.session_state.actividad_detectada = ""
         st.rerun()
@@ -310,13 +404,14 @@ with st.sidebar:
     if st.button("🔒 Cerrar Sesión"):
         st.session_state.auth = False
         st.session_state.u = None
-        st.query_params.clear() 
+        st.query_params.clear()
         st.rerun()
 
 # --- 5. GESTIÓN DE MEMORIA ---
 if 'plan_actual' not in st.session_state: st.session_state.plan_actual = ""
 if 'actividad_detectada' not in st.session_state: st.session_state.actividad_detectada = ""
 if 'redirigir_a_archivo' not in st.session_state: st.session_state.redirigir_a_archivo = False
+if 'menu_directo' not in st.session_state: st.session_state.menu_directo = None
 
 # --- 6. FUNCIÓN GENERADORA GENÉRICA ---
 def generar_respuesta(mensajes_historial, temperatura=0.7):
@@ -333,10 +428,15 @@ def generar_respuesta(mensajes_historial, temperatura=0.7):
 # --- 7. CUERPO DE LA APP ---
 st.title("🍎 Asistente Educativo - Zulia")
 
+# SELECCIÓN DE HERRAMIENTA CON NAVEGACIÓN MEJORADA
 # Redirección automática si se solicita desde sidebar
 if st.session_state.get('redirigir_a_archivo', False):
     opcion = "📂 Mi Archivo Pedagógico"
     st.session_state.redirigir_a_archivo = False
+# Si hay navegación directa, usar esa opción
+elif st.session_state.menu_directo:
+    opcion = st.session_state.menu_directo
+    st.session_state.menu_directo = None  # Resetear después de usar
 else:
     opcion = st.selectbox(
         "Seleccione herramienta:",
@@ -356,6 +456,13 @@ else:
 # =========================================================
 if opcion == "📝 Planificación Profesional":
     st.subheader("Planificación Técnica (Taller Laboral)")
+    
+    # BOTÓN PARA VOLVER
+    if st.button("← Volver al Menú", key="volver_planif"):
+        st.session_state.menu_directo = None
+        st.rerun()
+    
+    st.markdown("---")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -458,6 +565,13 @@ if opcion == "📝 Planificación Profesional":
 elif opcion == "📝 Evaluar Alumno (NUEVO)":
     st.subheader("Evaluación Diaria Inteligente")
     
+    # BOTÓN PARA VOLVER
+    if st.button("← Volver al Menú", key="volver_eval"):
+        st.session_state.menu_directo = None
+        st.rerun()
+    
+    st.markdown("---")
+    
     # --- CÁLCULO DE FECHA SEGURA (HORA VENEZUELA) ---
     from datetime import timedelta
     fecha_segura_ve = datetime.utcnow() - timedelta(hours=4)
@@ -480,6 +594,10 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
         Esto le indica al sistema **qué planificación usar para buscar actividades**.
         """)
         st.info("💡 **Consejo:** Activa la planificación que corresponde a **esta semana laboral**.")
+        
+        if st.button("📂 Ir a Mi Archivo Ahora"):
+            st.session_state.menu_directo = "📂 Mi Archivo Pedagógico"
+            st.rerun()
         st.stop()
     
     # --- MOSTRAR PLANIFICACIÓN ACTIVA ---
@@ -653,6 +771,13 @@ elif opcion == "📝 Evaluar Alumno (NUEVO)":
 elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
     st.subheader("🎓 Expediente Estudiantil 360°")
     
+    # BOTÓN PARA VOLVER
+    if st.button("← Volver al Menú", key="volver_registros"):
+        st.session_state.menu_directo = None
+        st.rerun()
+    
+    st.markdown("---")
+    
     try:
         # 1. Cargamos TODA la base de datos de evaluaciones
         df_e = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
@@ -661,6 +786,9 @@ elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
         
         if mis_evals.empty:
             st.info("📭 Aún no has registrado evaluaciones. Ve a la opción 'Evaluar Alumno' para empezar.")
+            if st.button("📝 Ir a Evaluar Alumno"):
+                st.session_state.menu_directo = "📝 Evaluar Alumno (NUEVO)"
+                st.rerun()
         else:
             # 2. SELECTOR DE ALUMNO (El centro de todo)
             lista_alumnos = sorted(mis_evals['ESTUDIANTE'].unique().tolist())
@@ -785,6 +913,13 @@ elif opcion == "📊 Registro de Evaluaciones (NUEVO)":
 elif opcion == "📂 Mi Archivo Pedagógico":
     st.subheader(f"📂 Expediente de: {st.session_state.u['NOMBRE']}")
     
+    # BOTÓN PARA VOLVER
+    if st.button("← Volver al Menú", key="volver_archivo"):
+        st.session_state.menu_directo = None
+        st.rerun()
+    
+    st.markdown("---")
+    
     # OBTENER PLANIFICACIÓN ACTIVA ACTUAL
     plan_activa_actual = obtener_plan_activa_usuario(st.session_state.u['NOMBRE'])
     
@@ -800,9 +935,11 @@ elif opcion == "📂 Mi Archivo Pedagógico":
     
     with col_accion:
         if plan_activa_actual:
-            if st.button("❌ Desactivar", help="Dejar de usar esta planificación para evaluar"):
+            if st.button("❌ Desactivar", 
+                        help="Dejar de usar esta planificación para evaluar",
+                        type="secondary"):
                 if desactivar_plan_activa(st.session_state.u['NOMBRE']):
-                    st.success("Planificación desactivada.")
+                    st.success("✅ Planificación desactivada.")
                     time.sleep(1)
                     st.rerun()
     
@@ -815,6 +952,9 @@ elif opcion == "📂 Mi Archivo Pedagógico":
         
         if mis_planes.empty:
             st.warning("Aún no tienes planificaciones guardadas.")
+            if st.button("📝 Crear primera planificación"):
+                st.session_state.menu_directo = "📝 Planificación Profesional"
+                st.rerun()
         else:
             # IDENTIFICAR CUÁL ES LA ACTIVA ACTUAL (por contenido)
             contenido_activo_actual = plan_activa_actual['CONTENIDO_PLAN'] if plan_activa_actual else None
@@ -905,22 +1045,25 @@ elif opcion == "📂 Mi Archivo Pedagógico":
                                 st.rerun()
                         else:
                             st.error("⚠️ ¿Eliminar esta planificación?")
-                            if st.button("✅ Sí, eliminar", key=f"confirm_{index}"):
-                                # Si es la activa, desactivarla primero
-                                if es_activa:
-                                    desactivar_plan_activa(st.session_state.u['NOMBRE'])
-                                
-                                # Eliminar de la hoja principal
-                                df_actualizado = df.drop(index)
-                                conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_actualizado)
-                                
-                                st.success("🗑️ Planificación eliminada.")
-                                time.sleep(1)
-                                st.rerun()
+                            col_conf1, col_conf2 = st.columns(2)
+                            with col_conf1:
+                                if st.button("✅ Sí, eliminar", key=f"confirm_{index}"):
+                                    # Si es la activa, desactivarla primero
+                                    if es_activa:
+                                        desactivar_plan_activa(st.session_state.u['NOMBRE'])
+                                    
+                                    # Eliminar de la hoja principal
+                                    df_actualizado = df.drop(index)
+                                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_actualizado)
+                                    
+                                    st.success("🗑️ Planificación eliminada.")
+                                    time.sleep(1)
+                                    st.rerun()
                             
-                            if st.button("❌ No, conservar", key=f"cancel_{index}"):
-                                st.session_state[f"confirm_del_{index}"] = False
-                                st.rerun()
+                            with col_conf2:
+                                if st.button("❌ No, conservar", key=f"cancel_{index}"):
+                                    st.session_state[f"confirm_del_{index}"] = False
+                                    st.rerun()
 
     except Exception as e:
         st.error(f"Error cargando archivo: {e}")
@@ -930,7 +1073,15 @@ elif opcion == "📂 Mi Archivo Pedagógico":
 # =========================================================
 elif opcion == "🌟 Mensaje Motivacional":
     st.subheader("Dosis de Ánimo Express ⚡")
-    if st.button("❤️ Recibir Dosis"):
+    
+    # BOTÓN PARA VOLVER
+    if st.button("← Volver al Menú", key="volver_mensaje"):
+        st.session_state.menu_directo = None
+        st.rerun()
+    
+    st.markdown("---")
+    
+    if st.button("❤️ Recibir Dosis", use_container_width=True):
         estilos_posibles = [
             {"rol": "El Colega Realista", "instruccion": "Dile algo crudo pero esperanzador sobre enseñar. Humor venezolano. NO SALUDES."},
             {"rol": "El Sabio Espiritual", "instruccion": "Cita bíblica de fortaleza y frase docente. NO SALUDES."},
@@ -944,23 +1095,49 @@ elif opcion == "🌟 Mensaje Motivacional":
             st.markdown(f'<div class="plan-box" style="border-left: 5px solid #ff4b4b;"><h3>❤️ {estilo["rol"]}</h3><div class="mensaje-texto">"{res}"</div></div>', unsafe_allow_html=True)
 
 elif opcion == "💡 Ideas de Actividades":
-    tema = st.text_input("Tema a trabajar:")
-    if st.button("✨ Sugerir"):
-        res = generar_respuesta([
-            {"role": "system", "content": INSTRUCCIONES_TECNICAS}, 
-            {"role": "user", "content": f"3 actividades DUA para {tema} en Taller Laboral."}
-        ], temperatura=0.7)
-        st.markdown(f'<div class="plan-box">{res}</div>', unsafe_allow_html=True)
+    st.subheader("💡 Generador de Actividades DUA")
+    
+    # BOTÓN PARA VOLVER
+    if st.button("← Volver al Menú", key="volver_ideas"):
+        st.session_state.menu_directo = None
+        st.rerun()
+    
+    st.markdown("---")
+    
+    tema = st.text_input("Tema a trabajar:", placeholder="Ej: Herramientas de limpieza")
+    if st.button("✨ Sugerir Actividades", use_container_width=True):
+        if tema:
+            res = generar_respuesta([
+                {"role": "system", "content": INSTRUCCIONES_TECNICAS}, 
+                {"role": "user", "content": f"3 actividades DUA para {tema} en Taller Laboral. Formato: 1) Título, 2) Materiales, 3) Instrucciones paso a paso."}
+            ], temperatura=0.7)
+            st.markdown(f'<div class="plan-box">{res}</div>', unsafe_allow_html=True)
+        else:
+            st.warning("Por favor, ingresa un tema primero.")
 
 elif opcion == "❓ Consultas Técnicas":
-    duda = st.text_area("Consulta Legal/Técnica:")
-    if st.button("🔍 Responder"):
-        res = generar_respuesta([
-            {"role": "system", "content": INSTRUCCIONES_TECNICAS}, 
-            {"role": "user", "content": f"Responde técnicamente y cita la ley o currículo: {duda}"}
-        ], temperatura=0.5)
-        st.markdown(f'<div class="plan-box">{res}</div>', unsafe_allow_html=True)
+    st.subheader("❓ Consultas Pedagógicas y Legales")
+    
+    # BOTÓN PARA VOLVER
+    if st.button("← Volver al Menú", key="volver_consultas"):
+        st.session_state.menu_directo = None
+        st.rerun()
+    
+    st.markdown("---")
+    
+    duda = st.text_area("Consulta Legal/Técnica:", 
+                       placeholder="Ej: ¿Qué artículo de la LOE respalda la evaluación cualitativa en Educación Especial?",
+                       height=150)
+    if st.button("🔍 Buscar Respuesta", use_container_width=True):
+        if duda:
+            res = generar_respuesta([
+                {"role": "system", "content": INSTRUCCIONES_TECNICAS}, 
+                {"role": "user", "content": f"Responde técnicamente y cita la ley o currículo: {duda}"}
+            ], temperatura=0.5)
+            st.markdown(f'<div class="plan-box">{res}</div>', unsafe_allow_html=True)
+        else:
+            st.warning("Por favor, ingresa tu consulta primero.")
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 2.4 (Sistema de Planificación Activa)")
+st.caption("Desarrollado por Luis Atencio | Versión: 2.5 (Sistema con Navegación Mejorada) | 🍎 Legado Maestro")
