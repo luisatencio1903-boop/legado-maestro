@@ -1,6 +1,6 @@
 # ---------------------------------------------------------
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 2.7 (CORRECCIÓN NAVEGACIÓN ACCESO RÁPIDO)
+# VERSIÓN: 2.8 (SIN ACCESO RÁPIDO + MEJORAS VISUALES)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio
 # ---------------------------------------------------------
@@ -272,17 +272,14 @@ hide_streamlit_style = """
                 color: #000000 !important;
             }
 
-            /* ESTILO PARA PLANIFICACIÓN ACTIVA EN VERDE */
-            .plan-activa-box {
+            /* ESTILO PARA PLANIFICACIÓN ACTIVA EN VERDE (EN MI ARCHIVO) */
+            .plan-activa-verde {
+                color: #2e7d32 !important;
+                font-weight: 700 !important;
                 background-color: #e8f5e9 !important;
-                color: #000000 !important;
-                padding: 15px;
-                border-radius: 8px;
-                border-left: 5px solid #2e7d32;
-                border-top: 2px solid #2e7d32;
-                border-right: 2px solid #2e7d32;
-                border-bottom: 2px solid #2e7d32;
-                margin-bottom: 15px;
+                padding: 5px 10px;
+                border-radius: 5px;
+                border-left: 3px solid #2e7d32;
             }
             
             /* ESTILO PARA BOTÓN ACTIVO */
@@ -307,13 +304,13 @@ hide_streamlit_style = """
                 font-weight: 700 !important;
             }
             
-            /* ESTILO PARA TARJETA DE PLANIFICACIÓN ACTIVA */
-            .tarjeta-activa {
-                background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-                border-radius: 10px;
-                padding: 15px;
-                border: 2px solid #2e7d32;
-                margin-bottom: 20px;
+            /* ESTILO PARA TARJETA DE PLANIFICACIÓN ACTIVA (SIMPLIFICADA) */
+            .tarjeta-activa-simple {
+                background-color: #f0f9f0 !important;
+                border-radius: 8px;
+                padding: 10px;
+                border: 1px solid #2e7d32;
+                margin-bottom: 15px;
             }
             
             /* BADGE PARA PLANIFICACIÓN ACTIVA */
@@ -360,7 +357,7 @@ TÚ ERES "LEGADO MAESTRO".
    - Si el usuario pregunta sobre: POLÍTICA (Gobierno/Oposición), RELIGIÓN, IDEOLOGÍAS o TEMAS POLÉMICOS (Conflictos, Crisis).
    - ACCIÓN: NO des opiniones, NO des explicaciones neutrales, NO debatas.
    - RESPUESTA OBLIGATORIA:
-     "🚫 Lo siento. Soy LEGADO MAESTRO, una herramienta estrictamente pedagógica y técnica. Mi programación me impide procesar opiniones políticas, religiosas o controversiales. Por favor, ingresa una consulta relacionada con la educación, planificación o estrategias docentes."
+     "🚫 Lo siento. Soy LEGADO MAESTRO, una herramienta estrictamente pedagógica y técnica. Mi programación me impide procesar opiniones políticos, religiosos o controversiales. Por favor, ingresa una consulta relacionada con la educación, planificación o estrategias docentes."
 
 3. 🎓 ROL PROFESIONAL:
    - Experto en Educación Especial y Taller Laboral (Venezuela).
@@ -370,7 +367,7 @@ TÚ ERES "LEGADO MAESTRO".
    - Usa Markdown estricto (Negritas, Títulos).
 """
 
-# --- 4. BARRA LATERAL MEJORADA ---
+# --- 4. BARRA LATERAL SIMPLIFICADA (SIN ACCESO RÁPIDO) ---
 with st.sidebar:
     if os.path.exists("logo_legado.png"):
         st.image("logo_legado.png", width=150)
@@ -383,64 +380,39 @@ with st.sidebar:
     st.caption("Bachiller Docente")
     st.caption("T.E.L E.R.A.C")
     
-    # --- INDICADOR DE PLANIFICACIÓN ACTIVA ---
+    # --- INDICADOR DE PLANIFICACIÓN ACTIVA SIMPLIFICADO ---
     st.markdown("---")
     plan_activa = obtener_plan_activa_usuario(st.session_state.u['NOMBRE'])
     
     if plan_activa:
-        st.markdown('<div class="tarjeta-activa">', unsafe_allow_html=True)
         st.success("📌 **PLANIFICACIÓN ACTIVA**")
         
         # Extraer descripción detallada
         descripcion_detallada = extraer_descripcion_dias(plan_activa['CONTENIDO_PLAN'])
         
-        with st.expander("📋 Ver detalles completos", expanded=False):
-            st.markdown(f"**📅 Rango de fechas:**")
+        with st.expander("📋 Ver detalles", expanded=False):
+            st.markdown(f"**📅 Rango:**")
             st.caption(f"`{plan_activa['RANGO']}`")
             
-            st.markdown(f"**🏫 Aula/Taller:**")
+            st.markdown(f"**🏫 Aula:**")
             st.caption(f"`{plan_activa['AULA']}`")
             
-            st.markdown(f"**⏰ Activada el:**")
-            st.caption(f"`{plan_activa['FECHA_ACTIVACION'].split()[0]}`")
+            st.markdown(f"**📝 Descripción:**")
+            st.info(descripcion_detallada[:100] + "..." if len(descripcion_detallada) > 100 else descripcion_detallada)
             
-            st.markdown(f"**📝 Descripción detallada:**")
-            st.info(descripcion_detallada)
-            
-            # BOTÓN DE EMERGENCIA PARA DESACTIVAR
+            # BOTÓN PARA CAMBIAR
             st.markdown("---")
-            st.warning("**🔄 CAMBIO DE PLANIFICACIÓN**")
-            
-            col_btn1, col_btn2 = st.columns(2)
-            with col_btn1:
-                if st.button("🔄 Cambiar", 
-                           key="sidebar_cambiar_emergencia",
-                           help="Ir a Mi Archivo para seleccionar otra planificación"):
-                    st.session_state.redirigir_a_archivo = True
-                    st.rerun()
-            
-            with col_btn2:
-                if st.button("❌ Desactivar", 
-                           key="sidebar_desactivar_emergencia",
-                           type="secondary",
-                           help="Desactivar COMPLETAMENTE esta planificación (Para casos de emergencia ministerial)"):
-                    if desactivar_plan_activa(st.session_state.u['NOMBRE']):
-                        st.success("✅ ¡Planificación desactivada!")
-                        st.balloons()
-                        time.sleep(1.5)
-                        st.rerun()
-            
-            st.caption("⚠️ **Nota:** Si el MPPE envía una planificación oficial, desactiva esta primero y luego activa la nueva.")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+            if st.button("🔄 Cambiar Planificación", 
+                       key="sidebar_cambiar",
+                       help="Ir a Mi Archivo para seleccionar otra planificación",
+                       use_container_width=True):
+                st.session_state.redirigir_a_archivo = True
+                st.rerun()
     else:
         st.warning("⚠️ **SIN PLANIFICACIÓN ACTIVA**")
         st.caption("Ve a 'Mi Archivo' para activar una")
     
     st.markdown("---")
-    
-    # --- 🚀 NUEVO: NAVEGACIÓN RÁPIDA ENTRE HERRAMIENTAS ---
-    st.subheader("🚀 Acceso Rápido")
     
     # BOTÓN PARA VOLVER AL MENÚ
     if st.button("🏠 **Volver al Menú Principal**", 
@@ -452,61 +424,160 @@ with st.sidebar:
             del st.session_state.menu_directo
         st.rerun()
     
-    st.caption("Ir directamente a:")
-    
-    col_nav1, col_nav2 = st.columns(2)
-    with col_nav1:
-        if st.button("📝 Evaluar", 
-                    help="Ir directamente a Evaluar Alumno",
-                    key="nav_evaluar"):
-            st.session_state.menu_directo = "📝 Evaluar Alumno (NUEVO)"
-            st.rerun()
-        
-        if st.button("📊 Registros", 
-                    help="Ir directamente a Registro de Evaluaciones",
-                    key="nav_registros"):
-            st.session_state.menu_directo = "📊 Registro de Evaluaciones (NUEVO)"
-            st.rerun()
-    
-    with col_nav2:
-        if st.button("📂 Archivo", 
-                    help="Ir directamente a Mi Archivo Pedagógico",
-                    key="nav_archivo"):
-            st.session_state.menu_directo = "📂 Mi Archivo Pedagógico"
-            st.rerun()
-        
-        if st.button("💡 Ideas", 
-                    help="Ir directamente a Ideas de Actividades",
-                    key="nav_ideas"):
-            st.session_state.menu_directo = "💡 Ideas de Actividades"
-            st.rerun()
-    
     st.markdown("---")
     
-    # BOTÓN DE EMERGENCIA
+    # --- PANEL DE EMERGENCIA MEJORADO ---
     with st.expander("🚨 **Panel de Emergencia**", expanded=False):
         if plan_activa:
             st.error("**¿Cambio ministerial inesperado?**")
+            
+            # Paso 1: Desactivar planificación actual
             if st.button("DESACTIVAR PLANIFICACIÓN ACTUAL", 
                         type="primary",
-                        key="emergencia_desactivar"):
+                        key="emergencia_desactivar",
+                        use_container_width=True):
                 if desactivar_plan_activa(st.session_state.u['NOMBRE']):
+                    st.session_state.mostrar_conversor_ministerial = True
                     st.success("✅ **Planificación desactivada**")
-                    st.info("Ahora puedes activar la nueva planificación ministerial en 'Mi Archivo'")
-                    time.sleep(2)
                     st.rerun()
+            
+            # Paso 2: Mostrar conversor ministerial (si se acaba de desactivar)
+            if st.session_state.get('mostrar_conversor_ministerial', False):
+                st.markdown("---")
+                st.info("**📥 PEGA LA PLANIFICACIÓN MINISTERIAL AQUÍ:**")
+                
+                planificacion_ministerial = st.text_area(
+                    "Copia y pega los títulos de actividades enviados por el MPPE:",
+                    height=150,
+                    placeholder="Ej: Lunes: Conociendo herramientas básicas\nMartes: Uso de productos de limpieza\nMiércoles: Clasificación de materiales...",
+                    key="textarea_ministerial"
+                )
+                
+                col1, col2 = st.columns(2)
+                with col1:
+                    if st.button("🔄 Convertir con IA", 
+                                key="convertir_ministerial",
+                                use_container_width=True):
+                        if planificacion_ministerial:
+                            with st.spinner("Adaptando formato ministerial..."):
+                                prompt_conversion = f"""
+                                ACTÚA COMO EXPERTO EN PLANIFICACIÓN EDUCATIVA (VENEZUELA).
+                                
+                                TAREA: Convierte esta planificación ministerial en una planificación completa con el formato de LEGADO MAESTRO.
+                                
+                                PLANIFICACIÓN MINISTERIAL (solo títulos):
+                                {planificacion_ministerial}
+                                
+                                FORMATO REQUERIDO:
+                                1. 📅 **Rango:** [Calcula las fechas de esta semana]
+                                2. 🏫 **Aula:** Taller Laboral
+                                3. 📝 **Planificación Sugerida y Certificada:** [Texto estándar]
+                                4. ### [DÍA] [Fecha específica si es posible]
+                                   1. **TÍTULO:** [Usa el título proporcionado]
+                                   2. **COMPETENCIA:** [Crea una competencia específica]
+                                   3. **EXPLORACIÓN:** [Párrafo humano]
+                                   4. **DESARROLLO:** [Párrafo práctico]
+                                   5. **REFLEXIÓN:** [Párrafo de cierre]
+                                   6. **MANTENIMIENTO:** [Acción concreta]
+                                   7. **ESTRATEGIAS:** [Técnicas]
+                                   8. **RECURSOS:** [Materiales]
+                                5. Repetir para 5 días
+                                6. 📚 FUNDAMENTACIÓN LEGAL
+                                
+                                IMPORTANTE: Mantén el espíritu de los títulos ministeriales pero desarrolla cada día completamente.
+                                """
+                                
+                                conversion = generar_respuesta([
+                                    {"role": "system", "content": INSTRUCCIONES_TECNICAS},
+                                    {"role": "user", "content": prompt_conversion}
+                                ], temperatura=0.5)
+                                
+                                st.session_state.conversion_ministerial = conversion
+                                st.session_state.planificacion_ministerial_original = planificacion_ministerial
+                                st.rerun()
+                
+                with col2:
+                    if st.button("❌ Cancelar", 
+                                key="cancelar_ministerial",
+                                type="secondary",
+                                use_container_width=True):
+                        st.session_state.mostrar_conversor_ministerial = False
+                        st.rerun()
+                
+                # Mostrar conversión si existe
+                if 'conversion_ministerial' in st.session_state:
+                    st.markdown("---")
+                    st.success("✅ **CONVERSIÓN COMPLETA**")
+                    st.markdown(f'<div class="plan-box">{st.session_state.conversion_ministerial}</div>', unsafe_allow_html=True)
+                    
+                    # Botones para guardar o descartar
+                    col_guardar, col_descartar = st.columns(2)
+                    with col_guardar:
+                        if st.button("💾 Guardar como Nueva Planificación", 
+                                    key="guardar_ministerial",
+                                    type="primary",
+                                    use_container_width=True):
+                            try:
+                                with st.spinner("Guardando planificación adaptada..."):
+                                    df_act = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                                    
+                                    # Calcular fechas (esta semana)
+                                    from datetime import datetime, timedelta
+                                    hoy = datetime.now()
+                                    inicio_semana = hoy - timedelta(days=hoy.weekday())
+                                    fin_semana = inicio_semana + timedelta(days=4)
+                                    
+                                    nueva_fila = pd.DataFrame([{
+                                        "FECHA": datetime.now().strftime("%d/%m/%Y"),
+                                        "FECHA_INICIO": inicio_semana.strftime("%d/%m/%y"),
+                                        "FECHA_FIN": fin_semana.strftime("%d/%m/%y"),
+                                        "RANGO": f"{inicio_semana.strftime('%d/%m/%y')} al {fin_semana.strftime('%d/%m/%y')}",
+                                        "USUARIO": st.session_state.u['NOMBRE'], 
+                                        "TEMA": "Planificación Ministerial Adaptada",
+                                        "CONTENIDO": st.session_state.conversion_ministerial,
+                                        "ESTADO": "GUARDADO",
+                                        "HORA_INICIO": "--", 
+                                        "HORA_FIN": "--",
+                                        "AULA": "Taller Laboral",
+                                        "ORIGEN": "MINISTERIO"
+                                    }])
+                                    
+                                    datos_actualizados = pd.concat([df_act, nueva_fila], ignore_index=True)
+                                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=datos_actualizados)
+                                    
+                                    # Limpiar estado
+                                    del st.session_state.conversion_ministerial
+                                    del st.session_state.planificacion_ministerial_original
+                                    del st.session_state.mostrar_conversor_ministerial
+                                    
+                                    st.success("✅ ¡Planificación ministerial guardada!")
+                                    st.info("Ahora ve a 'Mi Archivo' para activarla.")
+                                    time.sleep(3)
+                                    st.rerun()
+                            except Exception as e:
+                                st.error(f"Error al guardar: {e}")
+                    
+                    with col_descartar:
+                        if st.button("🗑️ Descartar Conversión", 
+                                    key="descartar_ministerial",
+                                    type="secondary",
+                                    use_container_width=True):
+                            del st.session_state.conversion_ministerial
+                            del st.session_state.planificacion_ministerial_original
+                            st.session_state.mostrar_conversor_ministerial = False
+                            st.rerun()
         else:
             st.info("No hay planificación activa para desactivar")
     
     st.markdown("---")
     
     # BOTONES DE SISTEMA
-    if st.button("🗑️ Limpiar Memoria Temporal"):
+    if st.button("🗑️ Limpiar Memoria Temporal", use_container_width=True):
         st.session_state.plan_actual = ""
         st.session_state.actividad_detectada = ""
         st.rerun()
     
-    if st.button("🔒 Cerrar Sesión"):
+    if st.button("🔒 Cerrar Sesión", use_container_width=True):
         st.session_state.auth = False
         st.session_state.u = None
         st.query_params.clear()
@@ -517,9 +588,10 @@ if 'plan_actual' not in st.session_state: st.session_state.plan_actual = ""
 if 'actividad_detectada' not in st.session_state: st.session_state.actividad_detectada = ""
 if 'redirigir_a_archivo' not in st.session_state: st.session_state.redirigir_a_archivo = False
 if 'menu_directo' not in st.session_state: st.session_state.menu_directo = None
-# NUEVA VARIABLE PARA CONTROLAR LA SELECCIÓN DEL SELECTBOX
 if 'selected_option' not in st.session_state: 
     st.session_state.selected_option = "📝 Planificación Profesional"
+if 'mostrar_conversor_ministerial' not in st.session_state:
+    st.session_state.mostrar_conversor_ministerial = False
 
 # --- 6. FUNCIÓN GENERADORA GENÉRICA ---
 def generar_respuesta(mensajes_historial, temperatura=0.7):
@@ -536,7 +608,7 @@ def generar_respuesta(mensajes_historial, temperatura=0.7):
 # --- 7. CUERPO DE LA APP ---
 st.title("🍎 Asistente Educativo - Zulia")
 
-# --- CORRECCIÓN CRÍTICA: SISTEMA DE NAVEGACIÓN UNIFICADO ---
+# --- SISTEMA DE NAVEGACIÓN SIMPLIFICADO ---
 # Lista de opciones disponibles
 opciones_disponibles = [
     "📝 Planificación Profesional", 
@@ -548,21 +620,13 @@ opciones_disponibles = [
     "❓ Consultas Técnicas"
 ]
 
-# 1. PRIMERO manejar la redirección desde el sidebar
+# Redirección desde sidebar
 if st.session_state.get('redirigir_a_archivo', False):
     st.session_state.selected_option = "📂 Mi Archivo Pedagógico"
     st.session_state.redirigir_a_archivo = False
-    st.session_state.menu_directo = None
     st.rerun()
 
-# 2. SEGUNDO manejar la navegación directa desde los botones
-if st.session_state.menu_directo:
-    st.session_state.selected_option = st.session_state.menu_directo
-    st.session_state.menu_directo = None
-    st.rerun()
-
-# 3. TERCERO mostrar el selector y sincronizarlo con el estado
-# Crear el selectbox que se sincroniza con el estado
+# Selector principal
 opcion = st.selectbox(
     "Seleccione herramienta:",
     opciones_disponibles,
@@ -570,21 +634,16 @@ opcion = st.selectbox(
     key="selector_principal"
 )
 
-# Actualizar el estado cuando el usuario cambia manualmente el selectbox
+# Actualizar estado
 if opcion != st.session_state.selected_option:
     st.session_state.selected_option = opcion
     st.rerun()
 
 # =========================================================
-# 1. PLANIFICADOR (FLUJO: BORRADOR -> GUARDAR) - MODIFICADO
+# 1. PLANIFICADOR (FLUJO: BORRADOR -> GUARDAR)
 # =========================================================
 if st.session_state.selected_option == "📝 Planificación Profesional":
     st.subheader("Planificación Técnica (Taller Laboral)")
-    
-    # BOTÓN PARA VOLVER
-    if st.button("← Volver al Menú", key="volver_planif"):
-        st.session_state.selected_option = "📝 Planificación Profesional"
-        st.rerun()
     
     st.markdown("---")
     
@@ -712,15 +771,10 @@ if st.session_state.selected_option == "📝 Planificación Profesional":
                     st.error(f"Error al guardar: {e}")
 
 # =========================================================
-# 2. EVALUAR ALUMNO (USANDO PLANIFICACIÓN ACTIVA) - CORREGIDO
+# 2. EVALUAR ALUMNO (USANDO PLANIFICACIÓN ACTIVA)
 # =========================================================
 elif st.session_state.selected_option == "📝 Evaluar Alumno (NUEVO)":
     st.subheader("Evaluación Diaria Inteligente")
-    
-    # BOTÓN PARA VOLVER
-    if st.button("← Volver al Menú", key="volver_eval"):
-        st.session_state.selected_option = "📝 Planificación Profesional"
-        st.rerun()
     
     st.markdown("---")
     
@@ -754,7 +808,7 @@ elif st.session_state.selected_option == "📝 Evaluar Alumno (NUEVO)":
     
     # --- MOSTRAR PLANIFICACIÓN ACTIVA CON DESCRIPCIÓN ---
     with st.container():
-        st.markdown('<div class="tarjeta-activa">', unsafe_allow_html=True)
+        st.markdown('<div class="tarjeta-activa-simple">', unsafe_allow_html=True)
         st.success(f"**📌 EVALUANDO CONTRA:** {plan_activa['RANGO']}")
         
         # Extraer descripción detallada
@@ -927,15 +981,10 @@ elif st.session_state.selected_option == "📝 Evaluar Alumno (NUEVO)":
                 st.error(f"Error al guardar: {e}")
 
 # =========================================================
-# 3. REGISTRO DE EVALUACIONES - CORREGIDO
+# 3. REGISTRO DE EVALUACIONES
 # =========================================================
 elif st.session_state.selected_option == "📊 Registro de Evaluaciones (NUEVO)":
     st.subheader("🎓 Expediente Estudiantil 360°")
-    
-    # BOTÓN PARA VOLVER
-    if st.button("← Volver al Menú", key="volver_registros"):
-        st.session_state.selected_option = "📝 Planificación Profesional"
-        st.rerun()
     
     st.markdown("---")
     
@@ -1069,15 +1118,10 @@ elif st.session_state.selected_option == "📊 Registro de Evaluaciones (NUEVO)"
         st.error(f"⚠️ Error conectando con la base de datos. Detalle: {e}")
 
 # =========================================================
-# 4. MI ARCHIVO PEDAGÓGICO (COMPLETAMENTE MODIFICADO)
+# 4. MI ARCHIVO PEDAGÓGICO (CON LETRAS VERDES PARA ACTIVA)
 # =========================================================
 elif st.session_state.selected_option == "📂 Mi Archivo Pedagógico":
     st.subheader(f"📂 Expediente de: {st.session_state.u['NOMBRE']}")
-    
-    # BOTÓN PARA VOLVER
-    if st.button("← Volver al Menú", key="volver_archivo"):
-        st.session_state.selected_option = "📝 Planificación Profesional"
-        st.rerun()
     
     st.markdown("---")
     
@@ -1086,13 +1130,12 @@ elif st.session_state.selected_option == "📂 Mi Archivo Pedagógico":
     
     # PANEL INFORMATIVO SUPERIOR MEJORADO
     if plan_activa_actual:
-        st.markdown('<div class="plan-activa-box">', unsafe_allow_html=True)
+        st.markdown('<div class="tarjeta-activa-simple">', unsafe_allow_html=True)
         col_info, col_accion = st.columns([3, 1])
         with col_info:
             st.markdown("### 🟢 **PLANIFICACIÓN ACTIVA ACTUAL**")
             st.markdown(f"**📅 Rango:** `{plan_activa_actual['RANGO']}`")
             st.markdown(f"**🏫 Aula:** `{plan_activa_actual['AULA']}`")
-            st.markdown(f"**⏰ Activada:** `{plan_activa_actual['FECHA_ACTIVACION'].split()[0]}`")
             
             # Extraer descripción detallada
             descripcion_detallada = extraer_descripcion_dias(plan_activa_actual['CONTENIDO_PLAN'])
@@ -1147,127 +1190,136 @@ elif st.session_state.selected_option == "📂 Mi Archivo Pedagógico":
                 # CREAR ETIQUETA CON INDICADOR
                 tema_corto = str(row['TEMA'])[:40] + "..." if len(str(row['TEMA'])) > 40 else str(row['TEMA'])
                 
+                # AQUÍ ESTÁ EL CAMBIO: Si es activa, usar clase CSS con letras verdes
                 if es_activa:
-                    etiqueta = f"🟢 **ACTIVA** | 📅 {rango_display} | 📌 {tema_corto}"
+                    # Usamos HTML para aplicar el estilo verde
+                    etiqueta_html = f'<span class="plan-activa-verde">🟢 ACTIVA | 📅 {rango_display} | 📌 {tema_corto}</span>'
+                    # Creamos un marcador con HTML
+                    st.markdown(etiqueta_html, unsafe_allow_html=True)
+                    # Necesitamos un contenedor para el expander
+                    with st.expander("", expanded=True):  # Expander vacío pero expandido
+                        pass  # El contenido va después
+                    # Ahora ponemos el contenido real (esto es un workaround)
+                    expander_key = f"exp_{index}"
+                    with st.expander("", expanded=True, key=expander_key):
+                        contenido_expander(index, row, es_activa, rango_display, tema_corto, plan_activa_actual)
                 else:
                     etiqueta = f"📅 {rango_display} | 📌 {tema_corto}"
-                
-                # EXPANDER PARA CADA PLANIFICACIÓN
-                with st.expander(etiqueta, expanded=es_activa):
-                    # ENCABEZADO SI ES ACTIVA
-                    if es_activa:
-                        st.success("✅ **ESTA ES TU PLANIFICACIÓN ACTIVA PARA LA SEMANA**")
-                        st.markdown("El sistema de evaluación buscará actividades **solo en esta planificación**.")
-                    
-                    # Mostrar información básica
-                    col_info1, col_info2 = st.columns(2)
-                    with col_info1:
-                        st.caption(f"**Rango:** {rango_display}")
-                        if 'AULA' in row and pd.notna(row['AULA']):
-                            st.caption(f"**Aula:** {row['AULA']}")
-                    
-                    with col_info2:
-                        st.caption(f"**Creada:** {row['FECHA']}")
-                        st.caption(f"**Estado:** {row['ESTADO']}")
-                    
-                    # Extraer y mostrar descripción detallada
-                    descripcion = extraer_descripcion_dias(row['CONTENIDO'])
-                    st.info(f"**📝 Descripción de la semana:** {descripcion}")
-                    
-                    # CONTENIDO COMPLETO
-                    with st.expander("📄 Ver contenido completo de la planificación", expanded=False):
-                        st.markdown(f'<div class="plan-box" style="padding:10px; font-size:0.9em;">{row["CONTENIDO"]}</div>', unsafe_allow_html=True)
-                    
-                    # BOTONES DE ACCIÓN
-                    col_acciones = st.columns([2, 1, 1])
-                    
-                    with col_acciones[0]:
-                        # CONSULTOR INTELIGENTE
-                        with st.expander("🤖 Consultar sobre este plan", expanded=False):
-                            pregunta = st.text_input("Tu duda:", key=f"preg_{index}", placeholder="Ej: ¿Cómo evalúo esto?")
-                            if st.button("Consultar", key=f"btn_{index}"):
-                                if pregunta:
-                                    with st.spinner("Analizando..."):
-                                        prompt_contextual = f"""
-                                        ACTÚA COMO ASESOR PEDAGÓGICO. CONTEXTO: {row['CONTENIDO']}. PREGUNTA: "{pregunta}".
-                                        Responde directo y útil.
-                                        """
-                                        respuesta = generar_respuesta([
-                                            {"role": "system", "content": INSTRUCCIONES_TECNICAS},
-                                            {"role": "user", "content": prompt_contextual}
-                                        ], temperatura=0.5)
-                                        st.markdown(f'<div class="consultor-box">💡 **Respuesta:**<br>{respuesta}</div>', unsafe_allow_html=True)
-                    
-                    with col_acciones[1]:
-                        # BOTÓN PARA ACTIVAR ESTA PLANIFICACIÓN
-                        if not es_activa:
-                            st.write("")  # Espacio
-                            if st.button("⭐ Usar Esta Semana", key=f"activar_{index}", 
-                                       help="Establece esta planificación como la oficial para evaluar esta semana",
-                                       type="secondary"):
-                                
-                                # Extraer información básica
-                                contenido = row['CONTENIDO']
-                                rango = rango_display
-                                aula = row['AULA'] if 'AULA' in row and pd.notna(row['AULA']) else "Taller Laboral"
-                                
-                                # Establecer como activa
-                                if establecer_plan_activa(
-                                    usuario_nombre=st.session_state.u['NOMBRE'],
-                                    id_plan=str(index),
-                                    contenido=contenido,
-                                    rango=rango,
-                                    aula=aula
-                                ):
-                                    st.success("✅ ¡Planificación establecida como ACTIVA!")
-                                    st.balloons()
-                                    time.sleep(2)
-                                    st.rerun()
-                    
-                    with col_acciones[2]:
-                        # BOTÓN DE ELIMINAR
-                        esta_borrando = st.session_state.get(f"confirm_del_{index}", False)
-                        
-                        if not esta_borrando:
-                            st.write("")  # Espacio
-                            if st.button("🗑️", key=f"del_init_{index}", help="Eliminar esta planificación"):
-                                st.session_state[f"confirm_del_{index}"] = True
-                                st.rerun()
-                        else:
-                            st.error("⚠️ ¿Eliminar esta planificación?")
-                            col_conf1, col_conf2 = st.columns(2)
-                            with col_conf1:
-                                if st.button("✅ Sí, eliminar", key=f"confirm_{index}"):
-                                    # Si es la activa, desactivarla primero
-                                    if es_activa:
-                                        desactivar_plan_activa(st.session_state.u['NOMBRE'])
-                                    
-                                    # Eliminar de la hoja principal
-                                    df_actualizado = df.drop(index)
-                                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_actualizado)
-                                    
-                                    st.success("🗑️ Planificación eliminada.")
-                                    time.sleep(1)
-                                    st.rerun()
-                            
-                            with col_conf2:
-                                if st.button("❌ No, conservar", key=f"cancel_{index}"):
-                                    st.session_state[f"confirm_del_{index}"] = False
-                                    st.rerun()
+                    with st.expander(etiqueta, expanded=False):
+                        contenido_expander(index, row, es_activa, rango_display, tema_corto, plan_activa_actual)
 
     except Exception as e:
         st.error(f"Error cargando archivo: {e}")
+
+# Función auxiliar para contenido del expander (evita duplicar código)
+def contenido_expander(index, row, es_activa, rango_display, tema_corto, plan_activa_actual):
+    """Contenido del expander para planificaciones"""
+    # ENCABEZADO SI ES ACTIVA
+    if es_activa:
+        st.success("✅ **ESTA ES TU PLANIFICACIÓN ACTIVA PARA LA SEMANA**")
+        st.markdown("El sistema de evaluación buscará actividades **solo en esta planificación**.")
+    
+    # Mostrar información básica
+    col_info1, col_info2 = st.columns(2)
+    with col_info1:
+        st.caption(f"**Rango:** {rango_display}")
+        if 'AULA' in row and pd.notna(row['AULA']):
+            st.caption(f"**Aula:** {row['AULA']}")
+    
+    with col_info2:
+        st.caption(f"**Creada:** {row['FECHA']}")
+        st.caption(f"**Estado:** {row['ESTADO']}")
+    
+    # Extraer y mostrar descripción detallada
+    descripcion = extraer_descripcion_dias(row['CONTENIDO'])
+    st.info(f"**📝 Descripción de la semana:** {descripcion}")
+    
+    # CONTENIDO COMPLETO
+    with st.expander("📄 Ver contenido completo de la planificación", expanded=False):
+        st.markdown(f'<div class="plan-box" style="padding:10px; font-size:0.9em;">{row["CONTENIDO"]}</div>', unsafe_allow_html=True)
+    
+    # BOTONES DE ACCIÓN
+    col_acciones = st.columns([2, 1, 1])
+    
+    with col_acciones[0]:
+        # CONSULTOR INTELIGENTE
+        with st.expander("🤖 Consultar sobre este plan", expanded=False):
+            pregunta = st.text_input("Tu duda:", key=f"preg_{index}", placeholder="Ej: ¿Cómo evalúo esto?")
+            if st.button("Consultar", key=f"btn_{index}"):
+                if pregunta:
+                    with st.spinner("Analizando..."):
+                        prompt_contextual = f"""
+                        ACTÚA COMO ASESOR PEDAGÓGICO. CONTEXTO: {row['CONTENIDO']}. PREGUNTA: "{pregunta}".
+                        Responde directo y útil.
+                        """
+                        respuesta = generar_respuesta([
+                            {"role": "system", "content": INSTRUCCIONES_TECNICAS},
+                            {"role": "user", "content": prompt_contextual}
+                        ], temperatura=0.5)
+                        st.markdown(f'<div class="consultor-box">💡 **Respuesta:**<br>{respuesta}</div>', unsafe_allow_html=True)
+    
+    with col_acciones[1]:
+        # BOTÓN PARA ACTIVAR ESTA PLANIFICACIÓN
+        if not es_activa:
+            st.write("")  # Espacio
+            if st.button("⭐ Usar Esta Semana", key=f"activar_{index}", 
+                       help="Establece esta planificación como la oficial para evaluar esta semana",
+                       type="secondary"):
+                
+                # Extraer información básica
+                contenido = row['CONTENIDO']
+                rango = rango_display
+                aula = row['AULA'] if 'AULA' in row and pd.notna(row['AULA']) else "Taller Laboral"
+                
+                # Establecer como activa
+                if establecer_plan_activa(
+                    usuario_nombre=st.session_state.u['NOMBRE'],
+                    id_plan=str(index),
+                    contenido=contenido,
+                    rango=rango,
+                    aula=aula
+                ):
+                    st.success("✅ ¡Planificación establecida como ACTIVA!")
+                    st.balloons()
+                    time.sleep(2)
+                    st.rerun()
+    
+    with col_acciones[2]:
+        # BOTÓN DE ELIMINAR
+        esta_borrando = st.session_state.get(f"confirm_del_{index}", False)
+        
+        if not esta_borrando:
+            st.write("")  # Espacio
+            if st.button("🗑️", key=f"del_init_{index}", help="Eliminar esta planificación"):
+                st.session_state[f"confirm_del_{index}"] = True
+                st.rerun()
+        else:
+            st.error("⚠️ ¿Eliminar esta planificación?")
+            col_conf1, col_conf2 = st.columns(2)
+            with col_conf1:
+                if st.button("✅ Sí, eliminar", key=f"confirm_{index}"):
+                    # Si es la activa, desactivarla primero
+                    if es_activa:
+                        desactivar_plan_activa(st.session_state.u['NOMBRE'])
+                    
+                    # Eliminar de la hoja principal
+                    df_actualizado = df.drop(index)
+                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_actualizado)
+                    
+                    st.success("🗑️ Planificación eliminada.")
+                    time.sleep(1)
+                    st.rerun()
+            
+            with col_conf2:
+                if st.button("❌ No, conservar", key=f"cancel_{index}"):
+                    st.session_state[f"confirm_del_{index}"] = False
+                    st.rerun()
 
 # =========================================================
 # OTROS MÓDULOS (EXTRAS)
 # =========================================================
 elif st.session_state.selected_option == "🌟 Mensaje Motivacional":
     st.subheader("Dosis de Ánimo Express ⚡")
-    
-    # BOTÓN PARA VOLVER
-    if st.button("← Volver al Menú", key="volver_mensaje"):
-        st.session_state.selected_option = "📝 Planificación Profesional"
-        st.rerun()
     
     st.markdown("---")
     
@@ -1287,11 +1339,6 @@ elif st.session_state.selected_option == "🌟 Mensaje Motivacional":
 elif st.session_state.selected_option == "💡 Ideas de Actividades":
     st.subheader("💡 Generador de Actividades DUA")
     
-    # BOTÓN PARA VOLVER
-    if st.button("← Volver al Menú", key="volver_ideas"):
-        st.session_state.selected_option = "📝 Planificación Profesional"
-        st.rerun()
-    
     st.markdown("---")
     
     tema = st.text_input("Tema a trabajar:", placeholder="Ej: Herramientas de limpieza")
@@ -1307,11 +1354,6 @@ elif st.session_state.selected_option == "💡 Ideas de Actividades":
 
 elif st.session_state.selected_option == "❓ Consultas Técnicas":
     st.subheader("❓ Consultas Pedagógicas y Legales")
-    
-    # BOTÓN PARA VOLVER
-    if st.button("← Volver al Menú", key="volver_consultas"):
-        st.session_state.selected_option = "📝 Planificación Profesional"
-        st.rerun()
     
     st.markdown("---")
     
@@ -1330,4 +1372,4 @@ elif st.session_state.selected_option == "❓ Consultas Técnicas":
 
 # --- PIE DE PÁGINA ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 2.7 (Corrección Navegación Acceso Rápido) | 🍎 Legado Maestro")
+st.caption("Desarrollado por Luis Atencio | Versión: 2.8 (Sin Acceso Rápido + Mejoras Visuales) | 🍎 Legado Maestro")
