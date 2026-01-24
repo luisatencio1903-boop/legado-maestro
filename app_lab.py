@@ -218,50 +218,57 @@ except Exception as e:
 
 # --- 4.3 Conexión a Google Drive API (v5.0) ---
 def subir_evidencia_drive(archivo_foto, nombre_archivo):
-    """Sube la foto comprimida a Google Drive y devuelve el link público."""
+    """Sube la foto comprimida a Google Drive con Scope Total."""
     try:
-        # 1. Obtener la información de la llave desde los secrets
+        # 1. Obtener info de la llave
         info_llave = st.secrets["connections"]["gsheets"]
         
-        # 2. DEFINIR ALCANCES (SCOPES): Esto le dice a Google que queremos permiso para CREAR archivos
-        # Sin esto, Google rechaza la petición (Error 400)
-        SCOPES = ['https://www.googleapis.com/auth/drive.file']
+        # 2. Scope TOTAL para evitar bloqueos
+        SCOPES = ['https://www.googleapis.com/auth/drive']
         
-        # 3. Crear credenciales con el alcance de Drive
+        # 3. Autenticación robusta
         creds = service_account.Credentials.from_service_account_info(info_llave, scopes=SCOPES)
         service = build('drive', 'v3', credentials=creds)
         
-        # 4. Comprimir la imagen antes de subir (Función de Luis Atencio)
+        # 4. Comprimir imagen
         foto_preparada = comprimir_imagen(archivo_foto)
         
-        # 5. Configurar metadatos
+        # 5. ID de la carpeta (Limpiado de posibles espacios)
+        ID_LIMPIO = ID_CARPETA_DRIVE.strip()
+        
+        # 6. Metadatos simplificados
         metadata = {
             'name': nombre_archivo,
-            'parents': [ID_CARPETA_DRIVE]
+            'parents': [ID_LIMPIO]
         }
         
-        # 6. Preparar la subida
-        # Cambiamos resumable=False para que el envío sea directo y falle menos en móviles
-        media = MediaIoBaseUpload(foto_preparada, mimetype='image/jpeg', resumable=False)
+        # 7. Preparar la carga
+        media = MediaIoBaseUpload(
+            foto_preparada, 
+            mimetype='image/jpeg', 
+            resumable=False # Envío directo para mayor éxito
+        )
         
-        # 7. Ejecutar la creación del archivo
+        # 8. Crear archivo
         archivo_drive = service.files().create(
-            body=metadata, 
-            media_body=media, 
+            body=metadata,
+            media_body=media,
             fields='id, webViewLink'
         ).execute()
         
-        # 8. Otorgar permiso de lectura al Director (cualquiera con el link)
+        # 9. Permisos de visibilidad
         service.permissions().create(
-            fileId=archivo_drive.get('id'), 
+            fileId=archivo_drive.get('id'),
             body={'type': 'anyone', 'role': 'viewer'}
         ).execute()
         
         return archivo_drive.get('webViewLink')
         
     except Exception as e:
-        # Esto nos dará más detalle si algo vuelve a fallar
-        st.error(f"Error técnico en Google Drive: {e}")
+        # Esto nos dirá exactamente qué está pasando
+        st.error(f"Error detallado en Drive: {str(e)}")
+        # Si el error es 404, el ID de la carpeta está mal.
+        # Si el error es 403, falta habilitar la API o compartir la carpeta.
         return None
 
 # =============================================================================
