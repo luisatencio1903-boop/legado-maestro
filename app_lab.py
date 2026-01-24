@@ -873,7 +873,7 @@ else:
         
         # 1. Definir contexto (Propio o Suplencia)
         es_suplencia = st.checkbox("🦸 ¿Estás cubriendo a un colega?", value=False)
-        titular = st.selectbox("Titular de la sección:", LISTA_DOCENTES) if es_suplence else st.session_state.u['NOMBRE']
+        titular = st.selectbox("Titular de la sección:", LISTA_DOCENTES) if es_suplencia else st.session_state.u['NOMBRE']
         
         pa = obtener_plan_activa_usuario(titular)
         if not pa:
