@@ -1206,78 +1206,122 @@ else:
             st.error(f"Error al cargar el historial: {e}")
 
    # -------------------------------------------------------------------------
-    # VISTA: MI ARCHIVO (v7.2 - ACTIVACIÓN DE PLANES PARA SUPLENCIAS)
+    # VISTA: MI ARCHIVO PEDAGÓGICO (v10.1 - INTEGRACIÓN TOTAL DE PLANES Y LOGROS)
     # -------------------------------------------------------------------------
     elif opcion == "📂 Mi Archivo Pedagógico":
-        st.markdown("### 📂 Gestión de Archivo y Planificaciones")
+        st.markdown("### 📂 Mi Archivo Pedagógico Digital")
         
-        # 1. Selector de contexto (¿Mi archivo o el de un colega?)
-        modo_suplencia_arch = st.checkbox("🦸 **Activar Modo Suplencia** (Gestionar archivo de un colega)")
-        
-        if modo_suplencia_arch:
-            usuario_a_consultar = st.selectbox("Seleccione Docente Ausente:", LISTA_DOCENTES)
-            st.warning(f"Estás gestionando el archivo de: **{usuario_a_consultar}**")
-        else:
-            usuario_a_consultar = st.session_state.u['NOMBRE']
-            st.info("Viendo tus planificaciones guardadas.")
-
-        # 2. MOSTRAR ESTADO ACTUAL DEL PLAN SELECCIONADO
-        pa = obtener_plan_activa_usuario(usuario_a_consultar)
-        if pa:
-            st.success(f"📌 **PLAN ACTIVO de {usuario_a_consultar}:** {pa['RANGO']}")
-            if st.button(f"Desactivar Plan de {usuario_a_consultar}"):
-                desactivar_plan_activa(usuario_a_consultar)
-                st.rerun()
-        else:
-            st.warning(f"⚠️ {usuario_a_consultar} no tiene ninguna planificación activa ahora.")
-
-        st.divider()
-
-        # 3. CARGAR Y MOSTRAR HISTORIAL DE PLANES GUARDADOS
+        # Cargamos todas las bases de datos necesarias para el cruce de información
         try:
-            # Leemos la Hoja1 donde están todos los planes
             df_total_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-            # Filtramos por el usuario seleccionado (sea yo o el colega)
-            planes_visibles = df_total_planes[df_total_planes['USUARIO'] == usuario_a_consultar]
+            df_ejecucion = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=0)
+            df_evaluaciones = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
             
-            if planes_visibles.empty:
-                st.warning(f"No se encontraron planes guardados para {usuario_a_consultar}.")
-            else:
-                st.write(f"Planes disponibles de {usuario_a_consultar}:")
-                for i, fila in planes_visibles.iloc[::-1].iterrows():
-                    # Marcamos visualmente si este es el que está activo
-                    es_este_activo = (pa['CONTENIDO_PLAN'] == fila['CONTENIDO']) if pa else False
-                    
-                    titulo_expander = f"{'⭐ ACTIVO | ' if es_este_activo else ''}📅 {fila['FECHA']} | {str(fila['TEMA'])[:35]}..."
-                    
-                    with st.expander(titulo_expander):
-                        st.markdown(f'<div class="plan-box">{fila["CONTENIDO"]}</div>', unsafe_allow_html=True)
+            # Creamos las dos pestañas para separar Futuro (Planes) de Pasado (Logros)
+            tab_archivo, tab_consolidados = st.tabs(["📝 Mis Planificaciones", "🏆 Actividades Consolidadas"])
+
+            # --- PESTAÑA 1: GESTIÓN DE ARCHIVO Y PLANIFICACIONES (TU LÓGICA v7.2) ---
+            with tab_archivo:
+                # 1. Selector de contexto (¿Mi archivo o el de un colega?) - PRESERVADO
+                modo_suplencia_arch = st.checkbox("🦸 **Activar Modo Suplencia** (Gestionar archivo de un colega)", key="check_supl_v72")
+                
+                if modo_suplencia_arch:
+                    usuario_a_consultar = st.selectbox("Seleccione Docente Ausente:", LISTA_DOCENTES, key="sel_doc_v72")
+                    st.warning(f"Gestionando archivo de: **{usuario_a_consultar}**")
+                else:
+                    usuario_a_consultar = st.session_state.u['NOMBRE']
+                    st.info("Viendo tus planificaciones guardadas.")
+
+                # 2. Mostrar estado actual del plan seleccionado - PRESERVADO
+                pa = obtener_plan_activa_usuario(usuario_a_consultar)
+                if pa:
+                    st.success(f"📌 **PLAN ACTIVO de {usuario_a_consultar}:** {pa['RANGO']}")
+                    if st.button(f"Desactivar Plan de {usuario_a_consultar}", key="btn_des_v72"):
+                        desactivar_plan_activa(usuario_a_consultar)
+                        st.rerun()
+                else:
+                    st.warning(f"⚠️ {usuario_a_consultar} no tiene ninguna planificación activa ahora.")
+
+                st.divider()
+
+                # 3. Mostrar historial de planes guardados - PRESERVADO
+                mis_p = df_total_planes[df_total_planes['USUARIO'] == usuario_a_consultar]
+                
+                if mis_p.empty:
+                    st.warning(f"No se encontraron planes guardados para {usuario_a_consultar}.")
+                else:
+                    for i, fila in mis_p.iloc[::-1].iterrows():
+                        es_este_activo = (pa['CONTENIDO_PLAN'] == fila['CONTENIDO']) if pa else False
+                        titulo_expander = f"{'⭐ ACTIVO | ' if es_este_activo else ''}📅 {fila['FECHA']} | {str(fila['TEMA'])[:35]}..."
                         
-                        # Solo mostramos el botón de activar si NO es el plan que ya está activo
-                        if not es_este_activo:
-                            if st.button(f"📌 Activar para {usuario_a_consultar}", key=f"btn_act_{i}"):
-                                # Aquí la clave: Establecemos el plan PARA EL COLEGA
-                                establecer_plan_activa(
-                                    usuario_nombre=usuario_a_consultar, 
-                                    id_plan=str(i), 
-                                    contenido=fila['CONTENIDO'], 
-                                    rango=fila['FECHA'], 
-                                    aula="Taller/Aula"
-                                )
-                                st.success(f"✅ ¡Plan de {usuario_a_consultar} activado!")
-                                time.sleep(1)
-                                st.rerun()
-                        
-                        # El botón borrar solo lo mostramos si NO estamos en modo suplencia 
-                        # (Para que un suplente no borre accidentalmente el trabajo de otro)
-                        if not modo_suplencia_arch:
-                            if st.button(f"🗑️ Borrar mi plan", key=f"btn_del_{i}"):
-                                # Lógica para borrar (df_total_planes.drop...)
-                                df_actualizado = df_total_planes.drop(i)
-                                conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_actualizado)
-                                st.rerun()
+                        with st.expander(titulo_expander):
+                            st.markdown(f'<div class="plan-box">{fila["CONTENIDO"]}</div>', unsafe_allow_html=True)
+                            
+                            col_btns = st.columns(2)
+                            if not es_este_activo:
+                                if col_btns[0].button(f"📌 Activar para {usuario_a_consultar}", key=f"act_btn_{i}"):
+                                    establecer_plan_activa(usuario_a_consultar, str(i), fila['CONTENIDO'], fila['FECHA'], "Taller/Aula")
+                                    st.success("Plan activado."); time.sleep(1); st.rerun()
+                            
+                            # Seguridad: Solo el dueño puede borrar sus planes - PRESERVADO
+                            if not modo_suplencia_arch:
+                                if col_btns[1].button(f"🗑️ Borrar mi plan", key=f"del_btn_{i}"):
+                                    df_actualizado = df_total_planes.drop(i)
+                                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_actualizado)
+                                    st.rerun()
+
+            # --- PESTAÑA 2: ACTIVIDADES CONSOLIDADAS (LA NUEVA EVOLUCIÓN v10.1) ---
+            with tab_consolidados:
+                st.write("### ✅ Registro de Cumplimiento y Evidencias")
+                # Aquí siempre mostramos lo del docente logueado para sus méritos
+                mis_logros = df_ejecucion[df_ejecucion['USUARIO'] == st.session_state.u['NOMBRE']]
+                
+                if mis_logros.empty:
+                    st.info("Aún no tienes actividades consolidadas. Ve al 'Aula Virtual' para culminar tu primera clase.")
+                else:
+                    # Métrica de cumplimiento semanal
+                    total_sem = len(mis_logros)
+                    st.metric("Actividades de la Semana", f"{total_sem} de 5")
+
+                    for _, logro in mis_logros.iloc[::-1].iterrows():
+                        with st.expander(f"✅ LOGRO: {logro['FECHA']} | {logro['ACTIVIDAD_TITULO']}"):
+                            # 1. Fotos con Botones de Descarga - v10.1
+                            fotos = str(logro['EVIDENCIA_FOTO']).split('|')
+                            c1, c2 = st.columns(2)
+                            
+                            with c1:
+                                if len(fotos) > 0 and fotos[0].strip() != "-":
+                                    u1 = fotos[0].strip()
+                                    st.image(u1, caption="Proceso", use_container_width=True)
+                                    try:
+                                        st.download_button("💾 Descargar Foto 1", requests.get(u1).content, f"Proceso_{logro['FECHA']}.jpg", "image/jpeg", key=f"dl1_{logro['FECHA']}_{random.randint(0,999)}")
+                                    except: st.caption("Error en descarga")
+                            
+                            with c2:
+                                if len(fotos) > 1 and fotos[1].strip() != "-":
+                                    u2 = fotos[1].strip()
+                                    st.image(u2, caption="Culminación", use_container_width=True)
+                                    try:
+                                        st.download_button("💾 Descargar Foto 2", requests.get(u2).content, f"Cierre_{logro['FECHA']}.jpg", "image/jpeg", key=f"dl2_{logro['FECHA']}_{random.randint(0,999)}")
+                                    except: st.caption("Error en descarga")
+
+                            st.info(f"**Experiencia Docente:** {logro['RESUMEN_LOGROS']}")
+                            
+                            # 2. Botón de Análisis de IA - PRESERVADO
+                            if st.button("🧠 Ver Análisis de Logro (IA)", key=f"ia_{logro['FECHA']}_{random.randint(0,999)}"):
+                                p_ia = f"Analiza esta actividad pedagógica: {logro['ACTIVIDAD_TITULO']}. Logros: {logro['RESUMEN_LOGROS']}. Valora el impacto en Educación Especial."
+                                st.markdown(f'<div class="eval-box">{generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":p_ia}], 0.4)}</div>', unsafe_allow_html=True)
+
+                            # 3. Cruce con Estudiantes - PRESERVADO
+                            st.write("**🧒 Alumnos evaluados en esta actividad:**")
+                            ev_dia = df_evaluaciones[(df_evaluaciones['FECHA'] == logro['FECHA']) & (df_evaluaciones['USUARIO'] == st.session_state.u['NOMBRE'])]
+                            if ev_dia.empty: st.caption("Sin evaluaciones individuales.")
+                            else:
+                                for _, e in ev_dia.iterrows():
+                                    st.markdown(f"- **{e['ESTUDIANTE']}**: {e['EVALUACION_IA'][:100]}...")
+
         except Exception as e:
-            st.error(f"Error al cargar el archivo de planificaciones: {e}")
+            st.error(f"Error técnico en el archivo: {e}")
 
     # -------------------------------------------------------------------------
     # VISTAS: EXTRAS (ORIGINALES PRESERVADAS)
