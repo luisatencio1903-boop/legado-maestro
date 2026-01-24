@@ -99,7 +99,32 @@ def comprimir_imagen(archivo_camara):
     img.save(buffer, format="JPEG", quality=70, optimize=True)
     buffer.seek(0)
     return buffer
-
+def extraer_actividad_del_dia(plan_texto, dia_nombre):
+    """Extrae del plan semanal solo el bloque correspondiente a un día."""
+    try:
+        # Normalizar para búsqueda (todo a minúsculas)
+        plan_m = plan_texto.lower()
+        dia_m = dia_nombre.lower()
+        
+        # El marcador que usamos en el prompt es ### Nombre del Día
+        inicio_marcador = f"### {dia_m}"
+        start_idx = plan_m.find(inicio_marcador)
+        
+        if start_idx == -1:
+            return None # No se encontró ese día en el plan
+            
+        # Buscar el inicio del siguiente día (que también empieza con ###)
+        # Empezamos a buscar DESPUÉS del marcador actual
+        end_idx = plan_m.find("###", start_idx + len(inicio_marcador))
+        
+        if end_idx == -1:
+            # Es el último día del plan (viernes generalmente)
+            return plan_texto[start_idx:].strip()
+        else:
+            return plan_texto[start_idx:end_idx].strip()
+    except:
+        return None
+        
 # =============================================================================
 # 3. ESTILOS CSS (INTERFAZ VISUAL ORIGINAL COMPLETA)
 # =============================================================================
