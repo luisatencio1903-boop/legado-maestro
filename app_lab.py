@@ -537,7 +537,7 @@ with st.sidebar:
     else:
         st.header("🍎")
         
-    st.title("Legado Maestro")
+    st.title("SUPER DOCENTE 1.0")
     st.caption(f"Prof. {st.session_state.u['NOMBRE']}")
     
     # Mostrar estado de planificación activa
