@@ -861,7 +861,108 @@ else:
                             {"role":"user","content":prompt}
                         ], 0.4) # Temperatura más baja para máxima precisión estructural
                         st.rerun()
+# -------------------------------------------------------------------------
+    # VISTA: AULA VIRTUAL (v8.0 - FLUJO PERSISTENTE CON DOBLE EVIDENCIA)
+    # -------------------------------------------------------------------------
+    elif opcion == "🦸‍♂️ AULA VIRTUAL (Ejecución Hoy)":
+        st.info("💡 Centro de Ejecución: Captura el proceso y el cierre de tu clase.")
+        
+        # 1. Definir contexto (Propio o Suplencia)
+        es_suplencia = st.checkbox("🦸 ¿Estás cubriendo a un colega?", value=False)
+        titular = st.selectbox("Titular de la sección:", LISTA_DOCENTES) if es_suplence else st.session_state.u['NOMBRE']
+        
+        pa = obtener_plan_activa_usuario(titular)
+        if not pa:
+            st.error(f"🚨 {titular} no tiene un plan activo."); st.stop()
 
+        # 2. Visualización del Plan
+        with st.expander("📖 Ver Planificación de la Semana", expanded=False):
+            st.markdown(f'<div class="plan-box">{pa["CONTENIDO_PLAN"]}</div>', unsafe_allow_html=True)
+
+        st.divider()
+
+        # 3. ÁREA DE TRABAJO Y EVIDENCIAS
+        st.markdown("### 📸 Registro de Evidencias en Vivo")
+        st.caption("Captura dos momentos clave de la actividad para sumar tus méritos.")
+
+        # --- FOTO 1: INICIO / PROCESO ---
+        if st.session_state.av_foto1 is None:
+            st.subheader("Paso 1: Evidencia de Inicio/Proceso")
+            foto1_input = st.camera_input("Capturar momento inicial", key="cam_inicio")
+            if foto1_input:
+                if st.button("📤 Guardar Primera Evidencia"):
+                    with st.spinner("Subiendo..."):
+                        url1 = subir_a_imgbb(foto1_input)
+                        if url1:
+                            st.session_state.av_foto1 = url1
+                            st.success("✅ Primera foto cargada. Puedes seguir navegando en la App si lo deseas.")
+                            time.sleep(2); st.rerun()
+        else:
+            st.success("✅ Primera evidencia guardada correctamente.")
+            st.image(st.session_state.av_foto1, width=150, caption="Inicio/Proceso")
+
+        # --- FOTO 2: CIERRE / CULMINACIÓN (Solo sale si ya está la 1) ---
+        if st.session_state.av_foto1 and st.session_state.av_foto2 is None:
+            st.divider()
+            st.subheader("Paso 2: Evidencia de Culminación")
+            foto2_input = st.camera_input("Capturar resultado final", key="cam_cierre")
+            if foto2_input:
+                if st.button("📤 Guardar Evidencia de Cierre"):
+                    with st.spinner("Subiendo..."):
+                        url2 = subir_a_imgbb(foto2_input)
+                        if url2:
+                            st.session_state.av_foto2 = url2
+                            st.success("✅ Segunda foto cargada.")
+                            time.sleep(2); st.rerun()
+        elif st.session_state.av_foto2:
+            st.success("✅ Segunda evidencia guardada correctamente.")
+            st.image(st.session_state.av_foto2, width=150, caption="Cierre/Culminación")
+
+        # --- PASO FINAL: RESUMEN Y ENVÍO ---
+        if st.session_state.av_foto1 and st.session_state.av_foto2:
+            st.divider()
+            st.markdown("### 🏁 Finalizar Reporte de Ejecución")
+            # El resumen se guarda en session_state para no perderse
+            st.session_state.av_resumen = st.text_area("Resumen de logros y observaciones finales:", 
+                                                     value=st.session_state.av_resumen)
+            
+            if st.button("🚀 CULMINAR ACTIVIDAD Y ENVIAR A DIRECCIÓN", type="primary"):
+                if not st.session_state.av_resumen:
+                    st.error("Por favor, escribe un breve resumen de los logros antes de culminar.")
+                else:
+                    with st.spinner("Registrando culminación en la nube..."):
+                        try:
+                            df_ej = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=0)
+                            nueva_ej = pd.DataFrame([{
+                                "FECHA": ahora_ve().strftime("%d/%m/%Y"),
+                                "USUARIO": st.session_state.u['NOMBRE'],
+                                "DOCENTE_TITULAR": titular,
+                                "ACTIVIDAD_TITULO": "Ejecución Diaria",
+                                "EVIDENCIA_FOTO": f"{st.session_state.av_foto1} | {st.session_state.av_foto2}",
+                                "RESUMEN_LOGROS": st.session_state.av_resumen,
+                                "ESTADO": "CULMINADA",
+                                "PUNTOS": 5
+                            }])
+                            conn.update(spreadsheet=URL_HOJA, worksheet="EJECUCION", data=pd.concat([df_ej, nueva_ej], ignore_index=True))
+                            
+                            # LIMPIAR MEMORIA DESPUÉS DE ENVIAR
+                            st.session_state.av_foto1 = None
+                            st.session_state.av_foto2 = None
+                            st.session_state.av_resumen = ""
+                            
+                            st.balloons()
+                            st.success("✅ Actividad certificada. ¡Méritos sumados para el Docente del Año!")
+                            time.sleep(3); st.session_state.pagina_actual = "HOME"; st.rerun()
+                        except Exception as e:
+                            st.error(f"Error al guardar: {e}")
+
+        # BOTÓN PARA RESETEAR (Por si se equivocó de foto)
+        if st.session_state.av_foto1 or st.session_state.av_foto2:
+            if st.button("🧹 Borrar borrador y empezar de nuevo"):
+                st.session_state.av_foto1 = None
+                st.session_state.av_foto2 = None
+                st.session_state.av_resumen = ""
+                st.rerun()
     # -------------------------------------------------------------------------
     # VISTA: PLANIFICADOR MINISTERIAL (ORIGINAL PRESERVADA)
     # -------------------------------------------------------------------------
