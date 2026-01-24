@@ -216,68 +216,85 @@ except Exception as e:
     st.stop()
 
 # --- 4.3 Conexión a Google Drive API (v5.0) ---
+import requests
+import json
+
 def subir_evidencia_drive(archivo_foto, nombre_archivo):
-    """Sube la foto a Drive con configuración de alta compatibilidad."""
+    """Sube la foto a Drive usando peticiones HTTP directas para evitar el Error 400."""
     try:
-        # 1. Reconstruir credenciales desde secrets
+        # 1. Obtener Token de Acceso usando las credenciales de los secrets
         gs = st.secrets["connections"]["gsheets"]
-        
-        # Limpieza profunda de la llave
         pk = gs["private_key"].replace("\\n", "\n") if "\\n" in gs["private_key"] else gs["private_key"]
         
-        creds_info = {
-            "type": "service_account",
-            "project_id": gs["project_id"],
-            "private_key_id": gs["private_key_id"],
-            "private_key": pk,
-            "client_email": gs["client_email"],
-            "client_id": gs["client_id"],
-            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-            "token_uri": "https://oauth2.googleapis.com/token",
-            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-            "client_x509_cert_url": gs["client_x509_cert_url"]
+        # Crear el Header de autenticación manualmente (OAuth2)
+        import time
+        import jwt # Asegúrate de tener PyJWT en requirements si esto falla, sino usamos la otra vía
+        
+        now = int(time.time())
+        payload = {
+            "iss": gs["client_email"],
+            "sub": gs["client_email"],
+            "aud": "https://oauth2.googleapis.com/token",
+            "iat": now,
+            "exp": now + 3600,
+            "scope": "https://www.googleapis.com/auth/drive.file"
+        }
+        
+        # Para no complicarte con JWT, vamos a intentar la última vía con la librería pero con carga simple
+        from google.auth.transport.requests import Request
+        from google.oauth2 import service_account
+        
+        creds = service_account.Credentials.from_service_account_info(
+            gs, scopes=['https://www.googleapis.com/auth/drive.file']
+        )
+        creds.refresh(Request())
+        token = creds.token
+
+        # 2. Comprimir imagen
+        foto_ready = comprimir_imagen(archivo_foto).getvalue()
+
+        # 3. Petición de subida (Metadatos + Archivo)
+        metadata = {
+            "name": nombre_archivo,
+            "parents": [ID_CARPETA_DRIVE.strip()]
+        }
+        
+        files = {
+            'data': ('metadata', json.dumps(metadata), 'application/json; charset=UTF-8'),
+            'file': ('image/jpeg', foto_ready)
         }
 
-        # 2. Scope total de Drive
-        SCOPES = ['https://www.googleapis.com/auth/drive']
-        creds = service_account.Credentials.from_service_account_info(creds_info, scopes=SCOPES)
-        service = build('drive', 'v3', credentials=creds)
+        headers = {"Authorization": f"Bearer {token}"}
         
-        # 3. Preparar imagen (Compresión Luis Atencio)
-        foto_preparada = comprimir_imagen(archivo_foto)
+        # Subida Simple Multipart
+        response = requests.post(
+            "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+            headers=headers,
+            files=files
+        )
         
-        # 4. Metadatos MINIMALISTAS (Solo nombre y carpeta)
-        # El error 400 suele ser por enviar campos que la API v3 no espera
-        file_metadata = {
-            'name': str(nombre_archivo),
-            'parents': [ID_CARPETA_DRIVE.strip()]
-        }
-        
-        # 5. Carga simple (MediaIoBaseUpload)
-        media = MediaIoBaseUpload(foto_preparada, mimetype='image/jpeg', resumable=False)
-        
-        # 6. Crear el archivo (Sin pedir el webViewLink en la creación inicial para evitar el 400)
-        file = service.files().create(
-            body=file_metadata,
-            media_body=media,
-            fields='id' # Solo pedimos el ID al principio
-        ).execute()
-        
-        file_id = file.get('id')
-        
-        # 7. Hacerlo público y obtener el Link en pasos separados
-        service.permissions().create(
-            fileId=file_id,
-            body={'type': 'anyone', 'role': 'viewer'}
-        ).execute()
-        
-        # Obtener el link final
-        file_info = service.files().get(fileId=file_id, fields='webViewLink').execute()
-        
-        return file_info.get('webViewLink')
-        
+        if response.status_code == 200:
+            file_id = response.json().get("id")
+            
+            # 4. Hacerlo público (Permisos)
+            requests.post(
+                f"https://www.googleapis.com/drive/v3/files/{file_id}/permissions",
+                headers=headers,
+                json={"type": "anyone", "role": "viewer"}
+            )
+            
+            # 5. Obtener el link
+            res_info = requests.get(
+                f"https://www.googleapis.com/drive/v3/files/{file_id}?fields=webViewLink",
+                headers=headers
+            )
+            return res_info.json().get("webViewLink")
+        else:
+            st.error(f"Error de Google: {response.text}")
+            return None
+
     except Exception as e:
-        st.error(f"Error detallado: {str(e)}")
+        st.error(f"Error en el sistema de archivos: {e}")
         return None
 
 # =============================================================================
