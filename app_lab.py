@@ -924,50 +924,64 @@ else:
                 st.error(f"Error al guardar: {e}")
 
   # -------------------------------------------------------------------------
-    # VISTA: EVALUAR ALUMNO (v7.0 MATRÍCULA GLOBAL Y MODO SUPLENCIA)
+    # VISTA: EVALUAR ALUMNO (v7.2 - CONTEXTO DUAL: MI PLAN vs PLAN SUPLENCIA)
     # -------------------------------------------------------------------------
     elif opcion == "📝 Evaluar Alumno":
-        pa = obtener_plan_activa_usuario(st.session_state.u['NOMBRE'])
-        if not pa: 
-            st.error("🚨 No tienes una planificación activa. Ve a 'Mi Archivo' y activa una para poder evaluar.")
+        st.markdown("### 📝 Registro Pedagógico Diario")
+        
+        # 1. Selector de contexto (¿Mis alumnos o los de otro?)
+        es_suplente = st.checkbox("🦸 **Activar Modo Suplencia** (Evaluar alumnos de un colega)")
+        
+        if es_suplente:
+            titular_objetivo = st.selectbox("¿A quién estás cubriendo hoy?", LISTA_DOCENTES)
+            st.warning(f"Modo Suplencia: Estás usando la carpeta de **{titular_objetivo}**")
         else:
-            st.success(f"📋 Evaluando sobre el Plan: {pa['RANGO']}")
+            titular_objetivo = st.session_state.u['NOMBRE']
+            st.info("Estás trabajando con tus alumnos y tu planificación.")
+
+        # 2. BUSCAR EL PLAN ACTIVO SEGÚN EL TITULAR SELECCIONADO
+        # Si es suplencia, busca el de Neida. Si no, busca el de Luis.
+        pa = obtener_plan_activa_usuario(titular_objetivo)
+        
+        if not pa: 
+            st.error(f"🚨 El docente **{titular_objetivo}** no tiene una planificación activa.")
+            st.info("Ve a 'Mi Archivo Pedagógico', activa el modo suplencia y activa un plan para este colega.")
+        else:
+            # Mostramos el plan con el que se va a evaluar
+            with st.expander(f"📖 Ver Plan Activo de {titular_objetivo}", expanded=False):
+                st.markdown(f'<div class="plan-box">{pa["CONTENIDO_PLAN"]}</div>', unsafe_allow_html=True)
             
-            # 1. INTERRUPTOR DE SUPLENCIA
-            es_suplente = st.checkbox("🦸 ¿Es una Suplencia? (Evaluar alumno de otro colega)")
-            
-            if es_suplente:
-                # El suplente elige al titular y el sistema busca sus alumnos
-                titular_del_alumno = st.selectbox("Seleccione al Docente Titular:", LISTA_DOCENTES)
-                alumnos_visibles = df_mat_global[df_mat_global['DOCENTE_TITULAR'] == titular_del_alumno]['NOMBRE_ALUMNO'].tolist()
-            else:
-                # El docente ve solo sus propios alumnos
-                titular_del_alumno = st.session_state.u['NOMBRE']
-                alumnos_visibles = df_mat_global[df_mat_global['DOCENTE_TITULAR'] == titular_del_alumno]['NOMBRE_ALUMNO'].tolist()
+            # 3. FILTRAR ALUMNOS SEGÚN EL TITULAR
+            alumnos_visibles = df_mat_global[df_mat_global['DOCENTE_TITULAR'] == titular_objetivo]['NOMBRE_ALUMNO'].tolist()
             
             if not alumnos_visibles:
-                st.warning(f"No se encontraron alumnos registrados para el docente: {titular_del_alumno}")
+                st.warning(f"No hay alumnos registrados en la matrícula para {titular_objetivo}")
             else:
-                estudiante_sel = st.selectbox("Seleccione el Estudiante:", sorted(alumnos_visibles))
+                col_alum, col_act = st.columns([1, 1])
+                with col_alum:
+                    estudiante_sel = st.selectbox("Seleccione el Estudiante:", sorted(alumnos_visibles))
                 
-                # Buscar actividad sugerida en el plan
-                if st.button("🔍 Buscar Actividad de Hoy"):
-                    with st.spinner("Consultando tu planificación..."):
-                        dia_hoy = ahora_ve().strftime("%A")
-                        res_act = generar_respuesta([{"role":"user","content":f"Plan: {pa['CONTENIDO_PLAN'][:5000]}. Hoy: {dia_hoy}. ¿Qué actividad toca? SOLO el título."}], 0.1)
-                        st.session_state.actividad_detectada = res_act.strip().replace('"', '')
+                with col_act:
+                    # El botón de buscar actividad ahora lee el plan del titular seleccionado
+                    if st.button("🔍 Buscar Actividad en este Plan"):
+                        with st.spinner(f"Leyendo plan de {titular_objetivo}..."):
+                            dia_hoy = ahora_ve().strftime("%A")
+                            # La IA solo ve el plan del titular (aunque tú seas el suplente)
+                            res_act = generar_respuesta([{"role":"user","content":f"Plan: {pa['CONTENIDO_PLAN'][:5000]}. Hoy es {dia_hoy}. ¿Qué actividad toca hoy? Responde SOLO el título."}], 0.1)
+                            st.session_state.actividad_detectada = res_act.strip().replace('"', '')
                 
-                actividad_final = st.text_input("Actividad:", value=st.session_state.actividad_detectada)
-                observacion = st.text_area("Observación Anecdótica (¿Qué hizo el alumno?):")
+                actividad_final = st.text_input("Actividad a evaluar:", value=st.session_state.actividad_detectada)
+                observacion = st.text_area(f"Observación sobre el desempeño de {estudiante_sel}:")
                 
                 if st.button("⚡ Generar Evaluación Técnica"):
                     if estudiante_sel and observacion:
-                        with st.spinner("IA Analizando desempeño..."):
-                            p_eval = f"Evalúa a {estudiante_sel}. Actividad: {actividad_final}. Obs: {observacion}. Plan: {pa['CONTENIDO_PLAN'][:1000]}."
+                        with st.spinner("Analizando..."):
+                            # La IA evalúa basándose en el plan del Titular
+                            p_eval = f"Alumno: {estudiante_sel}. Actividad: {actividad_final}. Obs: {observacion}. Plan: {pa['CONTENIDO_PLAN'][:1000]}."
                             st.session_state.eval_resultado = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":p_eval}], 0.5)
                             st.session_state.est_temp = estudiante_sel
                             st.session_state.obs_temp = observacion
-                            st.session_state.titular_temp = titular_del_alumno # Guardamos quién es el dueño
+                            st.session_state.titular_temp = titular_objetivo # Guardamos quién es el dueño
 
             if st.session_state.eval_resultado:
                 st.markdown(f'<div class="eval-box">{st.session_state.eval_resultado}</div>', unsafe_allow_html=True)
@@ -977,8 +991,8 @@ else:
                         df_ev = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
                         nueva_ev = pd.DataFrame([{
                             "FECHA": ahora_ve().strftime("%d/%m/%Y"),
-                            "USUARIO": st.session_state.u['NOMBRE'], # El que escribe (Suplente o Titular)
-                            "DOCENTE_TITULAR": st.session_state.titular_temp, # El dueño del alumno
+                            "USUARIO": st.session_state.u['NOMBRE'], # El suplente firma como autor
+                            "DOCENTE_TITULAR": st.session_state.titular_temp, # Se guarda en la carpeta del ausente
                             "ESTUDIANTE": st.session_state.est_temp,
                             "ACTIVIDAD": actividad_final,
                             "ANECDOTA": st.session_state.obs_temp,
@@ -986,7 +1000,7 @@ else:
                             "PLANIFICACION_ACTIVA": pa['RANGO']
                         }])
                         conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=pd.concat([df_ev, nueva_ev], ignore_index=True))
-                        st.success(f"✅ Evaluación guardada en el expediente de {st.session_state.est_temp}")
+                        st.success(f"✅ Evaluación guardada correctamente en el expediente de {st.session_state.est_temp}")
                         st.session_state.eval_resultado = ""
                         time.sleep(2); st.rerun()
                     except Exception as e:
