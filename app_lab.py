@@ -362,12 +362,14 @@ def desactivar_plan_activa(usuario_nombre):
     except:
         return False
 
-# --- 6.2 Función de Asistencia (VERSIÓN 5.0 - BIOMÉTRICA INTEGRAL) ---
+# --- 6.2 Función de Asistencia (VERSIÓN 7.0 - GESTIÓN DE MÉRITOS Y SUPLENCIAS) ---
 
-def registrar_asistencia_biometrica(usuario, tipo, hora_e, hora_s, foto_e, foto_s, motivo, alerta_ia):
-    """Escribe los datos en las columnas correctas de la hoja ASISTENCIA."""
+def registrar_asistencia_v7(usuario, tipo, hora_e, hora_s, foto_e, foto_s, motivo, alerta_ia, puntos, suplencia_a="-"):
+    """
+    Mejora de la v5.0: Mantiene la biometría pero añade lógica de puntos y suplencias.
+    """
     try:
-        time.sleep(1) 
+        time.sleep(1) # Respiro para evitar error de API de Google
         df_asistencia = conn.read(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", ttl=0)
         hoy_str = ahora_ve().strftime("%d/%m/%Y")
         
@@ -375,33 +377,37 @@ def registrar_asistencia_biometrica(usuario, tipo, hora_e, hora_s, foto_e, foto_
         registro_hoy = df_asistencia[(df_asistencia['USUARIO'] == usuario) & (df_asistencia['FECHA'] == hoy_str)]
         
         if registro_hoy.empty:
-            # ENTRADA: Aquí usamos el nombre de columna 'HORA_ENTRADA'
+            # ENTRADA O INASISTENCIA: Registramos la fila inicial
             nuevo_registro = pd.DataFrame([{
                 "FECHA": hoy_str, 
                 "USUARIO": usuario, 
                 "TIPO": tipo,
-                "HORA_ENTRADA": hora_e, # <--- Esto escribirá en tu columna D
+                "HORA_ENTRADA": hora_e,
                 "FOTO_ENTRADA": foto_e,
                 "HORA_SALIDA": "-", 
                 "FOTO_SALIDA": "-",
                 "MOTIVO": motivo, 
                 "ALERTA_IA": alerta_ia, 
                 "ESTADO_DIRECTOR": "PENDIENTE",
-                "PUNTOS_MERITO": 0
+                "PUNTOS_MERITO": puntos, # <--- Ahora es dinámico (5 o 10)
+                "SUPLENCIA_A": suplencia_a # <--- Nueva columna de la v7.0
             }])
             df_final = pd.concat([df_asistencia, nuevo_registro], ignore_index=True)
             conn.update(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", data=df_final)
             return "OK"
         else:
-            # SALIDA: Actualizamos la misma fila
+            # SALIDA: Actualizamos la misma fila con los puntos finales y la foto
             idx = registro_hoy.index[0]
             if hora_s != "-":
                 df_asistencia.at[idx, 'HORA_SALIDA'] = hora_s
                 df_asistencia.at[idx, 'FOTO_SALIDA'] = foto_s
                 df_asistencia.at[idx, 'MOTIVO'] = motivo
+                df_asistencia.at[idx, 'PUNTOS_MERITO'] = puntos # <--- Sube a 15 si hay suplencia
+                df_asistencia.at[idx, 'SUPLENCIA_A'] = suplencia_a
                 conn.update(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", data=df_asistencia)
                 return "OK"
             return "DUPLICADO"
+            
     except Exception as e:
         return f"ERROR: {e}"
 
