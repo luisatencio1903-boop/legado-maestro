@@ -215,98 +215,39 @@ except Exception as e:
     st.stop()
 
 # --- 4.3 Conexión a Google Drive API (v5.0) ---
-import requests
-import json
-
-def subir_evidencia_drive(archivo_foto, nombre_archivo):
-    """
-    Sube la foto a Drive con la técnica 'CRLF Multipart'.
-    Solución encontrada en foros para evitar el Error 400 y 403 en Service Accounts.
-    """
+def subir_a_imgbb(archivo_foto):
+    """Sube la foto a ImgBB usando la llave de Luis Atencio y devuelve el link."""
     try:
-        # 1. Obtener Token de Acceso
-        from google.auth.transport.requests import Request
-        from google.oauth2 import service_account
+        # 1. Tu API KEY que me acabas de dar
+        API_KEY = "3bc2c5bae6c883fdcdcc4da6ec4122bd"
         
-        info_gs = st.secrets["connections"]["gsheets"]
-        # Limpieza de la llave privada
-        pk = info_gs["private_key"].replace("\\n", "\n") if "\\n" in info_gs["private_key"] else info_gs["private_key"]
-        
-        creds = service_account.Credentials.from_service_account_info(
-            info_gs, 
-            scopes=['https://www.googleapis.com/auth/drive']
-        )
-        creds.refresh(Request())
-        token = creds.token
+        # 2. Comprimir la imagen (Usando tu lógica de Pillow)
+        img = Image.open(archivo_foto)
+        if img.mode in ("RGBA", "P"): img = img.convert("RGB")
+        img.thumbnail((800, 800))
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=70)
+        foto_bytes = buf.getvalue()
 
-        # 2. Preparar la imagen comprimida (Tu función original)
-        foto_ready = comprimir_imagen(archivo_foto).getvalue()
-
-        # 3. CONSTRUCCIÓN QUIRÚRGICA DEL CUERPO (Protocolo RFC 2387)
-        # Los foros indican que Google v3 requiere \r\n (CRLF) obligatoriamente
-        boundary = "-------LUIS_ATENCIO_LEGADO_MAESTRO"
-        url_upload = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart"
-        
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": f"multipart/related; boundary={boundary}",
-            "Content-Length": "" # Dejamos que requests lo calcule
+        # 3. Envío directo a ImgBB
+        url = "https://api.imgbb.com/1/upload"
+        payload = {
+            "key": API_KEY,
         }
-
-        # Metadatos en formato estricto
-        metadata = {
-            "name": str(nombre_archivo),
-            "parents": [str(ID_CARPETA_DRIVE).strip()]
+        files = {
+            'image': foto_bytes,
         }
-
-        # CONSTRUCCIÓN DEL CUERPO BINARIO CON CRLF (\r\n)
-        # Esta es la parte que Reddit y StackOverflow señalan como la solución al 400
-        def to_bytes(s): return s.encode('utf-8')
-
-        CRLF = b"\r\n"
-        L_BOUND = to_bytes(f"--{boundary}")
-        F_BOUND = to_bytes(f"--{boundary}--")
-
-        # Ensamblaje del paquete
-        body_parts = [
-            L_BOUND,
-            to_bytes("Content-Type: application/json; charset=UTF-8"),
-            CRLF, # Doble salto entre headers y cuerpo
-            to_bytes(json.dumps(metadata)),
-            L_BOUND,
-            to_bytes("Content-Type: image/jpeg"),
-            CRLF,
-            foto_ready,
-            CRLF,
-            F_BOUND
-        ]
         
-        # Unimos todo con CRLF
-        full_body = CRLF.join(body_parts)
-
-        # 4. ENVÍO FINAL
-        response = requests.post(url_upload, headers=headers, data=full_body)
+        res = requests.post(url, payload, files=files)
         
-        if response.status_code == 200:
-            file_id = response.json().get("id")
-            
-            # 5. HACER PÚBLICO (Paso por separado para asegurar)
-            try:
-                url_perm = f"https://www.googleapis.com/drive/v3/files/{file_id}/permissions"
-                requests.post(url_perm, headers={"Authorization": f"Bearer {token}"}, json={"type": "anyone", "role": "viewer"})
-                
-                # OBTENER LINK FINAL
-                url_info = f"https://www.googleapis.com/drive/v3/files/{file_id}?fields=webViewLink"
-                res_info = requests.get(url_info, headers={"Authorization": f"Bearer {token}"})
-                return res_info.json().get("webViewLink")
-            except:
-                return f"https://drive.google.com/file/d/{file_id}/view" # Link de emergencia
+        if res.status_code == 200:
+            # Retornamos el link directo de la imagen
+            return res.json()['data']['url']
         else:
-            st.error(f"Error de Google (Detallado): {response.text}")
+            st.error(f"Error en ImgBB: {res.text}")
             return None
-
     except Exception as e:
-        st.error(f"Error en el motor de Drive: {e}")
+        st.error(f"Error de conexión: {e}")
         return None
 
 # =============================================================================
