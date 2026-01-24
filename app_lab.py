@@ -423,25 +423,21 @@ def generar_respuesta(mensajes_historial, temperatura=0.7):
 
 # PROMPT MAESTRO (Definición de Personalidad ORIGINAL)
 INSTRUCCIONES_TECNICAS = """
+# PROMPT MAESTRO (PERSONALIDAD LUIS ATENCIO V6.0 - MULTIMODALIDAD)
+INSTRUCCIONES_TECNICAS = """
 ⚠️ ERES "LEGADO MAESTRO".
-TU ROL: Experto en Educación Especial y Taller Laboral (Venezuela).
-TU IDENTIDAD: Sistema inteligente creado por Luis Atencio.
+TU ROL: Experto de alto nivel en el Currículo Nacional Bolivariano y especialista en las 6 modalidades de Educación Especial en Venezuela:
+1. Taller de Educación Laboral (T.E.L.)
+2. Instituto de Educación Especial Bolivariano (I.E.E.B.)
+3. Centro de Atención Integral para Personas con Autismo (C.A.I.P.A.)
+4. Aula Integrada (Apoyo en Escuela Regular)
+5. Unidad Psico-Educativa (U.P.E.)
+6. Educación Inicial (Preescolar)
 
 🚨 REGLAS PEDAGÓGICAS INQUEBRANTABLES:
-
-1. **COMPETENCIAS TÉCNICAS (ESTRUCTURA OBLIGATORIA):**
-   - NUNCA uses un verbo solitario (Ej: "Diseñar" -> MAL).
-   - Estructura Correcta: VERBO (Acción) + OBJETO (Qué) + CONDICIÓN (Cómo/Para qué).
-   - Ejemplo: "Selecciona y utiliza adecuadamente los materiales de limpieza para el mantenimiento del aula".
-   - Ejemplo: "Reconoce los símbolos patrios a través de actividades plásticas".
-
-2. **ACTIVIDADES VIVENCIALES:**
-   - PROHIBIDO actividades abstractas como "Investigar", "Hacer ensayos", "Leer textos largos".
-   - OBLIGATORIO actividades concretas: Recortar, Pegar, Pintar, Limpiar, Ordenar, Cantar, Dramatizar.
-
-3. **LENGUAJE HUMANO Y VARIADO:**
-   - Evita la repetición robótica.
-   - No empieces siempre con "Invitamos a". Usa: "Hoy descubrimos", "Manos a la obra", "Jugamos a".
+1. **COMPETENCIAS TÉCNICAS (ESTRUCTURA OBLIGATORIA):** NUNCA uses un verbo solitario. Estructura: VERBO (Acción) + OBJETO (Qué) + CONDICIÓN (Cómo/Para qué).
+2. **ACTIVIDADES VIVENCIALES:** PROHIBIDO investigar o leer textos largos. OBLIGATORIO: Recortar, Pegar, Pintar, Limpiar, Ordenar, Cantar, Cocinar, Modelar.
+3. **LENGUAJE HUMANO:** Estilo motivador, evita sonar robótico. Usa "Hoy descubrimos", "Manos a la obra".
 
 4. **FORMATO VISUAL:**
    - Usa saltos de línea (doble espacio) entre secciones.
@@ -757,50 +753,80 @@ else:
         else:
             st.info("✅ Registro del día completado.")
             if st.button("⬅️ Volver"): st.session_state.pagina_actual = "HOME"; st.rerun()
-    # -------------------------------------------------------------------------
-    # VISTA: PLANIFICADOR INTELIGENTE (ORIGINAL PRESERVADA)
+   # -------------------------------------------------------------------------
+    # VISTA: PLANIFICADOR INTELIGENTE (VERSIÓN 6.0 - MULTIMODALIDAD + P.E.I.)
     # -------------------------------------------------------------------------
     elif opcion == "🧠 PLANIFICADOR INTELIGENTE":
-        st.markdown("**Creación de Planificación desde Cero**")
+        st.markdown("**Generación de Planificación Pedagógica Especializada**")
         
         col1, col2 = st.columns(2)
         with col1:
             rango = st.text_input("Lapso (Fechas):", placeholder="Ej: 19 al 23 de Enero")
         with col2:
-            aula = st.text_input("Aula/Taller:", value="Mantenimiento y Servicios Generales")
+            modalidad = st.selectbox("Modalidad / Servicio:", [
+                "Taller de Educación Laboral (T.E.L.)",
+                "Instituto de Educación Especial (I.E.E.B.)",
+                "Centro de Atención Integral para Personas con Autismo (C.A.I.P.A.)",
+                "Aula Integrada (Escuela Regular)",
+                "Unidad Psico-Educativa (U.P.E.)",
+                "Educación Inicial (Preescolar)"
+            ])
         
-        notas = st.text_area("Tema Generador / Notas:", height=150)
+        is_pei = st.checkbox("🎯 ¿Planificación Individualizada (P.E.I.)?")
+        
+        perfil_alumno = ""
+        if is_pei:
+            perfil_alumno = st.text_area("Descripción del Alumno (Fortalezas, Retos y Diagnóstico):", 
+                                        placeholder="Indique perfil detallado para la atención individualizada...")
+        
+        notas = st.text_area("Tema Generador / Proyecto / Notas del Día:", height=100)
 
         if st.button("🚀 Generar Planificación", type="primary"):
             if rango and notas:
-                with st.spinner('Analizando currículo y redactando...'):
-                    st.session_state.temp_tema = notas
-                    
-                    prompt = f"""
-                    CONTEXTO: Taller Laboral (Educación Especial). 
-                    FECHA: {rango}. AULA: {aula}. TEMA: {notas}.
-                    
-                    INSTRUCCIÓN: Genera una planificación completa.
-                    REQUISITOS:
-                    1. Competencias Técnicas descriptivas (Acción+Objeto+Condición).
-                    2. Actividades concretas y vivenciales.
-                    3. Formato vertical con doble espacio.
-                    
-                    ESTRUCTURA:
-                    ### [DÍA]
-                    1. TÍTULO LÚDICO
-                    2. COMPETENCIA TÉCNICA
-                    3. EXPLORACIÓN
-                    4. DESARROLLO
-                    5. REFLEXIÓN
-                    6. ESTRATEGIAS
-                    7. RECURSOS
-                    """
-                    st.session_state.plan_actual = generar_respuesta([
-                        {"role":"system","content":INSTRUCCIONES_TECNICAS},
-                        {"role":"user","content":prompt}
-                    ], 0.6)
-                    st.rerun()
+                # Validación extra para PEI
+                if is_pei and not perfil_alumno:
+                    st.error("⚠️ Para una planificación P.E.I. es obligatorio describir el perfil del alumno.")
+                else:
+                    with st.spinner('Construyendo planificación técnica...'):
+                        st.session_state.temp_tema = f"{modalidad} - {notas}"
+                        
+                        # Definición de Rol según tipo de planificación
+                        if is_pei:
+                            rol_contexto = f"Actúa como Especialista de {modalidad}. Diseña una intervención individualizada (P.E.I.) para este perfil: {perfil_alumno}."
+                        else:
+                            rol_contexto = f"Actúa como docente de {modalidad}. Diseña una planificación grupal acorde a la modalidad."
+                        
+                        prompt = f"""
+                        CONTEXTO: {rol_contexto}
+                        TEMA: {notas}.
+                        FECHA: {rango}.
+                        
+                        INSTRUCCIÓN: Genera la planificación siguiendo el Currículo Nacional Bolivariano.
+                        
+                        REGLAS DE ORO:
+                        1. Competencias Técnicas completas (VERBO + OBJETO + CONDICIÓN).
+                        2. Actividades vivenciales y prácticas (Sin investigaciones abstractas).
+                        
+                        REGLAS DE FORMATO VISUAL (OBLIGATORIO):
+                        - Usa **Negritas** exclusivamente para los títulos de cada sección.
+                        - Deja doble espacio (doble salto de línea) entre cada uno de los 7 puntos.
+                        
+                        ESTRUCTURA VERTICAL:
+                        ### [DÍA]
+                        **1. TÍTULO LÚDICO**
+                        **2. COMPETENCIA TÉCNICA**
+                        **3. EXPLORACIÓN (Inicio)**
+                        **4. DESARROLLO (Proceso)**
+                        **5. REFLEXIÓN (Cierre)**
+                        **6. ESTRATEGIAS**
+                        **7. RECURSOS**
+                        """
+                        
+                        st.session_state.plan_actual = generar_respuesta([
+                            {"role":"system","content":INSTRUCCIONES_TECNICAS},
+                            {"role":"user","content":prompt}
+                        ], 0.6)
+                        st.rerun()
 
     # -------------------------------------------------------------------------
     # VISTA: PLANIFICADOR MINISTERIAL (ORIGINAL PRESERVADA)
