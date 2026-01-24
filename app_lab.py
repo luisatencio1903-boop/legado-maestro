@@ -220,7 +220,7 @@ import requests
 import json
 
 def subir_evidencia_drive(archivo_foto, nombre_archivo):
-    """Sube la foto a Drive en dos pasos atómicos para garantizar éxito."""
+    """Sube la foto a Drive usando Multipart manual para usar el cupo del propietario de la carpeta."""
     try:
         # 1. Obtener Token de Acceso
         from google.auth.transport.requests import Request
@@ -235,51 +235,56 @@ def subir_evidencia_drive(archivo_foto, nombre_archivo):
         )
         creds.refresh(Request())
         token = creds.token
-        headers = {"Authorization": f"Bearer {token}"}
 
         # 2. Comprimir imagen
         foto_ready = comprimir_imagen(archivo_foto).getvalue()
 
-        # 3. PASO 1: SUBIDA SIMPLE (Solo el contenido de la imagen)
-        # Usamos 'uploadType=media' que es el método más básico y menos propenso a errores 400
-        url_media = "https://www.googleapis.com/upload/drive/v3/files?uploadType=media"
-        headers_media = {
+        # 3. CONSTRUCCIÓN MANUAL DEL CUERPO MULTIPART
+        # Usamos un delimitador (boundary) único
+        boundary = "-------314159265358979323846"
+        url_upload = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart"
+        
+        headers = {
             "Authorization": f"Bearer {token}",
-            "Content-Type": "image/jpeg"
+            "Content-Type": f"multipart/related; boundary={boundary}"
         }
+
+        # Definimos los metadatos y los padres desde el inicio para evitar el error de cuota (403)
+        metadata = {
+            "name": nombre_archivo,
+            "parents": [ID_CARPETA_DRIVE.strip()]
+        }
+
+        # Construimos el cuerpo del mensaje exactamente como lo pide Google
+        body = (
+            f"--{boundary}\n"
+            f"Content-Type: application/json; charset=UTF-8\n\n"
+            f"{json.dumps(metadata)}\n"
+            f"--{boundary}\n"
+            f"Content-Type: image/jpeg\n\n"
+        ).encode('utf-8') + foto_ready + f"\n--{boundary}--".encode('utf-8')
+
+        # 4. ENVÍO FINAL
+        response = requests.post(url_upload, headers=headers, data=body)
         
-        res_subida = requests.post(url_media, headers=headers_media, data=foto_ready)
-        
-        if res_subida.status_code == 200:
-            file_id = res_subida.json().get("id")
+        if response.status_code == 200:
+            file_id = response.json().get("id")
             
-            # 4. PASO 2: ACTUALIZAR METADATOS (Poner nombre y mover a carpeta)
-            # Ahora que el archivo ya existe, le decimos cómo se llama y dónde va
-            url_meta = f"https://www.googleapis.com/drive/v3/files/{file_id}?addParents={ID_CARPETA_DRIVE.strip()}"
-            metadata = {
-                "name": nombre_archivo
-            }
-            requests.patch(url_meta, headers=headers, json=metadata)
-            
-            # 5. PASO 3: PERMISOS (Hacerlo público)
+            # 5. PERMISOS (Hacerlo público para el Director)
             url_perm = f"https://www.googleapis.com/drive/v3/files/{file_id}/permissions"
-            requests.post(url_perm, headers=headers, json={"type": "anyone", "role": "viewer"})
+            requests.post(url_perm, headers={"Authorization": f"Bearer {token}"}, json={"type": "anyone", "role": "viewer"})
             
             # 6. OBTENER LINK
             url_info = f"https://www.googleapis.com/drive/v3/files/{file_id}?fields=webViewLink"
-            res_info = requests.get(url_info, headers=headers)
+            res_info = requests.get(url_info, headers={"Authorization": f"Bearer {token}"})
             
             return res_info.json().get("webViewLink")
         else:
-            st.error(f"Falla en subida simple: {res_subida.text}")
+            st.error(f"Error de Google ({response.status_code}): {response.text}")
             return None
 
     except Exception as e:
         st.error(f"Error en el proceso Drive: {e}")
-        return None
-
-    except Exception as e:
-        st.error(f"Error en el proceso de Drive: {e}")
         return None
 
 # =============================================================================
