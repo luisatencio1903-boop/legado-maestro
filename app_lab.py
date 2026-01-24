@@ -220,13 +220,17 @@ import requests
 import json
 
 def subir_evidencia_drive(archivo_foto, nombre_archivo):
-    """Sube la foto a Drive usando Multipart manual para usar el cupo del propietario de la carpeta."""
+    """
+    Sube la foto a Drive con la técnica 'CRLF Multipart'.
+    Solución encontrada en foros para evitar el Error 400 y 403 en Service Accounts.
+    """
     try:
         # 1. Obtener Token de Acceso
         from google.auth.transport.requests import Request
         from google.oauth2 import service_account
         
         info_gs = st.secrets["connections"]["gsheets"]
+        # Limpieza de la llave privada
         pk = info_gs["private_key"].replace("\\n", "\n") if "\\n" in info_gs["private_key"] else info_gs["private_key"]
         
         creds = service_account.Credentials.from_service_account_info(
@@ -236,55 +240,74 @@ def subir_evidencia_drive(archivo_foto, nombre_archivo):
         creds.refresh(Request())
         token = creds.token
 
-        # 2. Comprimir imagen
+        # 2. Preparar la imagen comprimida (Tu función original)
         foto_ready = comprimir_imagen(archivo_foto).getvalue()
 
-        # 3. CONSTRUCCIÓN MANUAL DEL CUERPO MULTIPART
-        # Usamos un delimitador (boundary) único
-        boundary = "-------314159265358979323846"
+        # 3. CONSTRUCCIÓN QUIRÚRGICA DEL CUERPO (Protocolo RFC 2387)
+        # Los foros indican que Google v3 requiere \r\n (CRLF) obligatoriamente
+        boundary = "-------LUIS_ATENCIO_LEGADO_MAESTRO"
         url_upload = "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart"
         
         headers = {
             "Authorization": f"Bearer {token}",
-            "Content-Type": f"multipart/related; boundary={boundary}"
+            "Content-Type": f"multipart/related; boundary={boundary}",
+            "Content-Length": "" # Dejamos que requests lo calcule
         }
 
-        # Definimos los metadatos y los padres desde el inicio para evitar el error de cuota (403)
+        # Metadatos en formato estricto
         metadata = {
-            "name": nombre_archivo,
-            "parents": [ID_CARPETA_DRIVE.strip()]
+            "name": str(nombre_archivo),
+            "parents": [str(ID_CARPETA_DRIVE).strip()]
         }
 
-        # Construimos el cuerpo del mensaje exactamente como lo pide Google
-        body = (
-            f"--{boundary}\n"
-            f"Content-Type: application/json; charset=UTF-8\n\n"
-            f"{json.dumps(metadata)}\n"
-            f"--{boundary}\n"
-            f"Content-Type: image/jpeg\n\n"
-        ).encode('utf-8') + foto_ready + f"\n--{boundary}--".encode('utf-8')
+        # CONSTRUCCIÓN DEL CUERPO BINARIO CON CRLF (\r\n)
+        # Esta es la parte que Reddit y StackOverflow señalan como la solución al 400
+        def to_bytes(s): return s.encode('utf-8')
+
+        CRLF = b"\r\n"
+        L_BOUND = to_bytes(f"--{boundary}")
+        F_BOUND = to_bytes(f"--{boundary}--")
+
+        # Ensamblaje del paquete
+        body_parts = [
+            L_BOUND,
+            to_bytes("Content-Type: application/json; charset=UTF-8"),
+            CRLF, # Doble salto entre headers y cuerpo
+            to_bytes(json.dumps(metadata)),
+            L_BOUND,
+            to_bytes("Content-Type: image/jpeg"),
+            CRLF,
+            foto_ready,
+            CRLF,
+            F_BOUND
+        ]
+        
+        # Unimos todo con CRLF
+        full_body = CRLF.join(body_parts)
 
         # 4. ENVÍO FINAL
-        response = requests.post(url_upload, headers=headers, data=body)
+        response = requests.post(url_upload, headers=headers, data=full_body)
         
         if response.status_code == 200:
             file_id = response.json().get("id")
             
-            # 5. PERMISOS (Hacerlo público para el Director)
-            url_perm = f"https://www.googleapis.com/drive/v3/files/{file_id}/permissions"
-            requests.post(url_perm, headers={"Authorization": f"Bearer {token}"}, json={"type": "anyone", "role": "viewer"})
-            
-            # 6. OBTENER LINK
-            url_info = f"https://www.googleapis.com/drive/v3/files/{file_id}?fields=webViewLink"
-            res_info = requests.get(url_info, headers={"Authorization": f"Bearer {token}"})
-            
-            return res_info.json().get("webViewLink")
+            # 5. HACER PÚBLICO (Paso por separado para asegurar)
+            try:
+                url_perm = f"https://www.googleapis.com/drive/v3/files/{file_id}/permissions"
+                requests.post(url_perm, headers={"Authorization": f"Bearer {token}"}, json={"type": "anyone", "role": "viewer"})
+                
+                # OBTENER LINK FINAL
+                url_info = f"https://www.googleapis.com/drive/v3/files/{file_id}?fields=webViewLink"
+                res_info = requests.get(url_info, headers={"Authorization": f"Bearer {token}"})
+                return res_info.json().get("webViewLink")
+            except:
+                return f"https://drive.google.com/file/d/{file_id}/view" # Link de emergencia
         else:
-            st.error(f"Error de Google ({response.status_code}): {response.text}")
+            st.error(f"Error de Google (Detallado): {response.text}")
             return None
 
     except Exception as e:
-        st.error(f"Error en el proceso Drive: {e}")
+        st.error(f"Error en el motor de Drive: {e}")
         return None
 
 # =============================================================================
