@@ -282,7 +282,11 @@ if 'eval_resultado' not in st.session_state:
 
 if 'redirigir_a_archivo' not in st.session_state: 
     st.session_state.redirigir_a_archivo = False
-
+    
+# Memoria para el Aula Virtual (Persistencia entre navegaciones)
+if 'av_foto1' not in st.session_state: st.session_state.av_foto1 = None
+if 'av_foto2' not in st.session_state: st.session_state.av_foto2 = None
+if 'av_resumen' not in st.session_state: st.session_state.av_resumen = ""
 # =============================================================================
 # 6. LÓGICA DE NEGOCIO (BACKEND ORIGINAL COMPLETO)
 # =============================================================================
