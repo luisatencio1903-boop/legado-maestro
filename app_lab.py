@@ -30,7 +30,7 @@ from PIL import Image # Para la compresión tipo WhatsApp
 # =============================================================================
 
 st.set_page_config(
-    page_title="Legado Maestro",
+    page_title="SUPER DOCENTE 1.0", # <--- Nuevo Nombre
     page_icon="logo_legado.png",
     layout="centered",
     initial_sidebar_state="collapsed"
