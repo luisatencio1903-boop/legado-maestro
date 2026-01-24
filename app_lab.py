@@ -1143,4 +1143,4 @@ else:
 
 # --- FIN DEL DOCUMENTO ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 5.0 (Edición Maestra Real)")
+st.caption("SUPER DOCENTE 1.0 | Desarrollado para EDUCACION ESPECIAL por Bachiller Luis Atencio")
