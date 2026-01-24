@@ -39,7 +39,6 @@ st.set_page_config(
 
 # ID DE LA CARPETA DE GOOGLE DRIVE (CONFIGURADO POR LUIS ATENCIO)
 ID_CARPETA_DRIVE = "1giVsa-iSbg8QyGbPwj6r3UzVKSCu1POn"
-
 # -----------------------------------------------------------------------------
 # 2. FUNCIONES UTILITARIAS (TIEMPO Y FORMATO)
 # -----------------------------------------------------------------------------
