@@ -755,8 +755,8 @@ else:
         else:
             st.info("✅ Registro del día completado.")
             if st.button("⬅️ Volver"): st.session_state.pagina_actual = "HOME"; st.rerun()
-   # -------------------------------------------------------------------------
-    # VISTA: PLANIFICADOR INTELIGENTE (VERSIÓN 6.0 - MULTIMODALIDAD + P.E.I.)
+ # -------------------------------------------------------------------------
+    # VISTA: PLANIFICADOR INTELIGENTE (VERSIÓN 6.1 - ESPECIALIDAD TALLER + P.E.I.)
     # -------------------------------------------------------------------------
     elif opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.markdown("**Generación de Planificación Pedagógica Especializada**")
@@ -774,6 +774,12 @@ else:
                 "Educación Inicial (Preescolar)"
             ])
         
+        # CAMBIO: Si es TALLER, se pide el área específica
+        aula_especifica = ""
+        if modalidad == "Taller de Educación Laboral (T.E.L.)":
+            aula_especifica = st.text_input("Especifique el Taller / Aula:", 
+                                            placeholder="Ej: Carpintería, Mantenimiento, Cocina, Jardinería...")
+        
         is_pei = st.checkbox("🎯 ¿Planificación Individualizada (P.E.I.)?")
         
         perfil_alumno = ""
@@ -785,18 +791,21 @@ else:
 
         if st.button("🚀 Generar Planificación", type="primary"):
             if rango and notas:
-                # Validación extra para PEI
+                # Validaciones de campos obligatorios según elección
                 if is_pei and not perfil_alumno:
                     st.error("⚠️ Para una planificación P.E.I. es obligatorio describir el perfil del alumno.")
+                elif modalidad == "Taller de Educación Laboral (T.E.L.)" and not aula_especifica:
+                    st.error("⚠️ Por favor, especifique el nombre del Taller (Ej: Carpintería).")
                 else:
                     with st.spinner('Construyendo planificación técnica...'):
-                        st.session_state.temp_tema = f"{modalidad} - {notas}"
+                        # Ajuste de contexto pedagógico
+                        contexto_oficio = f" del área de {aula_especifica}" if aula_especifica else ""
+                        st.session_state.temp_tema = f"{modalidad}{contexto_oficio} - {notas}"
                         
-                        # Definición de Rol según tipo de planificación
                         if is_pei:
-                            rol_contexto = f"Actúa como Especialista de {modalidad}. Diseña una intervención individualizada (P.E.I.) para este perfil: {perfil_alumno}."
+                            rol_contexto = f"Actúa como Especialista de {modalidad}{contexto_oficio}. Diseña una intervención individualizada (P.E.I.) para este perfil: {perfil_alumno}."
                         else:
-                            rol_contexto = f"Actúa como docente de {modalidad}. Diseña una planificación grupal acorde a la modalidad."
+                            rol_contexto = f"Actúa como docente de {modalidad}{contexto_oficio}. Diseña una planificación grupal acorde a la modalidad."
                         
                         prompt = f"""
                         CONTEXTO: {rol_contexto}
@@ -807,7 +816,7 @@ else:
                         
                         REGLAS DE ORO:
                         1. Competencias Técnicas completas (VERBO + OBJETO + CONDICIÓN).
-                        2. Actividades vivenciales y prácticas (Sin investigaciones abstractas).
+                        2. Actividades 100% vivenciales y prácticas relacionadas estrictamente con {modalidad}{contexto_oficio}.
                         
                         REGLAS DE FORMATO VISUAL (OBLIGATORIO):
                         - Usa **Negritas** exclusivamente para los títulos de cada sección.
