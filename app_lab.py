@@ -218,62 +218,66 @@ except Exception as e:
 
 # --- 4.3 Conexión a Google Drive API (v5.0) ---
 def subir_evidencia_drive(archivo_foto, nombre_archivo):
-    """Sube la foto a Drive forzando limpieza de credenciales y metadatos."""
+    """Sube la foto a Drive reconstruyendo las credenciales para evitar errores."""
     try:
-        # 1. Extraer y convertir secretos a un diccionario real de Python
-        # A veces st.secrets devuelve un objeto que Drive no entiende bien
-        secrets_dict = dict(st.secrets["connections"]["gsheets"])
+        # 1. RECONSTRUCCIÓN MANUAL DEL DICCIONARIO (Para eliminar 'ruido' de los secrets)
+        # Esto asegura que Google reciba solo los campos oficiales
+        gs = st.secrets["connections"]["gsheets"]
         
-        # 2. Limpieza de la Llave Privada (Vital para evitar errores de firma)
-        if "private_key" in secrets_dict:
-            secrets_dict["private_key"] = secrets_dict["private_key"].replace("\\n", "\n")
+        creds_info = {
+            "type": gs["type"],
+            "project_id": gs["project_id"],
+            "private_key_id": gs["private_key_id"],
+            "private_key": gs["private_key"].replace("\\n", "\n"), # Limpieza de saltos de línea
+            "client_email": gs["client_email"],
+            "client_id": gs["client_id"],
+            "auth_uri": gs["auth_uri"],
+            "token_uri": gs["token_uri"],
+            "auth_provider_x509_cert_url": gs["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": gs["client_x509_cert_url"]
+        }
 
-        # 3. Definir Scope TOTAL
+        # 2. DEFINIR ALCANCE
         SCOPES = ['https://www.googleapis.com/auth/drive']
         
-        # 4. Crear credenciales limpias
-        creds = service_account.Credentials.from_service_account_info(secrets_dict, scopes=SCOPES)
+        # 3. CREAR CREDENCIALES LIMPIAS
+        creds = service_account.Credentials.from_service_account_info(creds_info, scopes=SCOPES)
         service = build('drive', 'v3', credentials=creds)
         
-        # 5. Comprimir la imagen (Usando tu función original)
+        # 4. PREPARAR LA IMAGEN (Compresión Luis Atencio)
         foto_preparada = comprimir_imagen(archivo_foto)
         
-        # 6. Preparar Metadatos (Sin campos extraños que causen el 400)
-        ID_LIMPIO = str(ID_CARPETA_DRIVE).strip()
+        # 5. LIMPIEZA DEL ID DE CARPETA 
+        # Si por error pegaste la URL completa, esto extrae solo el ID
+        folder_id = ID_CARPETA_DRIVE.strip().split('/')[-1]
+        
+        # 6. METADATOS SIMPLIFICADOS
         file_metadata = {
-            'name': str(nombre_archivo),
-            'parents': [ID_LIMPIO]
+            'name': nombre_archivo,
+            'parents': [folder_id]
         }
         
-        # 7. Preparar Media (Carga simple)
-        media = MediaIoBaseUpload(
-            foto_preparada, 
-            mimetype='image/jpeg', 
-            resumable=False
-        )
+        # 7. CARGA DE ARCHIVO
+        media = MediaIoBaseUpload(foto_preparada, mimetype='image/jpeg', resumable=False)
         
-        # 8. EJECUCIÓN: Crear el archivo
-        # Simplificamos los fields para que Google no de error de solicitud mal formada
-        file = service.files().create(
+        # Ejecutar creación
+        archivo_drive = service.files().create(
             body=file_metadata,
             media_body=media,
             fields='id, webViewLink'
         ).execute()
         
-        # 9. PERMISOS: Hacerlo público para el Director
-        try:
-            service.permissions().create(
-                fileId=file.get('id'),
-                body={'type': 'anyone', 'role': 'viewer'}
-            ).execute()
-        except:
-            pass # Si falla el permiso, al menos el archivo ya se subió
-            
-        return file.get('webViewLink')
+        # 8. PERMISOS DE VISIBILIDAD
+        service.permissions().create(
+            fileId=archivo_drive.get('id'),
+            body={'type': 'anyone', 'role': 'viewer'}
+        ).execute()
+        
+        return archivo_drive.get('webViewLink')
         
     except Exception as e:
-        # Este mensaje nos dirá LA VERDAD en la pantalla
-        st.error(f"Error Detallado: {str(e)}")
+        # Este mensaje nos dirá exactamente qué campo está fallando
+        st.error(f"Error Crítico en Drive: {str(e)}")
         return None
 
 # =============================================================================
