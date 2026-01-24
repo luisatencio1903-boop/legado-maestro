@@ -697,41 +697,63 @@ else:
                     registrar_asistencia_biometrica(st.session_state.u['NOMBRE'], "INASISTENCIA", "-", "-", "-", "-", motivo_i, alerta)
                     st.warning("✅ Inasistencia reportada."); time.sleep(2); st.session_state.pagina_actual = "HOME"; st.rerun()
 
-        # --- ESCENARIO B: REGISTRO DE SALIDA ---
+       # --- ESCENARIO B: REGISTRO DE SALIDA ---
         elif reg_hoy.iloc[0]['HORA_SALIDA'] == "-":
             st.success(f"🟢 Entrada registrada a las: {reg_hoy.iloc[0]['HORA_ENTRADA']}")
             
-            # Detectar si es salida fuera de tiempo (ejemplo: después de la 1:45 PM)
-            es_salida_fuera_hora = hora_actual.hour >= 14
+            # --- LÓGICA DE COHERENCIA HORARIA ---
+            hora_v = ahora_ve()
+            h_actual = hora_v.hour
+            
+            # Se considera fuera de hora si:
+            # 1. Es después de las 2:00 PM (14:00)
+            # 2. O si es antes de las 11:00 AM (Significa que olvidó marcar ayer y lo hace de madrugada)
+            es_fuera_de_horario = h_actual >= 14 or h_actual < 11
             
             motivo_salida = ""
-            if es_salida_fuera_hora:
-                st.warning("⚠️ **Registro de Salida fuera de hora:**")
-                incidencia_s = st.selectbox("Motivo del retraso en el registro:", [
+            
+            if es_fuera_de_horario:
+                st.warning("⚠️ **Registro de Salida fuera de horario:**")
+                st.info(f"El sistema detecta que son las {hora_v.strftime('%I:%M %p')}. Por favor, justifique por qué registra a esta hora.")
+                
+                incidencia_s = st.selectbox("Inconveniente presentado:", [
                     "Corte Eléctrico / Sin Luz",
                     "Sin Datos Móviles / Falla de Red",
-                    "Olvidé marcar al salir",
-                    "Actividad Extra-Cátedra prolongada"
+                    "Olvidé marcar al salir de la institución",
+                    "Actividad fuera del plantel prolongada",
+                    "Otro motivo"
                 ])
-                obs_s = st.text_input("Hora real de salida (según libro físico):")
-                motivo_salida = f"SALIDA TARDÍA: {incidencia_s} | Hora Real: {obs_s}"
+                
+                obs_s = st.text_input("Indique su HORA REAL de salida (según libro físico):", placeholder="Ej: 1:00 PM")
+                
+                if not obs_s:
+                    st.stop() # No deja continuar hasta que escriba la hora real
+                
+                motivo_salida = f"FUERA_HORA: {incidencia_s} | Salida Real: {obs_s}"
             else:
-                tipo_s = st.selectbox("Estatus jornada:", ["Salida Normal", "Trabajo Extra (Mérito)"])
+                # Horario Normal (Entre 11 AM y 1:59 PM)
+                tipo_s = st.selectbox("Estatus jornada:", ["Salida Normal", "Trabajo Extra (Suma de Méritos)"])
                 motivo_salida = tipo_s
 
-            foto_sal = st.camera_input("📸 Foto de Salida (Evidencia)")
-            if foto_sal and st.button("🏁 Finalizar Jornada"):
-                with st.spinner("Subiendo evidencia..."):
-                    url_s = subir_a_imgbb(foto_sal)
-                    if url_s:
-                        h_sal_sistema = ahora_ve().strftime('%I:%M %p')
-                        res = registrar_asistencia_biometrica(
-                            st.session_state.u['NOMBRE'], "ASISTENCIA", "-", h_sal_sistema, 
-                            "-", url_s, motivo_salida, "SALIDA_REVISAR" if es_salida_fuera_hora else "-"
-                        )
-                        st.balloons()
-                        st.success(f"✅ Jornada cerrada a las {h_sal_sistema}")
-                        time.sleep(3); st.session_state.pagina_actual = "HOME"; st.rerun()
+            foto_sal = st.camera_input("📸 Foto de Verificación (Evidencia de Salida)")
+            
+            if foto_sal:
+                if st.button("🏁 Finalizar Jornada"):
+                    with st.spinner("Procesando registro..."):
+                        url_s = subir_a_imgbb(foto_sal)
+                        if url_s:
+                            h_sistema = ahora_ve().strftime('%I:%M %p')
+                            res = registrar_asistencia_biometrica(
+                                st.session_state.u['NOMBRE'], "ASISTENCIA", "-", h_sistema, 
+                                "-", url_s, motivo_salida, "SALIDA_REVISAR" if es_fuera_de_horario else "-"
+                            )
+                            st.balloons()
+                            st.success(f"✅ Salida registrada a las {h_sistema}")
+                            if es_fuera_de_horario:
+                                st.info("📢 Su reporte fue enviado con alerta para validación del Director.")
+                            time.sleep(3)
+                            st.session_state.pagina_actual = "HOME"
+                            st.rerun()
         else:
             st.info("✅ Registro del día completado.")
             if st.button("⬅️ Volver"): st.session_state.pagina_actual = "HOME"; st.rerun()
