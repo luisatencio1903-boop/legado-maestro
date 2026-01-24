@@ -41,7 +41,12 @@ ID_CARPETA_DRIVE = "1giVsa-iSbg8QyGbPwj6r3UzVKSCu1POn"
 # -----------------------------------------------------------------------------
 # 2. FUNCIONES UTILITARIAS (TIEMPO Y FORMATO)
 # -----------------------------------------------------------------------------
-
+@st.cache_data(ttl=600) # Guarda la info por 10 minutos (600 segundos)
+def cargar_datos_maestros(_conn, url):
+    """Carga las listas de alumnos y profes una sola vez y las guarda en memoria."""
+    profes = _conn.read(spreadsheet=url, worksheet="USUARIOS")
+    matricula = _conn.read(spreadsheet=url, worksheet="MATRICULA_GLOBAL")
+    return profes, matricula
 def ahora_ve():
     """
     Retorna la fecha y hora actual ajustada a la Zona Horaria de Venezuela (UTC-4).
