@@ -1,13 +1,14 @@
 # =============================================================================
 # PROYECTO: LEGADO MAESTRO
-# VERSIÓN: 4.1 (GOLD MASTER - ERROR FIXED)
+# VERSIÓN: 4.2 (EDICIÓN MAESTRA EXPANDIDA - HORA VENEZUELA)
 # FECHA: Enero 2026
 # AUTOR: Luis Atencio (Bachiller Docente)
 # INSTITUCIÓN: T.E.L E.R.A.C
 #
 # DESCRIPCIÓN:
-# Plataforma integral para docentes de Educación Especial.
-# Integra Inteligencia Artificial, Base de Datos y Gestión Administrativa.
+# Plataforma de gestión pedagógica basada en Inteligencia Artificial.
+# Incluye: Asistencia, Planificación, Evaluación y Gestión de Archivos.
+# Correcciones: Zona Horaria (UTC-4), Navegación Móvil, Login Seguro.
 # =============================================================================
 
 import streamlit as st
@@ -18,7 +19,7 @@ from groq import Groq
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 import random
-import re  # Librería para expresiones regulares
+import re
 
 # =============================================================================
 # 1. CONFIGURACIÓN INICIAL DE LA PÁGINA
@@ -31,20 +32,52 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# -----------------------------------------------------------------------------
+# 2. FUNCIONES UTILITARIAS (TIEMPO Y FORMATO)
+# -----------------------------------------------------------------------------
+
+def ahora_ve():
+    """
+    Retorna la fecha y hora actual ajustada a la Zona Horaria de Venezuela (UTC-4).
+    Esto es crucial porque los servidores suelen estar en hora UTC (Londres).
+    """
+    hora_utc = datetime.utcnow()
+    hora_venezuela = hora_utc - timedelta(hours=4)
+    return hora_venezuela
+
+def limpiar_id(v): 
+    """
+    Limpia el formato de la cédula de identidad para comparaciones en base de datos.
+    Elimina puntos, comas, espacios y letras como 'V-' o 'E-'.
+    """
+    if v is None:
+        return ""
+    
+    valor_str = str(v).strip().upper()
+    # Eliminar decimales si viene de un Excel numérico
+    valor_limpio = valor_str.split('.')[0]
+    
+    # Reemplazos de limpieza
+    valor_limpio = valor_limpio.replace(',', '')
+    valor_limpio = valor_limpio.replace('.', '')
+    valor_limpio = valor_limpio.replace('V-', '')
+    valor_limpio = valor_limpio.replace('E-', '')
+    valor_limpio = valor_limpio.replace(' ', '')
+    
+    return valor_limpio
+
 # =============================================================================
-# 2. ESTILOS CSS (INTERFAZ VISUAL PROFESIONAL)
+# 3. ESTILOS CSS (INTERFAZ VISUAL)
 # =============================================================================
 
 hide_streamlit_style = """
 <style>
-    /* Ocultar elementos del sistema Streamlit para dar aspecto de App nativa */
+    /* Ocultar elementos nativos de Streamlit */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     
-    /* ----------------------------------------------------------- */
-    /* ESTILOS DE CAJAS DE CONTENIDO (PLANIFICACIONES)             */
-    /* ----------------------------------------------------------- */
+    /* CAJAS DE PLANIFICACIÓN */
     .plan-box {
         background-color: #f8f9fa !important;
         color: #212529 !important; 
@@ -71,9 +104,7 @@ hide_streamlit_style = """
         font-weight: 700;
     }
 
-    /* ----------------------------------------------------------- */
-    /* ESTILOS DE CAJAS DE EVALUACIÓN (RESPUESTAS IA)              */
-    /* ----------------------------------------------------------- */
+    /* CAJAS DE EVALUACIÓN (Resultados IA) */
     .eval-box {
         background-color: #e8f5e9 !important;
         color: #1b5e20 !important;
@@ -90,11 +121,7 @@ hide_streamlit_style = """
         font-weight: bold;
     }
 
-    /* ----------------------------------------------------------- */
-    /* ESTILOS PARA ELEMENTOS DE FORMULARIO (MÓVIL)                */
-    /* ----------------------------------------------------------- */
-    
-    /* Texto de selectores más grande para dedos */
+    /* ESTILOS PARA ELEMENTOS DE FORMULARIO (MÓVIL) */
     .stSelectbox label {
         font-size: 1.2rem !important;
         font-weight: 700 !important;
@@ -106,7 +133,7 @@ hide_streamlit_style = """
     .stButton button {
         width: 100%;
         border-radius: 8px;
-        height: 3.2em;
+        height: 3.5em;
         font-weight: 600;
         transition: all 0.3s ease;
     }
@@ -128,41 +155,25 @@ hide_streamlit_style = """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 # =============================================================================
-# 3. FUNCIONES UTILITARIAS Y DE CONEXIÓN
+# 4. CONEXIONES A SERVICIOS EXTERNOS
 # =============================================================================
 
-def limpiar_id(v): 
-    """
-    Normaliza el formato de la cédula de identidad para evitar errores en BD.
-    Elimina caracteres no numéricos y espacios.
-    """
-    if v is None:
-        return ""
-    valor_str = str(v).strip().upper()
-    # Eliminar decimales si viene de Excel numérico
-    valor_limpio = valor_str.split('.')[0]
-    # Eliminar puntuación y letras comunes
-    valor_limpio = valor_limpio.replace(',', '').replace('.', '')
-    valor_limpio = valor_limpio.replace('V-', '').replace('E-', '')
-    valor_limpio = valor_limpio.replace('V', '').replace('E', '')
-    return valor_limpio
-
-# --- CONEXIÓN A BASE DE DATOS (GOOGLE SHEETS) ---
+# --- 4.1 Conexión a Base de Datos (Google Sheets) ---
 try:
     conn = st.connection("gsheets", type=GSheetsConnection)
     
     if "GSHEETS_URL" not in st.secrets:
-        st.error("⚠️ Error Crítico: No se encontró 'GSHEETS_URL' en los secrets.")
+        st.error("⚠️ Error de Configuración: No se encontró 'GSHEETS_URL' en los secrets.")
         st.stop()
         
     URL_HOJA = st.secrets["GSHEETS_URL"]
     
 except Exception as e:
-    st.error("⚠️ No se pudo conectar con la Base de Datos.")
+    st.error("⚠️ Error Crítico: No se pudo establecer conexión con la Base de Datos.")
     st.error(f"Detalle técnico: {e}")
     st.stop()
 
-# --- CONEXIÓN A INTELIGENCIA ARTIFICIAL (GROQ) ---
+# --- 4.2 Conexión a Inteligencia Artificial (Groq) ---
 try:
     if "GROQ_API_KEY" in st.secrets:
         client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -175,7 +186,7 @@ except Exception as e:
     st.stop()
 
 # =============================================================================
-# 4. GESTIÓN DE VARIABLES DE ESTADO (MEMORIA DE SESIÓN)
+# 5. GESTIÓN DE VARIABLES DE ESTADO (MEMORIA DE SESIÓN)
 # =============================================================================
 
 # Autenticación
@@ -203,52 +214,59 @@ if 'redirigir_a_archivo' not in st.session_state:
     st.session_state.redirigir_a_archivo = False
 
 # =============================================================================
-# 5. LÓGICA DE NEGOCIO (BACKEND)
+# 6. LÓGICA DE NEGOCIO (BACKEND)
 # =============================================================================
 
-# --- 5.1 GESTIÓN DE PLANIFICACIÓN ACTIVA ---
+# --- 6.1 Funciones de Planificación Activa ---
 
 def obtener_plan_activa_usuario(usuario_nombre):
     """
-    Consulta la BD para obtener la planificación marcada como activa.
+    Obtiene la planificación activa actual del usuario desde la nube.
     """
     try:
+        # Leemos con un TTL bajo (5 seg) para tener datos frescos
         df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=5)
         
+        # Filtramos por usuario y estado activo
         plan_activa = df_activa[
             (df_activa['USUARIO'] == usuario_nombre) & 
             (df_activa['ACTIVO'] == True)
         ]
         
         if not plan_activa.empty:
+            # Retornar la más reciente basada en fecha de activación
             return plan_activa.sort_values('FECHA_ACTIVACION', ascending=False).iloc[0].to_dict()
         return None
-    except Exception:
+    except Exception as e:
         return None
 
 def establecer_plan_activa(usuario_nombre, id_plan, contenido, rango, aula):
     """
-    Marca una planificación como activa y desactiva las anteriores.
+    Establece una planificación específica como la 'Activa' para evaluaciones.
+    Usa la hora de Venezuela para el registro.
     """
     try:
+        # Intentar leer hoja existente
         try:
             df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=0)
         except:
-            # Crear DataFrame si la hoja está vacía o no existe
+            # Crear DataFrame vacío si la hoja no existe
             df_activa = pd.DataFrame(columns=[
                 "USUARIO", "FECHA_ACTIVACION", "ID_PLAN", 
                 "CONTENIDO_PLAN", "RANGO", "AULA", "ACTIVO"
             ])
         
-        # 1. Desactivar planes previos
+        # 1. Desactivar cualquier planificación activa previa del mismo usuario
         mask_usuario = df_activa['USUARIO'] == usuario_nombre
         if not df_activa[mask_usuario].empty:
             df_activa.loc[mask_usuario, 'ACTIVO'] = False
         
-        # 2. Insertar nuevo plan activo
+        # 2. Agregar la nueva planificación activa (Usando Hora Venezuela)
+        fecha_ve = ahora_ve().strftime("%d/%m/%Y %H:%M:%S")
+        
         nueva_activa = pd.DataFrame([{
             "USUARIO": usuario_nombre,
-            "FECHA_ACTIVACION": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            "FECHA_ACTIVACION": fecha_ve,
             "ID_PLAN": id_plan,
             "CONTENIDO_PLAN": contenido,
             "RANGO": rango,
@@ -256,35 +274,38 @@ def establecer_plan_activa(usuario_nombre, id_plan, contenido, rango, aula):
             "ACTIVO": True
         }])
         
-        # Guardar en BD
-        df_final = pd.concat([df_activa, nueva_activa], ignore_index=True)
-        conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_final)
+        # Combinar y actualizar la hoja
+        df_actualizado = pd.concat([df_activa, nueva_activa], ignore_index=True)
+        conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_actualizado)
         return True
     except Exception as e:
         st.error(f"Error al activar planificación: {e}")
         return False
 
 def desactivar_plan_activa(usuario_nombre):
-    """Desactiva el plan actual sin borrarlo."""
+    """
+    Desactiva cualquier planificación activa del usuario sin borrar el registro histórico.
+    """
     try:
         df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=0)
-        mask = df_activa['USUARIO'] == usuario_nombre
+        mask_usuario = df_activa['USUARIO'] == usuario_nombre
         
-        if not df_activa[mask].empty:
-            df_activa.loc[mask, 'ACTIVO'] = False
+        if not df_activa[mask_usuario].empty:
+            df_activa.loc[mask_usuario, 'ACTIVO'] = False
             conn.update(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", data=df_activa)
         return True
     except:
         return False
 
-# --- 5.2 GESTIÓN DE ASISTENCIA (INTEGRACIÓN CON DIRECCIÓN) ---
+# --- 6.2 Funciones de Asistencia (MÓDULO NUEVO) ---
 
 def registrar_asistencia(usuario, tipo, hora, motivo, recomendacion_ia):
     """
-    Escribe en la hoja 'ASISTENCIA' para validación del Director.
-    Retorna estados: 'OK', 'DUPLICADO', 'ERROR'.
+    Registra la asistencia en la hoja 'ASISTENCIA'.
+    Usa la hora de Venezuela.
     """
     try:
+        # Leer hoja de asistencia
         try:
             df_asistencia = conn.read(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", ttl=0)
         except:
@@ -294,9 +315,10 @@ def registrar_asistencia(usuario, tipo, hora, motivo, recomendacion_ia):
                 "MOTIVO", "ALERTA_IA", "ESTADO_DIRECTOR"
             ])
         
-        hoy_str = datetime.now().strftime("%d/%m/%Y")
+        # Obtener fecha actual en Venezuela
+        hoy_str = ahora_ve().strftime("%d/%m/%Y")
         
-        # Verificar si ya existe registro hoy
+        # Verificar duplicados del día (Un solo registro por día)
         duplicado = df_asistencia[
             (df_asistencia['USUARIO'] == usuario) & 
             (df_asistencia['FECHA'] == hoy_str)
@@ -305,15 +327,15 @@ def registrar_asistencia(usuario, tipo, hora, motivo, recomendacion_ia):
         if not duplicado.empty:
             return "DUPLICADO"
 
-        # Crear registro
+        # Crear nuevo registro
         nuevo_registro = pd.DataFrame([{
             "FECHA": hoy_str,
             "USUARIO": usuario,
-            "TIPO": tipo,          # ASISTENCIA / INASISTENCIA
-            "HORA_LLEGADA": hora,
-            "MOTIVO": motivo,
-            "ALERTA_IA": recomendacion_ia,
-            "ESTADO_DIRECTOR": "PENDIENTE" # Estado inicial
+            "TIPO": tipo,          # "ASISTENCIA" o "INASISTENCIA"
+            "HORA_LLEGADA": hora,  # Hora real o "-"
+            "MOTIVO": motivo,      # "Cumplimiento" o la razón de falta
+            "ALERTA_IA": recomendacion_ia, # Advertencia legal si aplica
+            "ESTADO_DIRECTOR": "PENDIENTE" # Para que el director valide
         }])
         
         # Guardar
@@ -324,21 +346,34 @@ def registrar_asistencia(usuario, tipo, hora, motivo, recomendacion_ia):
     except Exception as e:
         return f"ERROR: {e}"
 
-# --- 5.3 MOTOR DE INTELIGENCIA ARTIFICIAL ---
+# --- 6.3 Generador de Respuestas IA ---
 
-# Prompt Maestro: Define la personalidad y reglas pedagógicas
+def generar_respuesta(mensajes_historial, temperatura=0.7):
+    """
+    Envía prompt a Groq y maneja errores de conexión.
+    """
+    try:
+        chat_completion = client.chat.completions.create(
+            messages=mensajes_historial,
+            model=MODELO_USADO,
+            temperature=temperatura,
+        )
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        return f"Error de conexión con IA: {e}"
+
+# PROMPT MAESTRO (Definición de Personalidad)
 INSTRUCCIONES_TECNICAS = """
 ⚠️ ERES "LEGADO MAESTRO".
-TU IDENTIDAD: Sistema de Inteligencia Artificial Educativa Venezolana.
-TU CREADOR: Bachiller Docente Luis Atencio.
-TU ROL: Experto en Educación Especial y Taller Laboral (Población con Discapacidad Intelectual, Autismo, Down).
+TU ROL: Experto en Educación Especial y Taller Laboral (Venezuela).
+TU IDENTIDAD: Sistema inteligente creado por Luis Atencio.
 
 🚨 REGLAS PEDAGÓGICAS INQUEBRANTABLES:
 
 1. **COMPETENCIAS TÉCNICAS (ESTRUCTURA OBLIGATORIA):**
    - NUNCA uses un verbo solitario (Ej: "Diseñar" -> MAL).
-   - Estructura Correcta: VERBO DE ACCIÓN + OBJETO DE CONOCIMIENTO + CONDICIÓN/CONTEXTO.
-   - Ejemplo: "Selecciona y manipula herramientas de limpieza para el mantenimiento del aula".
+   - Estructura Correcta: VERBO (Acción) + OBJETO (Qué) + CONDICIÓN (Cómo/Para qué).
+   - Ejemplo: "Selecciona y utiliza adecuadamente los materiales de limpieza para el mantenimiento del aula".
    - Ejemplo: "Reconoce los símbolos patrios a través de actividades plásticas".
 
 2. **ACTIVIDADES VIVENCIALES:**
@@ -350,39 +385,24 @@ TU ROL: Experto en Educación Especial y Taller Laboral (Población con Discapac
    - No empieces siempre con "Invitamos a". Usa: "Hoy descubrimos", "Manos a la obra", "Jugamos a".
 
 4. **FORMATO VISUAL:**
-   - Usa saltos de línea (doble espacio) para separar secciones.
-   - Usa Negritas para resaltar.
+   - Usa saltos de línea (doble espacio) entre secciones.
+   - Usa Negritas para los títulos.
 """
 
-def generar_respuesta(mensajes_historial, temperatura=0.7):
-    """
-    Función wrapper para llamar a la API de Groq con manejo de errores.
-    """
-    try:
-        chat_completion = client.chat.completions.create(
-            messages=mensajes_historial,
-            model=MODELO_USADO,
-            temperature=temperatura,
-        )
-        return chat_completion.choices[0].message.content
-    except Exception as e:
-        return f"Error de conexión con el cerebro del sistema: {e}"
-
 # =============================================================================
-# 6. SISTEMA DE AUTENTICACIÓN (LOGIN UNIFICADO)
+# 7. SISTEMA DE LOGIN (AUTO & MANUAL)
 # =============================================================================
 
-# Aquí corregimos el error NameError asegurando que todo ocurre en orden.
-
-# 1. Recuperar parámetros de la URL (si existen)
+# Obtener parámetros de URL de forma segura
 query_params = st.query_params
 usuario_en_url = query_params.get("u", None)
 
-# 2. Intento de Auto-Login si hay parámetro en URL
+# 1. Intento de Auto-Login
 if not st.session_state.auth and usuario_en_url:
     try:
         df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
-        # Limpiar datos para comparación segura
+        
+        # Limpiamos para comparar
         df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
         usuario_limpio = limpiar_id(usuario_en_url)
         
@@ -392,13 +412,12 @@ if not st.session_state.auth and usuario_en_url:
             st.session_state.auth = True
             st.session_state.u = match.iloc[0].to_dict()
         else:
-            # Si el usuario de la URL no es válido, limpiar URL
+            # Si el usuario en URL no es válido, limpiamos
             st.query_params.clear()
-    except Exception:
-        # Si falla la conexión en auto-login, no hacemos nada y mostramos login manual
+    except:
         pass 
 
-# 3. Pantalla de Login Manual (Si no está autenticado)
+# 2. Pantalla de Login Manual (Si no está logueado)
 if not st.session_state.auth:
     st.title("🛡️ Acceso Legado Maestro")
     
@@ -410,16 +429,15 @@ if not st.session_state.auth:
             st.header("🍎")
     
     with col_form:
-        st.markdown("### Bienvenido")
+        st.markdown("### Iniciar Sesión")
         cedula_input = st.text_input("Cédula de Identidad:", key="login_c")
         pass_input = st.text_input("Contraseña:", type="password", key="login_p")
         
-        if st.button("🔐 Iniciar Sesión", use_container_width=True):
+        if st.button("🔐 Entrar", use_container_width=True):
             try:
-                with st.spinner("Verificando credenciales..."):
+                with st.spinner("Verificando..."):
                     df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
                     
-                    # Normalización
                     df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
                     cedula_limpia = limpiar_id(cedula_input)
                     
@@ -432,21 +450,18 @@ if not st.session_state.auth:
                     if not match.empty:
                         st.session_state.auth = True
                         st.session_state.u = match.iloc[0].to_dict()
-                        # Anclar sesión en URL para recargas
-                        st.query_params["u"] = cedula_limpia
-                        st.success("¡Acceso Concedido!")
+                        st.query_params["u"] = cedula_limpia # Anclar sesión
+                        st.success("¡Bienvenido!")
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("❌ Credenciales incorrectas. Verifique Cédula y Contraseña.")
+                        st.error("❌ Credenciales incorrectas.")
             except Exception as e:
-                st.error(f"Error de conexión con la base de datos: {e}")
-    
-    # Detener ejecución si no está logueado
+                st.error(f"Error de conexión: {e}")
     st.stop()
 
 # =============================================================================
-# 7. INTERFAZ DE BARRA LATERAL (INFORMACIÓN)
+# 8. INTERFAZ DE BARRA LATERAL (INFORMACIÓN)
 # =============================================================================
 
 with st.sidebar:
@@ -458,20 +473,22 @@ with st.sidebar:
     st.title("Legado Maestro")
     st.caption(f"Prof. {st.session_state.u['NOMBRE']}")
     
-    # Mostrar estado de la planificación
+    # Mostrar estado de planificación activa
     plan_activa = obtener_plan_activa_usuario(st.session_state.u['NOMBRE'])
     
     st.markdown("---")
     if plan_activa:
         st.success("📌 **Planificación Activa**")
-        st.caption(f"Rango: {plan_activa['RANGO']}")
-        st.caption(f"Aula: {plan_activa['AULA']}")
+        with st.expander("Ver detalles", expanded=False):
+            st.caption(f"**Rango:** {plan_activa['RANGO']}")
+            st.caption(f"**Aula:** {plan_activa['AULA']}")
+            st.caption(f"Activada: {plan_activa['FECHA_ACTIVACION'].split()[0]}")
     else:
         st.warning("⚠️ **Sin planificación activa**")
         st.caption("Ve a 'Mi Archivo' para activar una.")
 
 # =============================================================================
-# 8. SISTEMA DE NAVEGACIÓN Y VISTAS
+# 9. SISTEMA DE NAVEGACIÓN Y VISTAS
 # =============================================================================
 
 # Redirección interna automática
@@ -508,7 +525,7 @@ if st.session_state.pagina_actual == "HOME":
     
     st.write("")
     
-    # 1. CONTROL DE ASISTENCIA (NUEVO)
+    # 1. CONTROL DE ASISTENCIA
     st.markdown("### ⏱️ CONTROL DIARIO")
     sel_asistencia = st.selectbox(
         "Registro de Asistencia:",
@@ -539,7 +556,7 @@ if st.session_state.pagina_actual == "HOME":
         key="home_extras"
     )
     
-    # Ejecución de cambio de página
+    # Lógica de cambio de página
     if sel_asistencia != "(Seleccionar)":
         st.session_state.pagina_actual = "⏱️ Control de Asistencia"
         st.rerun()
@@ -567,13 +584,16 @@ else:
     opcion = st.session_state.pagina_actual
 
     # -------------------------------------------------------------------------
-    # VISTA: CONTROL DE ASISTENCIA (NUEVO MÓDULO)
+    # VISTA: CONTROL DE ASISTENCIA (CON HORA VENEZUELA)
     # -------------------------------------------------------------------------
     if opcion == "⏱️ Control de Asistencia":
         st.info("ℹ️ Este reporte se enviará a **Legado Director** para validación.")
         
-        fecha_hoy = datetime.now().strftime("%d/%m/%Y")
-        st.markdown(f"### 📅 Fecha: **{fecha_hoy}**")
+        # FECHA CORRECTA (VENEZUELA)
+        fecha_ve = ahora_ve()
+        fecha_hoy_str = fecha_ve.strftime("%d/%m/%Y")
+        
+        st.markdown(f"### 📅 Fecha: **{fecha_hoy_str}**")
         
         estado_asistencia = st.radio(
             "¿Cuál es tu estatus hoy?",
@@ -584,15 +604,19 @@ else:
         st.write("")
         
         if estado_asistencia == "✅ Asistí al Plantel":
-            hora_sistema = datetime.now().time()
-            st.markdown(f"**Hora de registro:** {hora_sistema.strftime('%H:%M:%S')}")
+            # HORA CORRECTA (VENEZUELA)
+            hora_ve = ahora_ve().time()
+            hora_str = hora_ve.strftime('%I:%M %p') # Formato 12 horas AM/PM
+            
+            st.markdown(f"**Hora de registro (Venezuela):** {hora_str}")
+            st.caption("Se registrará la hora exacta del sistema.")
             
             if st.button("📤 Enviar Reporte de Asistencia", type="primary"):
                 with st.spinner("Enviando a Dirección..."):
                     res = registrar_asistencia(
                         usuario=st.session_state.u['NOMBRE'],
                         tipo="ASISTENCIA",
-                        hora=str(hora_sistema.strftime('%H:%M:%S')),
+                        hora=str(hora_str),
                         motivo="Cumplimiento de horario",
                         recomendacion_ia="-"
                     )
@@ -740,8 +764,11 @@ else:
                 df_archivo = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
                 tema_guardar = st.session_state.get('temp_tema', 'Planificación')
                 
+                # USAMOS AHORA_VE() PARA LA FECHA DE GUARDADO
+                fecha_guardado = ahora_ve().strftime("%d/%m/%Y")
+                
                 nueva_fila = pd.DataFrame([{
-                    "FECHA": datetime.now().strftime("%d/%m/%Y"),
+                    "FECHA": fecha_guardado,
                     "USUARIO": st.session_state.u['NOMBRE'],
                     "TEMA": tema_guardar[:50], # Limitar largo
                     "CONTENIDO": st.session_state.plan_actual,
@@ -773,10 +800,12 @@ else:
             
             if st.button("🔍 Buscar Actividad de Hoy"):
                 with st.spinner("Buscando en tu plan..."):
-                    dia_semana = datetime.now().strftime("%A")
+                    # USAMOS AHORA_VE() PARA DIA CORRECTO
+                    dia_semana = ahora_ve().strftime("%A")
+                    
                     prompt_bus = f"""
                     PLAN: {pa['CONTENIDO_PLAN'][:10000]}
-                    HOY ES: {dia_semana}.
+                    HOY ES: {dia_semana} (En Venezuela).
                     ¿Qué actividad toca hoy? Responde SOLO el título o 'NO HAY ACTIVIDAD'.
                     """
                     res = generar_respuesta([{"role":"user","content":prompt_bus}], 0.1)
@@ -791,7 +820,7 @@ else:
                     with st.spinner("Analizando..."):
                         p_eval = f"""
                         Evalúa a {estudiante}. Actividad: {actividad_final}. Obs: {observacion}.
-                        Genera: Análisis Técnico Cualitativo, Nivel de Logro y Recomendación.
+                        Genera Análisis Técnico Cualitativo, Nivel de Logro y Recomendación.
                         """
                         st.session_state.eval_resultado = generar_respuesta([
                             {"role":"system","content":INSTRUCCIONES_TECNICAS},
@@ -808,8 +837,12 @@ else:
                 if st.button("💾 Guardar Registro"):
                     try:
                         df_ev = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
+                        
+                        # USAMOS AHORA_VE()
+                        fecha_registro = ahora_ve().strftime("%d/%m/%Y")
+                        
                         n_ev = pd.DataFrame([{
-                            "FECHA": datetime.now().strftime("%d/%m/%Y"),
+                            "FECHA": fecha_registro,
                             "USUARIO": st.session_state.u['NOMBRE'],
                             "ESTUDIANTE": st.session_state.est_temp,
                             "ACTIVIDAD": actividad_final,
@@ -844,7 +877,10 @@ else:
                 # Métricas
                 total = len(df['FECHA'].unique()) 
                 asist = len(dat_alum['FECHA'].unique())
-                pct = (asist / total) * 100 if total > 0 else 0
+                if total > 0:
+                    pct = (asist / total) * 100 
+                else:
+                    pct = 0
                 
                 c1, c2, c3 = st.columns(3)
                 c1.metric("Asistencias", f"{asist}")
@@ -929,4 +965,4 @@ else:
 
 # --- FIN DEL DOCUMENTO ---
 st.markdown("---")
-st.caption("Desarrollado por Luis Atencio | Versión: 4.1 (Gold Master Fixed)")
+st.caption("Desarrollado por Luis Atencio | Versión: 4.2 (Edición Maestra Real)")
