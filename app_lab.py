@@ -557,15 +557,15 @@ with st.sidebar:
 # =============================================================================
 # 9. SISTEMA DE NAVEGACIÓN Y VISTAS (INTEGRACIÓN TOTAL)
 # =============================================================================
-# --- CARGA DE DATOS GLOBALES v7.0 (Anti-Typos y Suplencias) ---
+# --- CARGA INTELIGENTE v7.3 (ANTI-BLOQUEO DE GOOGLE) ---
 try:
-    # 1. Cargar lista de todos los docentes
-    df_profes_global = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=300)
-    LISTA_DOCENTES = sorted(df_profes_global['NOMBRE'].dropna().unique().tolist())
-    # 2. Cargar Matrícula de Alumnos
-    df_mat_global = conn.read(spreadsheet=URL_HOJA, worksheet="MATRICULA_GLOBAL", ttl=300)
-except:
-    st.error("⚠️ Error al conectar con las listas maestras.")
+    df_p_global, df_m_global = cargar_datos_maestros(conn, URL_HOJA)
+    
+    # Extraer listas para los menús
+    LISTA_DOCENTES = sorted(df_p_global['NOMBRE'].dropna().unique().tolist())
+    df_mat_global = df_m_global # Disponible para todo el sistema
+except Exception as e:
+    st.error("🔄 Google está procesando muchas solicitudes. Por favor, espera 10 segundos y presiona el botón 'Limpiar' arriba.")
 # Redirección interna automática
 if st.session_state.redirigir_a_archivo:
     st.session_state.pagina_actual = "📂 Mi Archivo Pedagógico"
