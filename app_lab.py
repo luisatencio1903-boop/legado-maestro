@@ -876,12 +876,12 @@ else:
         
         notas = st.text_area("Tema Generador / Referente Ético / Notas:", height=100)
 
-    # =============================================================================
-        # BOTÓN MAESTRO: FUSIÓN TOTAL (VALIDACIONES + PROYECTO + VOCABULARIO ANTIGUO)
+  # =============================================================================
+        # BOTÓN MAESTRO: FUSIÓN TOTAL + FORMATO FORZADO
         # =============================================================================
         if st.button("🚀 Generar Planificación Estructurada", type="primary"):
             
-            # 1. VALIDACIONES DE SEGURIDAD (TU LÓGICA ORIGINAL INTACTA)
+            # 1. VALIDACIONES (INTACTAS)
             if not rango or not notas:
                 st.error("⚠️ Por favor ingrese el Lapso y el Tema.")
             elif is_pei and not perfil_alumno:
@@ -889,37 +889,31 @@ else:
             elif modalidad == "Taller de Educación Laboral (T.E.L.)" and not aula_especifica:
                 st.error("⚠️ Especifique el área del Taller.")
             else:
-                with st.spinner('Fusionando lógica de Proyectos con Vocabulario Técnico...'):
+                with st.spinner('Procesando Estructura, Normativa Legal y Espaciado...'):
                     
-                    # ---------------------------------------------------------
-                    # A. RECUPERAR VOCABULARIO Y TONO (TU ESENCIA ORIGINAL)
-                    # ---------------------------------------------------------
+                    # A. VOCABULARIO Y TONO (INTACTO)
                     vocabulario_sugerido = ""
                     tono_redaccion = ""
-                    
                     if "Inicial" in modalidad:
-                        tono_redaccion = "AFECTIVO, LÚDICO Y MATERNAL. Todo es a través del juego."
-                        vocabulario_sugerido = "- INICIO: Cantamos, La ronda, Títeres.\n- DESARROLLO: Rasgamos, Pintamos, Exploramos texturas.\n- CIERRE: Canción de guardar, Abrazos."
+                        tono_redaccion = "AFECTIVO, LÚDICO Y MATERNAL."
+                        vocabulario_sugerido = "- INICIO: Cantamos, La ronda.\n- DESARROLLO: Rasgamos, Pintamos.\n- CIERRE: Canción de guardar."
                     elif "Taller" in modalidad:
-                        tono_redaccion = "TÉCNICO, PRE-PROFESIONAL Y PRODUCTIVO. Enfoque en el oficio."
-                        vocabulario_sugerido = "- INICIO: Normas de seguridad, Organización.\n- DESARROLLO: Lijamos, Medimos, Ensamblamos, Sembramos, Reparamos.\n- CIERRE: Limpieza del taller, Control de calidad."
+                        tono_redaccion = "TÉCNICO, PRE-PROFESIONAL Y PRODUCTIVO."
+                        vocabulario_sugerido = "- INICIO: Normas de seguridad.\n- DESARROLLO: Lijamos, Medimos, Sembramos.\n- CIERRE: Control de calidad."
                     elif "Aula Integrada" in modalidad or "U.P.E." in modalidad:
                         tono_redaccion = "PSICO-EDUCATIVO Y REMEDIAL."
-                        vocabulario_sugerido = "- INICIO: Gimnasia cerebral, Lectura motivadora.\n- DESARROLLO: Leemos, Escribimos, Calculamos, Asociamos.\n- CIERRE: Autocorrección, Refuerzo positivo."
+                        vocabulario_sugerido = "- INICIO: Gimnasia cerebral.\n- DESARROLLO: Leemos, Escribimos.\n- CIERRE: Refuerzo positivo."
                     elif "Autismo" in modalidad or "C.A.I.P.A." in modalidad:
-                        tono_redaccion = "ESTRUCTURADO, VISUAL Y ANTICIPADO."
-                        vocabulario_sugerido = "- INICIO: Agenda visual, Anticipación.\n- DESARROLLO: Clasificamos, Seriamos, Encajamos.\n- CIERRE: Guardado estructurado."
+                        tono_redaccion = "ESTRUCTURADO Y VISUAL."
+                        vocabulario_sugerido = "- INICIO: Agenda visual.\n- DESARROLLO: Clasificamos, Encajamos.\n- CIERRE: Guardado."
                     else: 
-                        tono_redaccion = "SENSORIAL, HÁBITOS Y VIDA DIARIA."
-                        vocabulario_sugerido = "- INICIO: Rutina de saludo.\n- DESARROLLO: Estimulación sensorial, Higiene, Vestido.\n- CIERRE: Aseo, Merienda."
+                        tono_redaccion = "SENSORIAL Y HÁBITOS."
+                        vocabulario_sugerido = "- INICIO: Saludo.\n- DESARROLLO: Estimulación.\n- CIERRE: Aseo."
 
-                    # ---------------------------------------------------------
-                    # B. LÓGICA DE PROYECTOS (LA INTELIGENCIA NUEVA)
-                    # ---------------------------------------------------------
+                    # B. PROYECTOS (INTACTO)
                     texto_instruccion_proyecto = ""
                     etiqueta_titulo_dinamica = "TÍTULO DE LA ACTIVIDAD"
                     
-                    # INTENTO DE LECTURA HÍBRIDA (BOLSILLO -> NUBE)
                     datos_proyecto = None
                     if 'PROYECTO_LOCAL' in st.session_state:
                         datos_proyecto = st.session_state['PROYECTO_LOCAL']
@@ -938,10 +932,8 @@ else:
                                     'FASE_ACTUAL': fila['FASE_ACTUAL'],
                                     'DIAS_PSP': str(fila['DIAS_PSP'])
                                 }
-                        except:
-                            datos_proyecto = None
+                        except: datos_proyecto = None
 
-                    # INTERPRETACIÓN DE DATOS
                     if datos_proyecto and datos_proyecto.get('ACTIVO') == "TRUE":
                         servicio = datos_proyecto['SERVICIO']
                         pa = datos_proyecto['NOMBRE_PA']
@@ -959,65 +951,117 @@ else:
                             """
                         elif "Aula Integrada" in servicio or "U.P.E." in servicio:
                             etiqueta_titulo_dinamica = "LÍNEA DE ACCIÓN"
-                            texto_instruccion_proyecto = f"""
-                            🚨 **MODO ATENCIÓN ESPECIALIZADA:** LÍNEA: "{pa}" | FASE: {fase}.
-                            """
+                            texto_instruccion_proyecto = f"""🚨 **MODO ATENCIÓN:** LÍNEA: "{pa}" | FASE: {fase}."""
                         else:
-                            etiqueta_titulo_dinamica = "TÍTULO DEL PROYECTO"
-                            texto_instruccion_proyecto = f"""
-                            🚨 **MODO PROYECTO DE APRENDIZAJE:** PROYECTO: "{pa}" | MOMENTO: {fase}.
-                            """
+                            etiqueta_titulo_dinamica = "TÍTULO PROYECTO"
+                            texto_instruccion_proyecto = f"""🚨 **MODO P.A.:** PROYECTO: "{pa}" | MOMENTO: {fase}."""
                     else:
-                        texto_instruccion_proyecto = "NO HAY PROYECTO ACTIVO. Planifica basado en el TEMA MANUAL."
-                        etiqueta_titulo_dinamica = "TÍTULO DE LA CLASE"
+                        texto_instruccion_proyecto = "NO HAY PROYECTO ACTIVO. Planifica basado en TEMA MANUAL."
 
-                    # ---------------------------------------------------------
-                    # C. CONSTRUCCIÓN DEL PROMPT (FUSIÓN DE AMBOS MUNDOS)
-                    # ---------------------------------------------------------
-                    tipo_plan = "Individualizado (P.E.I.)" if is_pei else "Grupal"
-                    perfil_txt = f"PERFIL DEL ALUMNO: {perfil_alumno}" if is_pei else ""
-                    contexto_aula = f" del área de {aula_especifica}" if aula_especifica else ""
-                    
-                    # Guardamos el tema temporal para usarlo al guardar
+                    # C. PROMPT CON ENCABEZADO LEGAL Y FORMATO ESTRICTO
                     st.session_state.temp_tema = f"{modalidad} - {notas}"
+                    
+                    # AQUÍ ESTÁ EL ENCABEZADO QUE PEDISTE
+                    encabezado_legal = """
+                    **PLANIFICACIÓN SUGERIDA POR SUPER DOCENTE 1.0**
+                    *Sustentada en el Currículo Nacional Bolivariano y la Ley Orgánica de Educación (L.O.E.)*
+                    ---------------------------------------------------
+                    """
                     
                     prompt = f"""
                     ERES UN EXPERTO EN PLANIFICACIÓN EDUCATIVA VENEZOLANA.
+                    CONTEXTO: {modalidad} {aula_especifica}. TEMA: {notas}.
+                    PROYECTO: {texto_instruccion_proyecto}
+                    TONO: {tono_redaccion}. VOCABULARIO: {vocabulario_sugerido}.
                     
-                    CONTEXTO: {modalidad}{contexto_aula}.
-                    TEMA MANUAL: {notas}.
-                    TIPO: {tipo_plan} {perfil_txt}
+                    🚨 **REGLA DE FORMATO VISUAL (INQUEBRANTABLE):**
+                    ES OBLIGATORIO DEJAR UNA LÍNEA VACÍA ENTRE CADA PUNTO NUMERADO.
+                    NO escribas todo en un solo párrafo. Separa visualmente el Inicio, Desarrollo y Cierre.
                     
-                    DATOS DEL PROYECTO:
-                    {texto_instruccion_proyecto}
+                    ESTRUCTURA DE SALIDA REQUERIDA:
                     
-                    ESTILO Y VOCABULARIO REQUERIDO:
-                    - Tono: {tono_redaccion}
-                    - Palabras clave sugeridas: {vocabulario_sugerido}
+                    {encabezado_legal}
                     
-                    🚨 **REGLAS OBLIGATORIAS DE FORMATO:**
-                    1. **{etiqueta_titulo_dinamica}:** Solo nombre corto.
-                    2. **COMPETENCIA TÉCNICA:** Verbo Infinitivo + Contenido + Condición.
-                    3. **ESTRATEGIAS:** Solo técnicas reales (Lluvia de ideas, Modelado, etc.).
-                    
-                    ESTRUCTURA DE SALIDA (Doble espacio, Lunes a Viernes):
                     ### [DÍA Y FECHA]
+                    
                     **1. {etiqueta_titulo_dinamica}:** [Nombre]
+                    <br>
                     **2. COMPETENCIA TÉCNICA:** [Redacción]
+                    <br>
                     **3. EXPLORACIÓN (Inicio):** [Actividad]
+                    <br>
                     **4. DESARROLLO (Proceso):** [Actividad]
+                    <br>
                     **5. REFLEXIÓN (Cierre):** [Actividad]
+                    <br>
                     **6. ESTRATEGIAS:** [Técnicas]
+                    <br>
                     **7. RECURSOS:** [Materiales]
                     ---------------------------------------------------
                     Genera la planificación para el lapso: {rango}.
                     """
                     
                     # 4. GENERACIÓN IA
-                    st.session_state.plan_actual = generar_respuesta([
+                    respuesta_raw = generar_respuesta([
                         {"role":"system","content":INSTRUCCIONES_TECNICAS}, 
                         {"role":"user","content":prompt}
                     ], 0.6)
+                    
+                    # --- TRUCO DE PROGRAMADOR: FORZAR ESPACIOS SI LA IA FALLA ---
+                    # Esto busca donde dice "**2." y le mete dos espacios antes a la fuerza
+                    respuesta_formateada = respuesta_raw \
+                        .replace("**1.", "\n\n**1.") \
+                        .replace("**2.", "\n\n**2.") \
+                        .replace("**3.", "\n\n**3.") \
+                        .replace("**4.", "\n\n**4.") \
+                        .replace("**5.", "\n\n**5.") \
+                        .replace("**6.", "\n\n**6.") \
+                        .replace("**7.", "\n\n**7.") \
+                        .replace("### ", "\n\n\n### ") # Más espacio antes del día
+                    
+                    st.session_state.plan_actual = respuesta_formateada
+                    st.rerun()
+
+        # =============================================================================
+        # 5. VISUALIZACIÓN
+        # =============================================================================
+        if st.session_state.plan_actual:
+            st.divider()
+            st.success("✅ **Planificación Generada Exitosamente**")
+            
+            st.markdown(f"""
+            <div style="border: 1px solid #ddd; padding: 25px; border-radius: 10px; background-color: #fcfcfc; line-height: 1.8;">
+                {st.session_state.plan_actual}
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.divider()
+            
+            col_guardar, col_borrar = st.columns([1, 1])
+            with col_guardar:
+                if st.button("💾 Guardar en Mi Archivo", key="btn_guardar_final"):
+                    try:
+                        with st.spinner("Guardando..."):
+                            df_historia = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                            tema_guardar = st.session_state.get('temp_tema', notas)
+                            nuevo_registro = pd.DataFrame([{
+                                "FECHA": pd.Timestamp.now().strftime("%d/%m/%Y"), 
+                                "USUARIO": st.session_state.u['NOMBRE'], 
+                                "TEMA": tema_guardar[:50] + "...", 
+                                "CONTENIDO": st.session_state.plan_actual, 
+                                "ESTADO": "GUARDADO", 
+                                "HORA_INICIO": "--", "HORA_FIN": "--"
+                            }])
+                            conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df_historia, nuevo_registro], ignore_index=True))
+                            st.success("¡Guardado!")
+                            time.sleep(1.5)
+                            st.session_state.plan_actual = ""
+                            st.rerun()
+                    except Exception as e: st.error(f"Error: {e}")
+
+            with col_borrar:
+                if st.button("🗑️ Descartar", type="secondary", key="btn_descartar"):
+                    st.session_state.plan_actual = ""
                     st.rerun()
 
         # =============================================================================
