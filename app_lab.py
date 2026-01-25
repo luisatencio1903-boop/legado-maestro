@@ -1184,7 +1184,7 @@ else:
 # -------------------------------------------------------------------------
     # VISTA: GESTIÓN DE PROYECTOS Y PLANES (PARCHE V2: SELECTOR DE FASES)
     # -------------------------------------------------------------------------
-   elif opcion == "🏗️ GESTIÓN DE PROYECTOS Y PLANES":
+    elif opcion == "🏗️ GESTIÓN DE PROYECTOS Y PLANES":
         st.header("🏗️ Configuración de Proyectos y Planes")
         st.markdown("Defina su hoja de ruta. El sistema usará la **Etapa Seleccionada** para ajustar la exigencia práctica.")
 
