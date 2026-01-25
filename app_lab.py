@@ -1491,18 +1491,22 @@ else:
             st.error(f"Error al cargar el historial: {e}")
 
 # -------------------------------------------------------------------------
-    # VISTA: MI ARCHIVO PEDAGÓGICO (v12.3 - CSV SEGURO + EDITOR)
+    # VISTA: MI ARCHIVO PEDAGÓGICO (v12.4 - BITÁCORA SEMANAL + CRUCE DE DATOS)
     # -------------------------------------------------------------------------
     elif opcion == "📂 Mi Archivo Pedagógico":
         st.markdown("### 📂 Mi Archivo Pedagógico Digital")
         
         try:
+            # 1. CARGA DE DATOS (MODO ECO)
             df_total_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=60)
             df_ejecucion = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=60)
             df_evaluaciones = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=60)
             
-            tab_archivo, tab_consolidados, tab_historial_ev = st.tabs(["📝 Mis Planificaciones", "🏆 Actividades Consolidadas", "📊 Historial Evaluaciones"])
+            tab_archivo, tab_consolidados, tab_historial_ev = st.tabs(["📝 Mis Planificaciones", "📚 Bitácora de Clases (Logros)", "📊 Historial Evaluaciones"])
 
+            # =================================================================
+            # PESTAÑA 1: GESTIÓN DE PLANES (INTACTO - CON EDITOR Y CSV)
+            # =================================================================
             with tab_archivo:
                 col_filtros, col_backup = st.columns([3, 1])
                 with col_filtros:
@@ -1514,12 +1518,11 @@ else:
                         usuario_a_consultar = st.session_state.u['NOMBRE']
                         st.info("Viendo tus planificaciones.")
 
-                # RESPALDO CSV (SIN ERROR)
                 with col_backup:
                     mis_datos_raw = df_total_planes[df_total_planes['USUARIO'] == st.session_state.u['NOMBRE']]
                     if not mis_datos_raw.empty:
                         csv_data = mis_datos_raw.to_csv(index=False).encode('utf-8')
-                        st.download_button(label="📥 Respaldo", data=csv_data, file_name=f"Respaldo_{st.session_state.u['NOMBRE']}.csv", mime="text/csv")
+                        st.download_button(label="📥 Respaldo", data=csv_data, file_name=f"Respaldo_Planes_{st.session_state.u['NOMBRE']}.csv", mime="text/csv")
 
                 pa = obtener_plan_activa_usuario(usuario_a_consultar)
                 if pa:
@@ -1554,46 +1557,125 @@ else:
                                 if col_btns[2].button(f"🗑️ Borrar", key=f"del_btn_{i}"):
                                     conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_total_planes.drop(i)); st.rerun()
 
+            # =================================================================
+            # PESTAÑA 2: BITÁCORA SEMANAL (NUEVA LÓGICA DE AGRUPACIÓN)
+            # =================================================================
             with tab_consolidados:
-                st.write("### ✅ Registro de Cumplimiento")
-                mis_logros = df_ejecucion[df_ejecucion['USUARIO'] == st.session_state.u['NOMBRE']]
-                if mis_logros.empty: st.info("Sin registros.")
+                st.write("### 📚 Bitácora de Clases Ejecutadas")
+                mis_logros = df_ejecucion[df_ejecucion['USUARIO'] == st.session_state.u['NOMBRE']].copy()
+                
+                if mis_logros.empty:
+                    st.info("Aún no tienes actividades consolidadas.")
                 else:
-                    st.metric("Actividades de la Semana", f"{len(mis_logros)} de 5")
-                    for _, logro in mis_logros.iloc[::-1].iterrows():
-                        with st.expander(f"✅ LOGRO: {logro['FECHA']} | {logro['ACTIVIDAD_TITULO']}"):
-                            fotos = str(logro['EVIDENCIA_FOTO']).split('|')
-                            c1, c2 = st.columns(2)
-                            with c1:
-                                if len(fotos) > 0 and fotos[0].strip() != "-": st.image(fotos[0].strip(), caption="Proceso", use_container_width=True)
-                            with c2:
-                                if len(fotos) > 1 and fotos[1].strip() != "-": st.image(fotos[1].strip(), caption="Culminación", use_container_width=True)
-                            st.info(f"**Logro:** {logro['RESUMEN_LOGROS']}")
-                            if st.button("🧠 Análisis IA", key=f"ia_{logro['FECHA']}_{random.randint(0,999)}"):
-                                p_ia = f"Analiza: {logro['ACTIVIDAD_TITULO']}. Logros: {logro['RESUMEN_LOGROS']}."
-                                st.markdown(f'<div class="eval-box">{generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":p_ia}], 0.4)}</div>', unsafe_allow_html=True)
+                    # 1. PROCESAMIENTO DE FECHAS PARA AGRUPAR
+                    try:
+                        mis_logros['FECHA_DT'] = pd.to_datetime(mis_logros['FECHA'], dayfirst=True, errors='coerce')
+                        # Agrupamos por número de semana del año
+                        mis_logros['SEMANA_NUM'] = mis_logros['FECHA_DT'].dt.isocalendar().week
+                        mis_logros = mis_logros.sort_values('FECHA_DT', ascending=False)
+                    except:
+                        st.error("Error procesando fechas. Mostrando lista simple.")
+                        mis_logros['SEMANA_NUM'] = 0
 
+                    # 2. ITERAMOS POR SEMANA (AGRUPACIÓN VISUAL)
+                    semanas_unicas = mis_logros['SEMANA_NUM'].unique()
+                    
+                    for sem in semanas_unicas:
+                        # Filtramos los datos de esta semana
+                        datos_semana = mis_logros[mis_logros['SEMANA_NUM'] == sem]
+                        
+                        # Título del bloque semanal (Tomamos la fecha más reciente de esa semana)
+                        fecha_ref = datos_semana.iloc[0]['FECHA']
+                        cant_act = len(datos_semana)
+                        
+                        # --- EL BLOQUE SEMANAL QUE PEDISTE ---
+                        with st.expander(f"📂 SEMANA: {fecha_ref} (Actividades: {cant_act})", expanded=True):
+                            
+                            for _, logro in datos_semana.iterrows():
+                                st.markdown(f"##### 🗓️ {logro['FECHA']} | {logro['ACTIVIDAD_TITULO']}")
+                                
+                                # A. FOTOS
+                                fotos = str(logro['EVIDENCIA_FOTO']).split('|')
+                                c1, c2 = st.columns(2)
+                                with c1:
+                                    if len(fotos) > 0 and fotos[0].strip() != "-": st.image(fotos[0].strip(), caption="Inicio", width=150)
+                                with c2:
+                                    if len(fotos) > 1 and fotos[1].strip() != "-": st.image(fotos[1].strip(), caption="Cierre", width=150)
+
+                                # B. RESUMEN DEL DOCENTE
+                                st.info(f"**📝 Tu Resumen:** {logro['RESUMEN_LOGROS']}")
+                                
+                                # C. CRUCE CON ALUMNOS (LO NUEVO)
+                                # Buscamos las evaluaciones de ESE día específico
+                                ev_dia = df_evaluaciones[
+                                    (df_evaluaciones['FECHA'] == logro['FECHA']) & 
+                                    (df_evaluaciones['USUARIO'] == st.session_state.u['NOMBRE'])
+                                ]
+                                
+                                if not ev_dia.empty:
+                                    with st.expander(f"👥 Ver {len(ev_dia)} Evaluaciones de este día"):
+                                        for _, e in ev_dia.iterrows():
+                                            st.markdown(f"**• {e['ESTUDIANTE']}:** {e['EVALUACION_IA']}")
+                                            st.caption(f"*(Anecdota original: {e['ANECDOTA']})*")
+                                            st.divider()
+                                else:
+                                    st.caption("⚠️ No se registraron evaluaciones individuales este día.")
+
+                                # D. ANÁLISIS IA (CONTEXTUALIZADO)
+                                if st.button("🧠 Analizar Jornada (IA)", key=f"ia_btn_{logro['FECHA']}_{random.randint(0,999)}"):
+                                    # Construimos un prompt con TODO el contexto
+                                    contexto_alumnos = ""
+                                    if not ev_dia.empty:
+                                        contexto_alumnos = "EVALUACIONES ALUMNOS: " + ev_dia['EVALUACION_IA'].str.cat(sep=" | ")
+                                    
+                                    prompt_analisis = f"""
+                                    Analiza esta jornada escolar completa.
+                                    ACTIVIDAD: {logro['ACTIVIDAD_TITULO']}.
+                                    RESUMEN DOCENTE: {logro['RESUMEN_LOGROS']}.
+                                    {contexto_alumnos}
+                                    
+                                    Dime:
+                                    1. ¿Qué se logró consolidar?
+                                    2. ¿Hubo alguna incidencia implícita?
+                                    3. Sugerencia para la próxima clase.
+                                    """
+                                    res_ia = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":prompt_analisis}], 0.5)
+                                    st.markdown(f'<div class="eval-box">{res_ia}</div>', unsafe_allow_html=True)
+                                
+                                st.markdown("---")
+
+            # =================================================================
+            # PESTAÑA 3: HISTORIAL EVALUACIONES (INTACTO)
+            # =================================================================
             with tab_historial_ev:
                 st.write("### 📊 Expediente Estudiantil")
                 mis_alumnos_data = df_evaluaciones[df_evaluaciones['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
-                if mis_alumnos_data.empty: st.info("Sin registros.")
+                
+                if mis_alumnos_data.empty:
+                    st.info("Sin registros.")
                 else:
                     lista_alumnos_hist = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
                     alumno_sel = st.selectbox("Seleccione Alumno:", lista_alumnos_hist, key="sel_al_hist_v11")
                     registros_alumno = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
+                    
                     st.metric("Total Notas", len(registros_alumno))
                     st.markdown("---")
+                    
                     for _, fila in registros_alumno.iloc[::-1].iterrows():
                         with st.expander(f"📅 {fila['FECHA']} | Evalúa: {fila['USUARIO']}"):
-                            if fila['USUARIO'] != st.session_state.u['NOMBRE']: st.caption(f"ℹ️ Por Suplente: {fila['USUARIO']}")
+                            if fila['USUARIO'] != st.session_state.u['NOMBRE']:
+                                st.caption(f"ℹ️ Por Suplente: {fila['USUARIO']}")
                             st.write(fila['EVALUACION_IA'])
+                            st.caption(f"Original: {fila['ANECDOTA']}")
+                            
                     if st.button("📝 Informe de Progreso", key="btn_gen_inf_v11"):
                         with st.spinner("Generando..."):
                             historico_txt = registros_alumno['EVALUACION_IA'].str.cat(sep='\n\n')
                             informe = generar_respuesta([{"role":"user","content":f"Genera informe de progreso para {alumno_sel}: {historico_txt}"}])
                             st.markdown(f'<div class="plan-box">{informe}</div>', unsafe_allow_html=True)
+
         except Exception as e:
-            st.error(f"Error técnico: {e}")
+            st.error(f"Error técnico en archivo: {e}")
     # -------------------------------------------------------------------------
     # VISTAS: EXTRAS (ORIGINALES PRESERVADAS)
     # -------------------------------------------------------------------------
