@@ -1192,12 +1192,21 @@ else:
             
             es_taller = "Taller" in servicio_seleccionado
             
-            # CAMPO 1: PEDAGÓGICO
+            # CAMPO 1: PEDAGÓGICO (Lógica Dinámica de Etiquetas y Ejemplos)
             label_pa = "Nombre del Proyecto de Aprendizaje (P.A.):"
+            
+            # Definimos el ejemplo (placeholder) según quién sea el usuario
+            placeholder_pa = "Ej: Conociendo los animales / Mi familia y yo" # Default (Inicial/IEE)
+            
             if "Aula Integrada" in servicio_seleccionado:
                 label_pa = "Nombre de la Línea de Acción / P.A.I.:"
+                placeholder_pa = "Ej: Superando barreras de lecto-escritura / Atención individualizada"
             
-            nombre_pa = st.text_input(label_pa, value=d_pa, placeholder="Ej: Fortaleciendo la lectura / Conociendo mi entorno")
+            elif es_taller:
+                # AQUÍ ESTÁ EL CAMBIO PARA TI: Ejemplos reales de Taller
+                placeholder_pa = "Ej: Seguridad e Higiene Industrial / Valores para el Trabajo Liberador"
+            
+            nombre_pa = st.text_input(label_pa, value=d_pa, placeholder=placeholder_pa)
 
             # CAMPO 2: PRODUCTIVO (SOLO TALLER)
             nombre_psp = ""
