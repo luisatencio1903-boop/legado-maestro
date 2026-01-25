@@ -810,7 +810,7 @@ else:
             st.info("✅ Registro completo.")
             if st.button("Volver"): st.session_state.pagina_actual="HOME"; st.rerun()
 # -------------------------------------------------------------------------
-    # VISTA: PLANIFICADOR INTELIGENTE (CORRECCIÓN PEDAGÓGICA: TÍTULOS Y ESTRATEGIAS)
+    # VISTA: PLANIFICADOR INTELIGENTE (PROMPT ORIGINAL BOLIVARIANO + FIX DUPLICADO)
     # -------------------------------------------------------------------------
     elif opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.markdown("**Generación de Planificación Pedagógica Especializada**")
@@ -819,6 +819,7 @@ else:
         with col1:
             rango = st.text_input("Lapso (Fechas):", placeholder="Ej: 26 al 30 de Enero")
         with col2:
+            # TU SELECTOR ORIGINAL
             modalidad = st.selectbox("Modalidad / Servicio:", [
                 "Taller de Educación Laboral (T.E.L.)",
                 "Instituto de Educación Especial (I.E.E.B.)",
@@ -851,18 +852,19 @@ else:
                 elif modalidad == "Taller de Educación Laboral (T.E.L.)" and not aula_especifica:
                     st.error("⚠️ Especifique el área del Taller.")
                 else:
-                    with st.spinner('Aplicando estrategias metodológicas correctas...'):
+                    with st.spinner('Aplicando estrategias metodológicas del Currículo Bolivariano...'):
                         contexto_aula = f" del área de {aula_especifica}" if aula_especifica else ""
                         st.session_state.temp_tema = f"{modalidad}{contexto_aula} - {notas}"
                         
                         tipo_plan = "P.E.I. (Individualizada)" if is_pei else "Grupal"
                         
-                        # PROMPT CORREGIDO PEDAGÓGICAMENTE
+                        # --- TU PROMPT EXACTO (RESPETADO AL 100%) ---
                         prompt = f"""
                         ERES UN EXPERTO EN EL CURRÍCULO NACIONAL BOLIVARIANO (VENEZUELA).
                         
                         CONTEXTO: {modalidad}{contexto_aula}.
                         TEMA: {notas}.
+                        TIPO: {tipo_plan}. {(f"PERFIL ALUMNO: {perfil_alumno}" if is_pei else "")}
                         
                         🚨 **CORRECCIONES OBLIGATORIAS DE FORMATO Y PEDAGOGÍA:**
                         
@@ -895,6 +897,7 @@ else:
                         Genera la planificación para LUNES, MARTES, MIÉRCOLES, JUEVES Y VIERNES del lapso {rango}.
                         """
                         
+                        # Generar y guardar en memoria
                         st.session_state.plan_actual = generar_respuesta([
                             {"role":"system","content":INSTRUCCIONES_TECNICAS},
                             {"role":"user","content":prompt}
@@ -902,6 +905,41 @@ else:
                         
             else:
                 st.error("⚠️ Por favor ingrese el Lapso y el Tema.")
+
+    # --- VISUALIZACIÓN Y GUARDADO (FUERA DEL BOTÓN PARA EVITAR DUPLICADOS) ---
+    if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
+        st.divider()
+        st.success("✅ **Planificación Generada**")
+        st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
+        
+        col_s, col_d = st.columns([2, 1])
+        with col_s:
+            # AQUI ESTÁ EL ARREGLO DEL ERROR: key="btn_guardar_inteligente"
+            if st.button("💾 Guardar en Archivo", key="btn_guardar_inteligente"):
+                try:
+                    df = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                    t = st.session_state.get('temp_tema', 'Planificación')
+                    
+                    row = pd.DataFrame([{
+                        "FECHA": ahora_ve().strftime("%d/%m/%Y"), 
+                        "USUARIO": st.session_state.u['NOMBRE'], 
+                        "TEMA": t[:50], 
+                        "CONTENIDO": st.session_state.plan_actual, 
+                        "ESTADO": "GUARDADO", 
+                        "HORA_INICIO": "--", "HORA_FIN": "--"
+                    }])
+                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df, row], ignore_index=True))
+                    st.success("Guardado correctamente.")
+                    time.sleep(2)
+                    st.session_state.pagina_actual = "📂 Mi Archivo Pedagógico"
+                    st.rerun()
+                except Exception as e: st.error(f"Error: {e}")
+        
+        with col_d:
+            # Key única también para descartar
+            if st.button("🗑️ Descartar", key="btn_descartar_inteligente"):
+                st.session_state.plan_actual = ""
+                st.rerun()
 
     # --- VISUALIZACIÓN Y GUARDADO ---
     if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
