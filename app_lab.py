@@ -906,41 +906,6 @@ else:
             else:
                 st.error("⚠️ Por favor ingrese el Lapso y el Tema.")
 
-    # --- VISUALIZACIÓN Y GUARDADO (FUERA DEL BOTÓN PARA EVITAR DUPLICADOS) ---
-    if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
-        st.divider()
-        st.success("✅ **Planificación Generada**")
-        st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
-        
-        col_s, col_d = st.columns([2, 1])
-        with col_s:
-            # AQUI ESTÁ EL ARREGLO DEL ERROR: key="btn_guardar_inteligente"
-            if st.button("💾 Guardar en Archivo", key="btn_guardar_inteligente"):
-                try:
-                    df = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-                    t = st.session_state.get('temp_tema', 'Planificación')
-                    
-                    row = pd.DataFrame([{
-                        "FECHA": ahora_ve().strftime("%d/%m/%Y"), 
-                        "USUARIO": st.session_state.u['NOMBRE'], 
-                        "TEMA": t[:50], 
-                        "CONTENIDO": st.session_state.plan_actual, 
-                        "ESTADO": "GUARDADO", 
-                        "HORA_INICIO": "--", "HORA_FIN": "--"
-                    }])
-                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df, row], ignore_index=True))
-                    st.success("Guardado correctamente.")
-                    time.sleep(2)
-                    st.session_state.pagina_actual = "📂 Mi Archivo Pedagógico"
-                    st.rerun()
-                except Exception as e: st.error(f"Error: {e}")
-        
-        with col_d:
-            # Key única también para descartar
-            if st.button("🗑️ Descartar", key="btn_descartar_inteligente"):
-                st.session_state.plan_actual = ""
-                st.rerun()
-
     # --- VISUALIZACIÓN Y GUARDADO ---
     if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.divider()
