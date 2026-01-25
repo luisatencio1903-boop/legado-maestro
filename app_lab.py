@@ -636,20 +636,35 @@ if st.session_state.redirigir_a_archivo:
 # --- VISTA: HOME (PANTALLA DE INICIO) ---
 if st.session_state.pagina_actual == "HOME":
     
-    # Encabezado de Acciones Rápidas (Para móvil)
-    col_clean, col_space, col_logout = st.columns([1, 1, 1])
+    # Encabezado de Acciones Rápidas (3 Botones: Actualizar, Limpiar, Salir)
+    col_update, col_clean, col_logout = st.columns([1.2, 1, 1])
     
+    # 1. BOTÓN ACTUALIZAR (CONEXIÓN NUBE)
+    with col_update:
+        if st.button("♻️ ACTUALIZAR", help="Forzar descarga de alumnos y planes nuevos de Google Sheets"):
+            # Esto borra la memoria caché de la Base de Datos
+            st.cache_data.clear()
+            st.toast("☁️ Conectando con Google Sheets...", icon="🔄")
+            time.sleep(1)
+            st.success("¡Sistema Sincronizado!")
+            time.sleep(1)
+            st.rerun()
+
+    # 2. BOTÓN LIMPIAR (MEMORIA LOCAL)
     with col_clean:
-        if st.button("🧹 Limpiar", help="Borrar memoria temporal"):
+        if st.button("🧹 LIMPIAR", help="Borrar texto en pantalla y reiniciar variables temporales"):
+            # Esto solo borra lo que estás haciendo en el momento (No la base de datos)
             st.session_state.plan_actual = ""
             st.session_state.actividad_detectada = ""
             st.session_state.eval_resultado = ""
-            st.toast("Memoria limpiada")
+            st.session_state.temp_propuesta_ia = ""
+            st.toast("✨ Mesa de trabajo limpia")
             time.sleep(0.5)
             st.rerun()
             
+    # 3. BOTÓN SALIR
     with col_logout:
-        if st.button("🔒 Salir", type="primary", help="Cerrar sesión"):
+        if st.button("🔒 SALIR", type="primary", help="Cerrar sesión segura"):
             st.session_state.auth = False
             st.session_state.u = None
             st.query_params.clear() 
@@ -668,7 +683,7 @@ if st.session_state.pagina_actual == "HOME":
         st.session_state.pagina_actual = "⏱️ Control de Asistencia"
         st.rerun()
     
-# 2. HERRAMIENTAS DE GESTIÓN (Home)
+    # 2. HERRAMIENTAS DE GESTIÓN (Home)
     st.markdown("### 🛠️ GESTIÓN DOCENTE")
     sel_principal = st.selectbox(
         "Herramientas de Planificación:",
@@ -679,7 +694,6 @@ if st.session_state.pagina_actual == "HOME":
             "🏗️ GESTIÓN DE PROYECTOS Y PLANES",           
             "🧠 PLANIFICADOR INTELIGENTE",                
             "📜 PLANIFICADOR MINISTERIAL"
-            # YA NO ESTÁ "Registro de Evaluaciones" AQUÍ
         ],
         key="home_gestion"
     )
