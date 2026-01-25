@@ -1468,29 +1468,21 @@ else:
             st.error(f"Error al cargar el historial: {e}")
 
 # -------------------------------------------------------------------------
-    # VISTA: MI ARCHIVO PEDAGÓGICO (v12.1 - EDITOR + RESPALDO EXCEL)
+    # VISTA: MI ARCHIVO PEDAGÓGICO (v12.3 - CSV SEGURO + EDITOR)
     # -------------------------------------------------------------------------
     elif opcion == "📂 Mi Archivo Pedagógico":
         st.markdown("### 📂 Mi Archivo Pedagógico Digital")
         
-        # Cargamos todas las bases de datos necesarias
         try:
-            # MODO ECO: ttl=60 para no saturar
             df_total_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=60)
             df_ejecucion = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=60)
             df_evaluaciones = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=60)
             
-            # CREAMOS LAS 3 PESTAÑAS
             tab_archivo, tab_consolidados, tab_historial_ev = st.tabs(["📝 Mis Planificaciones", "🏆 Actividades Consolidadas", "📊 Historial Evaluaciones"])
 
-            # =================================================================
-            # PESTAÑA 1: GESTIÓN CON EDITOR Y RESPALDO (MEJORADO)
-            # =================================================================
             with tab_archivo:
                 col_filtros, col_backup = st.columns([3, 1])
-                
                 with col_filtros:
-                    # 1. Selector de contexto
                     modo_suplencia_arch = st.checkbox("🦸 **Modo Suplencia**", key="check_supl_v72")
                     if modo_suplencia_arch:
                         usuario_a_consultar = st.selectbox("Ver archivo de:", LISTA_DOCENTES, key="sel_doc_v72")
@@ -1499,89 +1491,50 @@ else:
                         usuario_a_consultar = st.session_state.u['NOMBRE']
                         st.info("Viendo tus planificaciones.")
 
-                # 2. BOTÓN DE RESPALDO (NUEVO)
+                # RESPALDO CSV (SIN ERROR)
                 with col_backup:
-                    # Filtramos solo MIS datos para descargar
                     mis_datos_raw = df_total_planes[df_total_planes['USUARIO'] == st.session_state.u['NOMBRE']]
                     if not mis_datos_raw.empty:
-                        # Convertir a Excel en memoria
-                        buffer = io.BytesIO()
-                        # Usamos 'xlsxwriter' si está instalado, o el default
-                        with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-                            mis_datos_raw.to_excel(writer, sheet_name='MIS_PLANES', index=False)
-                        
-                        st.download_button(
-                            label="📥 Excel",
-                            data=buffer,
-                            file_name=f"Respaldo_{st.session_state.u['NOMBRE']}.xlsx",
-                            mime="application/vnd.ms-excel",
-                            help="Descargar copia de seguridad local"
-                        )
+                        csv_data = mis_datos_raw.to_csv(index=False).encode('utf-8')
+                        st.download_button(label="📥 Respaldo", data=csv_data, file_name=f"Respaldo_{st.session_state.u['NOMBRE']}.csv", mime="text/csv")
 
-                # 3. Plan Activo
                 pa = obtener_plan_activa_usuario(usuario_a_consultar)
                 if pa:
                     st.success(f"📌 **PLAN ACTIVO:** {pa['RANGO']}")
-                    if st.button(f"Desactivar", key="btn_des_v72"):
-                        desactivar_plan_activa(usuario_a_consultar)
-                        st.rerun()
-                else:
-                    st.warning(f"⚠️ {usuario_a_consultar} no tiene plan activo.")
+                    if st.button(f"Desactivar", key="btn_des_v72"): desactivar_plan_activa(usuario_a_consultar); st.rerun()
+                else: st.warning(f"⚠️ {usuario_a_consultar} no tiene plan activo.")
 
                 st.divider()
 
-                # 4. Historial con EDITOR (NUEVO)
                 mis_p = df_total_planes[df_total_planes['USUARIO'] == usuario_a_consultar]
-                
-                if mis_p.empty:
-                    st.warning("No hay planes guardados.")
+                if mis_p.empty: st.warning("No hay planes guardados.")
                 else:
                     for i, fila in mis_p.iloc[::-1].iterrows():
                         es_este_activo = (pa['CONTENIDO_PLAN'] == fila['CONTENIDO']) if pa else False
                         titulo_expander = f"{'⭐ ACTIVO | ' if es_este_activo else ''}📅 {fila['FECHA']} | {str(fila['TEMA'])[:35]}..."
-                        
                         with st.expander(titulo_expander):
-                            # --- EDITOR DE TEXTO ---
-                            contenido_editado = st.text_area(
-                                "Contenido del Plan (Editable):", 
-                                value=fila["CONTENIDO"], 
-                                height=300,
-                                key=f"editor_{i}"
-                            )
-                            
+                            contenido_editado = st.text_area("Contenido del Plan (Editable):", value=fila["CONTENIDO"], height=300, key=f"editor_{i}")
                             col_btns = st.columns([1, 1, 1])
                             
-                            # Botón Actualizar (Solo aparece si cambiaste algo)
                             if contenido_editado != fila["CONTENIDO"]:
                                 if col_btns[0].button("💾 Guardar Cambios", key=f"btn_upd_{i}"):
                                     df_total_planes.at[i, 'CONTENIDO'] = contenido_editado
                                     conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_total_planes)
-                                    st.success("Plan actualizado.")
-                                    time.sleep(1)
-                                    st.rerun()
+                                    st.success("Actualizado."); time.sleep(1); st.rerun()
 
-                            # Botón Activar (Usa el contenido editado)
                             if not es_este_activo:
                                 if col_btns[1].button(f"📌 Activar", key=f"act_btn_{i}"):
                                     establecer_plan_activa(usuario_a_consultar, str(i), contenido_editado, fila['FECHA'], "Taller/Aula")
-                                    st.success("Plan activado."); time.sleep(1); st.rerun()
+                                    st.success("Activado."); time.sleep(1); st.rerun()
                             
-                            # Botón Borrar
                             if not modo_suplencia_arch:
                                 if col_btns[2].button(f"🗑️ Borrar", key=f"del_btn_{i}"):
-                                    df_actualizado = df_total_planes.drop(i)
-                                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_actualizado)
-                                    st.rerun()
+                                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_total_planes.drop(i)); st.rerun()
 
-            # =================================================================
-            # PESTAÑA 2: ACTIVIDADES CONSOLIDADAS (INTACTO)
-            # =================================================================
             with tab_consolidados:
                 st.write("### ✅ Registro de Cumplimiento")
                 mis_logros = df_ejecucion[df_ejecucion['USUARIO'] == st.session_state.u['NOMBRE']]
-                
-                if mis_logros.empty:
-                    st.info("Aún no tienes actividades consolidadas.")
+                if mis_logros.empty: st.info("Sin registros.")
                 else:
                     st.metric("Actividades de la Semana", f"{len(mis_logros)} de 5")
                     for _, logro in mis_logros.iloc[::-1].iterrows():
@@ -1589,62 +1542,35 @@ else:
                             fotos = str(logro['EVIDENCIA_FOTO']).split('|')
                             c1, c2 = st.columns(2)
                             with c1:
-                                if len(fotos) > 0 and fotos[0].strip() != "-":
-                                    u1 = fotos[0].strip()
-                                    st.image(u1, caption="Proceso", use_container_width=True)
-                                    try: st.download_button("💾 Bajar F1", requests.get(u1).content, f"P_{logro['FECHA']}.jpg", "image/jpeg", key=f"d1_{logro['FECHA']}_{random.randint(0,999)}")
-                                    except: pass
+                                if len(fotos) > 0 and fotos[0].strip() != "-": st.image(fotos[0].strip(), caption="Proceso", use_container_width=True)
                             with c2:
-                                if len(fotos) > 1 and fotos[1].strip() != "-":
-                                    u2 = fotos[1].strip()
-                                    st.image(u2, caption="Culminación", use_container_width=True)
-                                    try: st.download_button("💾 Bajar F2", requests.get(u2).content, f"C_{logro['FECHA']}.jpg", "image/jpeg", key=f"d2_{logro['FECHA']}_{random.randint(0,999)}")
-                                    except: pass
-
+                                if len(fotos) > 1 and fotos[1].strip() != "-": st.image(fotos[1].strip(), caption="Culminación", use_container_width=True)
                             st.info(f"**Logro:** {logro['RESUMEN_LOGROS']}")
-                            
                             if st.button("🧠 Análisis IA", key=f"ia_{logro['FECHA']}_{random.randint(0,999)}"):
                                 p_ia = f"Analiza: {logro['ACTIVIDAD_TITULO']}. Logros: {logro['RESUMEN_LOGROS']}."
                                 st.markdown(f'<div class="eval-box">{generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":p_ia}], 0.4)}</div>', unsafe_allow_html=True)
 
-                            st.write("**🧒 Alumnos:**")
-                            ev_dia = df_evaluaciones[(df_evaluaciones['FECHA'] == logro['FECHA']) & (df_evaluaciones['USUARIO'] == st.session_state.u['NOMBRE'])]
-                            if ev_dia.empty: st.caption("Sin evaluaciones individuales.")
-                            else:
-                                for _, e in ev_dia.iterrows():
-                                    st.markdown(f"- **{e['ESTUDIANTE']}**: {e['EVALUACION_IA'][:100]}...")
-
-            # =================================================================
-            # PESTAÑA 3: HISTORIAL EVALUACIONES (MUDANZA COMPLETA)
-            # =================================================================
             with tab_historial_ev:
                 st.write("### 📊 Expediente Estudiantil")
                 mis_alumnos_data = df_evaluaciones[df_evaluaciones['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
-                
-                if mis_alumnos_data.empty:
-                    st.info("Sin registros.")
+                if mis_alumnos_data.empty: st.info("Sin registros.")
                 else:
                     lista_alumnos_hist = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
                     alumno_sel = st.selectbox("Seleccione Alumno:", lista_alumnos_hist, key="sel_al_hist_v11")
                     registros_alumno = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
-                    
                     st.metric("Total Notas", len(registros_alumno))
                     st.markdown("---")
-                    
                     for _, fila in registros_alumno.iloc[::-1].iterrows():
                         with st.expander(f"📅 {fila['FECHA']} | Evalúa: {fila['USUARIO']}"):
-                            if fila['USUARIO'] != st.session_state.u['NOMBRE']:
-                                st.caption(f"ℹ️ Por Suplente: {fila['USUARIO']}")
+                            if fila['USUARIO'] != st.session_state.u['NOMBRE']: st.caption(f"ℹ️ Por Suplente: {fila['USUARIO']}")
                             st.write(fila['EVALUACION_IA'])
-                            
                     if st.button("📝 Informe de Progreso", key="btn_gen_inf_v11"):
                         with st.spinner("Generando..."):
                             historico_txt = registros_alumno['EVALUACION_IA'].str.cat(sep='\n\n')
                             informe = generar_respuesta([{"role":"user","content":f"Genera informe de progreso para {alumno_sel}: {historico_txt}"}])
                             st.markdown(f'<div class="plan-box">{informe}</div>', unsafe_allow_html=True)
-
         except Exception as e:
-            st.error(f"Error técnico en el archivo: {e}")
+            st.error(f"Error técnico: {e}")
     # -------------------------------------------------------------------------
     # VISTAS: EXTRAS (ORIGINALES PRESERVADAS)
     # -------------------------------------------------------------------------
