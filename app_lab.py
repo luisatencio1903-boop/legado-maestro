@@ -1184,12 +1184,13 @@ else:
 # -------------------------------------------------------------------------
     # VISTA: GESTIÓN DE PROYECTOS Y PLANES (PARCHE V2: SELECTOR DE FASES)
     # -------------------------------------------------------------------------
-    elif opcion == "🏗️ GESTIÓN DE PROYECTOS Y PLANES":
+   elif opcion == "🏗️ GESTIÓN DE PROYECTOS Y PLANES":
         st.header("🏗️ Configuración de Proyectos y Planes")
         st.markdown("Defina su hoja de ruta. El sistema usará la **Etapa Seleccionada** para ajustar la exigencia práctica.")
 
-        # 1. LEER LA HOJA DE GOOGLE SHEETS
+        # 1. LEER LA HOJA DE GOOGLE SHEETS (MODO ECO ACTIVADO)
         try:
+            # CAMBIO AQUÍ: ttl=60 (Antes era 0)
             df_proy = conn.read(spreadsheet=URL_HOJA, worksheet="CONFIG_PROYECTO", ttl=60)
             mi_proy = df_proy[df_proy['USUARIO'] == st.session_state.u['NOMBRE']]
         except Exception as e:
