@@ -864,7 +864,7 @@ else:
         
         notas = st.text_area("Tema Generador / Referente Ético / Notas:", height=100)
 
-        # BOTÓN DE GENERACIÓN
+       # BOTÓN DE GENERACIÓN (FUSIÓN: ADAPTACIÓN MODAL + FORMATO ESTRICTO)
         if st.button("🚀 Generar Planificación Estructurada", type="primary"):
             # Validaciones
             if rango and notas:
@@ -873,13 +873,34 @@ else:
                 elif modalidad == "Taller de Educación Laboral (T.E.L.)" and not aula_especifica:
                     st.error("⚠️ Especifique el área del Taller.")
                 else:
-                    with st.spinner('Aplicando estrategias metodológicas del Currículo Bolivariano...'):
+                    with st.spinner('Analizando modalidad y adaptando vocabulario técnico...'):
+                        
+                        # 1. CEREBRO DE ADAPTACIÓN MODAL (Vocabulario específico)
+                        vocabulario_sugerido = ""
+                        tono_redaccion = ""
+                        
+                        if "Inicial" in modalidad:
+                            tono_redaccion = "AFECTIVO, LÚDICO Y MATERNAL. Todo es a través del juego."
+                            vocabulario_sugerido = "- INICIO: Cantamos, La ronda, La caja mágica, Títeres.\n- DESARROLLO: Rasgamos, Pintamos, Exploramos texturas.\n- CIERRE: Canción de guardar, Abrazos."
+                        elif "Taller" in modalidad:
+                            tono_redaccion = "TÉCNICO, PRE-PROFESIONAL Y PRODUCTIVO. Enfoque en el oficio."
+                            vocabulario_sugerido = "- INICIO: Normas de seguridad, Organización del puesto.\n- DESARROLLO: Lijamos, Medimos, Ensamblamos, Sembramos, Reparamos.\n- CIERRE: Limpieza del taller, Control de calidad."
+                        elif "Aula Integrada" in modalidad or "U.P.E." in modalidad:
+                            tono_redaccion = "PSICO-EDUCATIVO Y REMEDIAL."
+                            vocabulario_sugerido = "- INICIO: Gimnasia cerebral, Lectura motivadora.\n- DESARROLLO: Leemos, Escribimos, Calculamos, Asociamos.\n- CIERRE: Autocorrección, Refuerzo positivo."
+                        elif "Autismo" in modalidad or "C.A.I.P.A." in modalidad:
+                            tono_redaccion = "ESTRUCTURADO, VISUAL Y ANTICIPADO."
+                            vocabulario_sugerido = "- INICIO: Agenda visual, Anticipación.\n- DESARROLLO: Clasificamos, Seriamos, Encajamos, Trabajamos en mesa.\n- CIERRE: Guardado estructurado."
+                        else: 
+                            tono_redaccion = "SENSORIAL, HÁBITOS Y VIDA DIARIA."
+                            vocabulario_sugerido = "- INICIO: Rutina de saludo, Reconocimiento del cuerpo.\n- DESARROLLO: Estimulación sensorial, Higiene, Vestido.\n- CIERRE: Aseo, Merienda compartida."
+
+                        # 2. PREPARACIÓN DE VARIABLES
                         contexto_aula = f" del área de {aula_especifica}" if aula_especifica else ""
                         st.session_state.temp_tema = f"{modalidad}{contexto_aula} - {notas}"
-                        
                         tipo_plan = "P.E.I. (Individualizada)" if is_pei else "Grupal"
                         
-                        # --- TU PROMPT EXACTO (RESPETADO AL 100%) ---
+                        # 3. EL PROMPT MAESTRO (INTEGRADO)
                         prompt = f"""
                         ERES UN EXPERTO EN EL CURRÍCULO NACIONAL BOLIVARIANO (VENEZUELA).
                         
@@ -887,10 +908,14 @@ else:
                         TEMA: {notas}.
                         TIPO: {tipo_plan}. {(f"PERFIL ALUMNO: {perfil_alumno}" if is_pei else "")}
                         
+                        INSTRUCCIONES DE ADAPTACIÓN (CRÍTICO):
+                        - Tono: {tono_redaccion}
+                        - Vocabulario Sugerido: {vocabulario_sugerido}
+                        
                         🚨 **CORRECCIONES OBLIGATORIAS DE FORMATO Y PEDAGOGÍA:**
                         
                         1. **TÍTULO LÚDICO:** Escribe SOLO el nombre corto y llamativo. (Ej: "LOS COLORES MÁGICOS"). NO escribas la descripción al lado.
-                        2. **COMPETENCIA:** Usa la estructura (Verbo + Contenido + Contexto).
+                        2. **COMPETENCIA TÉCNICA:** Usa la estructura (Verbo Infinitivo + Contenido + Condición).
                         3. **ESTRATEGIAS (IMPORTANTE):** Debes usar TÉCNICAS DOCENTES REALES.
                            - Ejemplos válidos: Lluvia de ideas, Preguntas generadoras, Discusión socializada, Modelado docente, Práctica guiada, Dramatización, Trabajo cooperativo.
                            - NO describas la actividad en este punto. Solo nombra la técnica.
@@ -903,13 +928,13 @@ else:
                         
                         **2. COMPETENCIA TÉCNICA:** [Redacción completa]
                         
-                        **3. EXPLORACIÓN (Inicio):** [Dinámica de motivación]
+                        **3. EXPLORACIÓN (Inicio):** [Dinámica de motivación usando el vocabulario sugerido]
                         
                         **4. DESARROLLO (Proceso):** [Actividad central práctica paso a paso]
                         
                         **5. REFLEXIÓN (Cierre):** [Socialización de lo aprendido]
                         
-                        **6. ESTRATEGIAS:** [Menciona las técnicas usadas: Lluvia de ideas, Observación, etc.]
+                        **6. ESTRATEGIAS:** [Técnicas usadas]
                         
                         **7. RECURSOS:** [Materiales físicos]
                         
@@ -918,15 +943,15 @@ else:
                         Genera la planificación para LUNES, MARTES, MIÉRCOLES, JUEVES Y VIERNES del lapso {rango}.
                         """
                         
-                        # Generar y guardar en memoria
+                        # 4. GENERACIÓN
                         st.session_state.plan_actual = generar_respuesta([
                             {"role":"system","content":INSTRUCCIONES_TECNICAS},
                             {"role":"user","content":prompt}
-                        ], 0.5)
+                        ], 0.6)
+                        st.rerun()
                         
             else:
                 st.error("⚠️ Por favor ingrese el Lapso y el Tema.")
-
   # --- VISUALIZACIÓN Y GUARDADO (ESTO DEBE APARECER UNA SOLA VEZ) ---
     if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.divider()
