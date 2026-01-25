@@ -938,39 +938,6 @@ else:
             if st.button("🗑️ Descartar", key="del_smart"):
                 st.session_state.plan_actual = ""
                 st.rerun()
-
-    # --- VISUALIZACIÓN Y GUARDADO ---
-    if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
-        st.divider()
-        st.success("✅ **Planificación Generada**")
-        st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
-        
-        col_s, col_d = st.columns([2, 1])
-        with col_s:
-            if st.button("💾 Guardar en Archivo", key="save_smart"):
-                try:
-                    df = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-                    t = st.session_state.get('temp_tema', 'Planificación')
-                    
-                    row = pd.DataFrame([{
-                        "FECHA": ahora_ve().strftime("%d/%m/%Y"), 
-                        "USUARIO": st.session_state.u['NOMBRE'], 
-                        "TEMA": t[:50], 
-                        "CONTENIDO": st.session_state.plan_actual, 
-                        "ESTADO": "GUARDADO", 
-                        "HORA_INICIO": "--", "HORA_FIN": "--"
-                    }])
-                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df, row], ignore_index=True))
-                    st.success("Guardado correctamente.")
-                    time.sleep(2)
-                    st.session_state.pagina_actual = "📂 Mi Archivo Pedagógico"
-                    st.rerun()
-                except Exception as e: st.error(f"Error: {e}")
-        
-        with col_d:
-            if st.button("🗑️ Descartar", key="del_smart"):
-                st.session_state.plan_actual = ""
-                st.rerun()
     # --- VISUALIZACIÓN Y GUARDADO ---
     if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.divider()
