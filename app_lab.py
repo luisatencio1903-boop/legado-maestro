@@ -1442,24 +1442,27 @@ else:
         except Exception as e:
             st.error(f"Error al cargar el historial: {e}")
 
-   # -------------------------------------------------------------------------
-    # VISTA: MI ARCHIVO PEDAGÓGICO (v10.1 - INTEGRACIÓN TOTAL DE PLANES Y LOGROS)
+  # -------------------------------------------------------------------------
+    # VISTA: MI ARCHIVO PEDAGÓGICO (v11.0 - VERSIÓN INTEGRAL DEFINITIVA)
     # -------------------------------------------------------------------------
     elif opcion == "📂 Mi Archivo Pedagógico":
         st.markdown("### 📂 Mi Archivo Pedagógico Digital")
         
         # Cargamos todas las bases de datos necesarias para el cruce de información
         try:
-            df_total_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-            df_ejecucion = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=0)
-            df_evaluaciones = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
+            # MODO ECO: ttl=60 para no saturar
+            df_total_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=60)
+            df_ejecucion = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=60)
+            df_evaluaciones = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=60)
             
-            # Creamos las dos pestañas para separar Futuro (Planes) de Pasado (Logros)
-            tab_archivo, tab_consolidados = st.tabs(["📝 Mis Planificaciones", "🏆 Actividades Consolidadas"])
+            # CREAMOS LAS 3 PESTAÑAS (Planes, Logros y Evaluaciones)
+            tab_archivo, tab_consolidados, tab_historial_ev = st.tabs(["📝 Mis Planificaciones", "🏆 Actividades Consolidadas", "📊 Historial Evaluaciones"])
 
-            # --- PESTAÑA 1: GESTIÓN DE ARCHIVO Y PLANIFICACIONES (TU LÓGICA v7.2) ---
+            # =================================================================
+            # PESTAÑA 1: GESTIÓN DE PLANIFICACIONES (CÓDIGO ORIGINAL PRESERVADO)
+            # =================================================================
             with tab_archivo:
-                # 1. Selector de contexto (¿Mi archivo o el de un colega?) - PRESERVADO
+                # 1. Selector de contexto (¿Mi archivo o el de un colega?)
                 modo_suplencia_arch = st.checkbox("🦸 **Activar Modo Suplencia** (Gestionar archivo de un colega)", key="check_supl_v72")
                 
                 if modo_suplencia_arch:
@@ -1469,7 +1472,7 @@ else:
                     usuario_a_consultar = st.session_state.u['NOMBRE']
                     st.info("Viendo tus planificaciones guardadas.")
 
-                # 2. Mostrar estado actual del plan seleccionado - PRESERVADO
+                # 2. Mostrar estado actual del plan seleccionado
                 pa = obtener_plan_activa_usuario(usuario_a_consultar)
                 if pa:
                     st.success(f"📌 **PLAN ACTIVO de {usuario_a_consultar}:** {pa['RANGO']}")
@@ -1481,7 +1484,7 @@ else:
 
                 st.divider()
 
-                # 3. Mostrar historial de planes guardados - PRESERVADO
+                # 3. Mostrar historial de planes guardados
                 mis_p = df_total_planes[df_total_planes['USUARIO'] == usuario_a_consultar]
                 
                 if mis_p.empty:
@@ -1500,14 +1503,16 @@ else:
                                     establecer_plan_activa(usuario_a_consultar, str(i), fila['CONTENIDO'], fila['FECHA'], "Taller/Aula")
                                     st.success("Plan activado."); time.sleep(1); st.rerun()
                             
-                            # Seguridad: Solo el dueño puede borrar sus planes - PRESERVADO
+                            # Seguridad: Solo el dueño puede borrar sus planes
                             if not modo_suplencia_arch:
                                 if col_btns[1].button(f"🗑️ Borrar mi plan", key=f"del_btn_{i}"):
                                     df_actualizado = df_total_planes.drop(i)
                                     conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_actualizado)
                                     st.rerun()
 
-            # --- PESTAÑA 2: ACTIVIDADES CONSOLIDADAS (LA NUEVA EVOLUCIÓN v10.1) ---
+            # =================================================================
+            # PESTAÑA 2: ACTIVIDADES CONSOLIDADAS (CÓDIGO ORIGINAL PRESERVADO)
+            # =================================================================
             with tab_consolidados:
                 st.write("### ✅ Registro de Cumplimiento y Evidencias")
                 # Aquí siempre mostramos lo del docente logueado para sus méritos
@@ -1522,7 +1527,7 @@ else:
 
                     for _, logro in mis_logros.iloc[::-1].iterrows():
                         with st.expander(f"✅ LOGRO: {logro['FECHA']} | {logro['ACTIVIDAD_TITULO']}"):
-                            # 1. Fotos con Botones de Descarga - v10.1
+                            # 1. Fotos con Botones de Descarga
                             fotos = str(logro['EVIDENCIA_FOTO']).split('|')
                             c1, c2 = st.columns(2)
                             
@@ -1544,12 +1549,12 @@ else:
 
                             st.info(f"**Experiencia Docente:** {logro['RESUMEN_LOGROS']}")
                             
-                            # 2. Botón de Análisis de IA - PRESERVADO
+                            # 2. Botón de Análisis de IA
                             if st.button("🧠 Ver Análisis de Logro (IA)", key=f"ia_{logro['FECHA']}_{random.randint(0,999)}"):
                                 p_ia = f"Analiza esta actividad pedagógica: {logro['ACTIVIDAD_TITULO']}. Logros: {logro['RESUMEN_LOGROS']}. Valora el impacto en Educación Especial."
                                 st.markdown(f'<div class="eval-box">{generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":p_ia}], 0.4)}</div>', unsafe_allow_html=True)
 
-                            # 3. Cruce con Estudiantes - PRESERVADO
+                            # 3. Cruce con Estudiantes
                             st.write("**🧒 Alumnos evaluados en esta actividad:**")
                             ev_dia = df_evaluaciones[(df_evaluaciones['FECHA'] == logro['FECHA']) & (df_evaluaciones['USUARIO'] == st.session_state.u['NOMBRE'])]
                             if ev_dia.empty: st.caption("Sin evaluaciones individuales.")
@@ -1557,9 +1562,41 @@ else:
                                 for _, e in ev_dia.iterrows():
                                     st.markdown(f"- **{e['ESTUDIANTE']}**: {e['EVALUACION_IA'][:100]}...")
 
+            # =================================================================
+            # PESTAÑA 3: HISTORIAL EVALUACIONES (NUEVA INTEGRACIÓN)
+            # =================================================================
+            with tab_historial_ev:
+                st.write("### 📊 Expediente Estudiantil")
+                
+                # FILTRO CRÍTICO: El docente solo ve los alumnos de los que es TITULAR
+                mis_alumnos_data = df_evaluaciones[df_evaluaciones['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
+                
+                if mis_alumnos_data.empty:
+                    st.info("Aún no hay evaluaciones registradas para tus alumnos.")
+                else:
+                    lista_alumnos_hist = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
+                    alumno_sel = st.selectbox("Seleccione Alumno para ver su historial:", lista_alumnos_hist, key="sel_al_hist_v11")
+                    
+                    registros_alumno = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
+                    
+                    st.metric("Total de Evaluaciones", len(registros_alumno))
+                    st.markdown("---")
+                    
+                    # Mostrar registros del más reciente al más antiguo
+                    for _, fila in registros_alumno.iloc[::-1].iterrows():
+                        with st.expander(f"📅 {fila['FECHA']} | Evalúa: {fila['USUARIO']}"):
+                            if fila['USUARIO'] != st.session_state.u['NOMBRE']:
+                                st.caption(f"ℹ️ Esta nota fue cargada por un docente suplente ({fila['USUARIO']})")
+                            st.write(fila['EVALUACION_IA'])
+                            
+                    if st.button("📝 Generar Informe de Progreso", key="btn_gen_inf_v11"):
+                        with st.spinner("Consolidando información..."):
+                            historico_txt = registros_alumno['EVALUACION_IA'].str.cat(sep='\n\n')
+                            informe = generar_respuesta([{"role":"user","content":f"Genera un informe técnico de progreso para {alumno_sel} basado en estas evaluaciones: {historico_txt}"}])
+                            st.markdown(f'<div class="plan-box">{informe}</div>', unsafe_allow_html=True)
+
         except Exception as e:
             st.error(f"Error técnico en el archivo: {e}")
-
     # -------------------------------------------------------------------------
     # VISTAS: EXTRAS (ORIGINALES PRESERVADAS)
     # -------------------------------------------------------------------------
