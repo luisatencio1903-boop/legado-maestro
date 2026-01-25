@@ -810,7 +810,7 @@ else:
             st.info("✅ Registro completo.")
             if st.button("Volver"): st.session_state.pagina_actual="HOME"; st.rerun()
 # -------------------------------------------------------------------------
-    # VISTA: PLANIFICADOR INTELIGENTE (MODALIDADES + PEI + SINÓNIMOS)
+    # VISTA: PLANIFICADOR INTELIGENTE (CORRECCIÓN VISUAL: LISTA VERTICAL)
     # -------------------------------------------------------------------------
     elif opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.markdown("**Generación de Planificación Pedagógica Especializada**")
@@ -819,7 +819,6 @@ else:
         with col1:
             rango = st.text_input("Lapso (Fechas):", placeholder="Ej: 26 al 30 de Enero")
         with col2:
-            # TU SELECTOR DE MODALIDADES (ESTRUCTURA ORIGINAL)
             modalidad = st.selectbox("Modalidad / Servicio:", [
                 "Taller de Educación Laboral (T.E.L.)",
                 "Instituto de Educación Especial (I.E.E.B.)",
@@ -839,7 +838,7 @@ else:
         perfil_alumno = ""
         if is_pei:
             perfil_alumno = st.text_area("Perfil del Alumno (Potencialidades y Necesidades):", 
-                                        placeholder="Ej: Estudiante con autismo, aprendizaje visual, requiere apoyo físico...")
+                                        placeholder="Describa brevemente al estudiante...")
         
         notas = st.text_area("Tema Generador / Referente Ético / Notas:", height=100)
 
@@ -852,13 +851,13 @@ else:
                 elif modalidad == "Taller de Educación Laboral (T.E.L.)" and not aula_especifica:
                     st.error("⚠️ Especifique el área del Taller.")
                 else:
-                    with st.spinner('Redactando estrategias con variedad léxica...'):
+                    with st.spinner('Estructurando formato vertical y redacción...'):
                         contexto_aula = f" del área de {aula_especifica}" if aula_especifica else ""
                         st.session_state.temp_tema = f"{modalidad}{contexto_aula} - {notas}"
                         
                         tipo_plan = "P.E.I. (Individualizada)" if is_pei else "Grupal"
                         
-                        # PROMPT CON LA REGLA DE SINÓNIMOS AÑADIDA
+                        # PROMPT CON FORMATO VISUAL ESTRICTO
                         prompt = f"""
                         ERES UN EXPERTO PEDAGOGO VENEZOLANO.
                         ENCABEZADO OBLIGATORIO: 
@@ -869,40 +868,36 @@ else:
                         ---
 
                         REGLAS DE REDACCIÓN (ANTI-ROBOT):
-                        1. **VARIEDAD LÉXICA (OBLIGATORIO):** NO empieces todos los días igual.
-                           - NO uses siempre "Invitamos a".
-                           - USA SINÓNIMOS: "Damos inicio", "Exploramos hoy", "Manos a la obra", "Nos reunimos para", "Jugamos a", "Descubrimos".
-                        2. **ACTIVIDADES VIVENCIALES:** Nada abstracto. Todo debe ser práctico (Recortar, limpiar, pintar, ordenar).
-                        3. **COMPETENCIAS TÉCNICAS:** Usa la estructura (Acción + Objeto + Condición).
+                        1. **VARIEDAD LÉXICA:** Usa sinónimos para el inicio (Damos inicio, Exploramos, Manos a la obra). NO repitas "Invitamos".
+                        2. **ACTIVIDADES VIVENCIALES:** Todo práctico (Tocar, oler, armar).
+                        3. **COMPETENCIAS TÉCNICAS:** Estructura (Acción + Objeto + Condición).
 
-                        INSTRUCCIÓN DE TIEMPO:
-                        La planificación DEBE comenzar por el día **LUNES** y terminar el **VIERNES** del lapso {rango}.
-
-                        ESTRUCTURA TÉCNICA (OBLIGATORIA PARA CADA DÍA):
-                        Usa una lista vertical rígida. Deja doble salto de línea entre puntos.
+                        INSTRUCCIÓN DE FORMATO VISUAL (CRÍTICO):
+                        - NO escribas los puntos seguidos en la misma línea.
+                        - OBLIGATORIO: Deja una línea vacía entre el punto 1, el 2, el 3, etc.
+                        - Usa este formato exacto:
 
                         ### [DÍA Y FECHA]
                         
-                        **1. TÍTULO LÚDICO:** (Nombre creativo)
+                        **1. TÍTULO LÚDICO:** [Contenido]
                         
-                        **2. COMPETENCIA TÉCNICA:** (Verbo + Objeto + Condición)
+                        **2. COMPETENCIA TÉCNICA:** [Contenido]
                         
-                        **3. EXPLORACIÓN (Inicio):** (Dinámica inicial variada)
+                        **3. EXPLORACIÓN (Inicio):** [Contenido]
                         
-                        **4. DESARROLLO (Proceso):** (Actividad vivencial central)
+                        **4. DESARROLLO (Proceso):** [Contenido]
                         
-                        **5. REFLEXIÓN (Cierre):** (Intercambio de saberes)
+                        **5. REFLEXIÓN (Cierre):** [Contenido]
                         
-                        **6. ESTRATEGIAS:** (Mediación docente)
+                        **6. ESTRATEGIAS:** [Contenido]
                         
-                        **7. RECURSOS:** (Materiales concretos)
+                        **7. RECURSOS:** [Contenido]
                         
                         ---------------------------------------------------
                         
-                        REPETIR ESTA ESTRUCTURA PARA LUNES, MARTES, MIÉRCOLES, JUEVES Y VIERNES.
+                        Genera la planificación completa para LUNES, MARTES, MIÉRCOLES, JUEVES Y VIERNES del lapso {rango}.
                         """
                         
-                        # Generamos y guardamos (SIN RERUN)
                         st.session_state.plan_actual = generar_respuesta([
                             {"role":"system","content":INSTRUCCIONES_TECNICAS},
                             {"role":"user","content":prompt}
@@ -911,6 +906,38 @@ else:
             else:
                 st.error("⚠️ Por favor ingrese el Lapso y el Tema.")
 
+    # --- VISUALIZACIÓN Y GUARDADO ---
+    if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
+        st.divider()
+        st.success("✅ **Planificación Generada**")
+        st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
+        
+        col_s, col_d = st.columns([2, 1])
+        with col_s:
+            if st.button("💾 Guardar en Archivo", key="save_smart"):
+                try:
+                    df = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                    t = st.session_state.get('temp_tema', 'Planificación')
+                    
+                    row = pd.DataFrame([{
+                        "FECHA": ahora_ve().strftime("%d/%m/%Y"), 
+                        "USUARIO": st.session_state.u['NOMBRE'], 
+                        "TEMA": t[:50], 
+                        "CONTENIDO": st.session_state.plan_actual, 
+                        "ESTADO": "GUARDADO", 
+                        "HORA_INICIO": "--", "HORA_FIN": "--"
+                    }])
+                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df, row], ignore_index=True))
+                    st.success("Guardado correctamente.")
+                    time.sleep(2)
+                    st.session_state.pagina_actual = "📂 Mi Archivo Pedagógico"
+                    st.rerun()
+                except Exception as e: st.error(f"Error: {e}")
+        
+        with col_d:
+            if st.button("🗑️ Descartar", key="del_smart"):
+                st.session_state.plan_actual = ""
+                st.rerun()
     # --- VISUALIZACIÓN Y GUARDADO ---
     if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.divider()
