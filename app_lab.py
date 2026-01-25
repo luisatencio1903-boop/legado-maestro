@@ -809,8 +809,8 @@ else:
         else:
             st.info("✅ Registro completo.")
             if st.button("Volver"): st.session_state.pagina_actual="HOME"; st.rerun()
- # -------------------------------------------------------------------------
-    # VISTA: PLANIFICADOR INTELIGENTE (VERSIÓN 6.3 - ESTRUCTURA "LUNES DE HIERRO")
+# -------------------------------------------------------------------------
+    # VISTA: PLANIFICADOR INTELIGENTE (ESTRUCTURA ORIGINAL + CORRECCIÓN DE FLUJO)
     # -------------------------------------------------------------------------
     elif opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.markdown("**Generación de Planificación Pedagógica Especializada**")
@@ -819,6 +819,7 @@ else:
         with col1:
             rango = st.text_input("Lapso (Fechas):", placeholder="Ej: 26 al 30 de Enero")
         with col2:
+            # TU SELECTOR DE MODALIDADES ORIGINAL
             modalidad = st.selectbox("Modalidad / Servicio:", [
                 "Taller de Educación Laboral (T.E.L.)",
                 "Instituto de Educación Especial (I.E.E.B.)",
@@ -842,7 +843,9 @@ else:
         
         notas = st.text_area("Tema Generador / Referente Ético / Notas:", height=100)
 
+        # BOTÓN DE GENERACIÓN
         if st.button("🚀 Generar Planificación Estructurada", type="primary"):
+            # Validaciones
             if rango and notas:
                 if is_pei and not perfil_alumno:
                     st.error("⚠️ Para P.E.I. debe describir el perfil.")
@@ -855,15 +858,18 @@ else:
                         
                         tipo_plan = "P.E.I. (Individualizada)" if is_pei else "Grupal"
                         
+                        # TU PROMPT ORIGINAL "LUNES DE HIERRO"
                         prompt = f"""
                         ERES UN EXPERTO PEDAGOGO VENEZOLANO.
                         ENCABEZADO OBLIGATORIO: 
                         📝 **Planificación Sugerida (Currículo Nacional Bolivariano)**
                         *Adaptada para la Modalidad de: {modalidad}{contexto_aula}*
+                        *Tipo: {tipo_plan}*
+                        {(f"PERFIL ALUMNO: {perfil_alumno}" if is_pei else "")}
                         ---
 
                         INSTRUCCIÓN DE TIEMPO:
-                        Ignora que hoy es sábado. La planificación DEBE comenzar obligatoriamente por el día **LUNES** y terminar el **VIERNES** del lapso {rango}.
+                        Ignora que hoy es sábado o domingo. La planificación DEBE comenzar obligatoriamente por el día **LUNES** y terminar el **VIERNES** del lapso {rango}.
 
                         ESTRUCTURA TÉCNICA (OBLIGATORIA PARA CADA DÍA):
                         Usa una lista vertical rígida. No amontones los puntos. 
@@ -890,11 +896,47 @@ else:
                         REPETIR ESTA ESTRUCTURA PARA LUNES, MARTES, MIÉRCOLES, JUEVES Y VIERNES.
                         """
                         
+                        # Generamos y guardamos en memoria (SIN RERUN AQUI)
                         st.session_state.plan_actual = generar_respuesta([
                             {"role":"system","content":INSTRUCCIONES_TECNICAS},
                             {"role":"user","content":prompt}
-                        ], 0.4) # Temperatura más baja para máxima precisión estructural
-                        st.rerun()
+                        ], 0.4)
+                        
+            else:
+                st.error("⚠️ Por favor ingrese el Lapso y el Tema.")
+
+    # --- VISUALIZACIÓN Y GUARDADO (FUERA DEL BOTÓN PARA QUE NO DESAPAREZCA) ---
+    if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
+        st.divider()
+        st.success("✅ **Planificación Generada**")
+        st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
+        
+        col_s, col_d = st.columns([2, 1])
+        with col_s:
+            if st.button("💾 Guardar en Archivo", key="save_smart"):
+                try:
+                    df = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                    t = st.session_state.get('temp_tema', 'Planificación')
+                    # Usamos ahora_ve()
+                    row = pd.DataFrame([{
+                        "FECHA": ahora_ve().strftime("%d/%m/%Y"), 
+                        "USUARIO": st.session_state.u['NOMBRE'], 
+                        "TEMA": t[:50], 
+                        "CONTENIDO": st.session_state.plan_actual, 
+                        "ESTADO": "GUARDADO", 
+                        "HORA_INICIO": "--", "HORA_FIN": "--"
+                    }])
+                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df, row], ignore_index=True))
+                    st.success("Guardado correctamente.")
+                    time.sleep(2)
+                    st.session_state.pagina_actual = "📂 Mi Archivo Pedagógico"
+                    st.rerun()
+                except Exception as e: st.error(f"Error: {e}")
+        
+        with col_d:
+            if st.button("🗑️ Descartar", key="del_smart"):
+                st.session_state.plan_actual = ""
+                st.rerun()
 # -------------------------------------------------------------------------
     # VISTA: AULA VIRTUAL (v11.2 - SINCRONIZACIÓN DE NOMBRES)
     # -------------------------------------------------------------------------
