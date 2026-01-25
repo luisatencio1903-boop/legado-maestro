@@ -1220,21 +1220,19 @@ else:
                         st.balloons(); st.success("✅ Jornada culminada."); time.sleep(3); st.session_state.pagina_actual = "HOME"; st.rerun()
                     else: st.error("Resumen requerido.")
 # -------------------------------------------------------------------------
-    # VISTA: GESTIÓN DE PROYECTOS (v11.5 - FIX MEMORIA CACHÉ)
+    # VISTA: GESTIÓN DE PROYECTOS (v11.6 - MENÚ DINÁMICO REAL)
     # -------------------------------------------------------------------------
     elif opcion == "🏗️ GESTIÓN DE PROYECTOS Y PLANES":
         st.header("🏗️ Configuración de Proyectos y Planes")
-        st.markdown("Defina su hoja de ruta. El sistema usará la **Etapa Seleccionada** para ajustar la exigencia práctica.")
+        st.markdown("Defina su hoja de ruta. El sistema adaptará los menús según su **Modalidad**.")
 
-        # 1. LEER LA HOJA DE GOOGLE SHEETS (CON CACHÉ 60s)
+        # 1. LEER DATOS (Con Caché y Prioridad Local)
         try:
             df_proy = conn.read(spreadsheet=URL_HOJA, worksheet="CONFIG_PROYECTO", ttl=60)
             mi_proy = df_proy[df_proy['USUARIO'] == st.session_state.u['NOMBRE']]
-        except Exception as e:
-            st.error(f"Error de conexión: {e}")
-            mi_proy = pd.DataFrame()
+        except: mi_proy = pd.DataFrame()
 
-        # 2. CARGAR VALORES DE LA NUBE (POR DEFECTO)
+        # Variables por defecto
         d_servicio = "Taller de Educación Laboral (T.E.L.)"
         d_pa = ""
         d_psp = ""
@@ -1242,6 +1240,7 @@ else:
         d_dias = []
         d_activo = False
 
+        # Cargar de Nube
         if not mi_proy.empty:
             fila = mi_proy.iloc[0]
             d_servicio = fila['SERVICIO'] if pd.notna(fila['SERVICIO']) else d_servicio
@@ -1251,69 +1250,79 @@ else:
             d_dias = str(fila['DIAS_PSP']).split(",") if pd.notna(fila['DIAS_PSP']) and fila['DIAS_PSP'] else []
             d_activo = True if str(fila['ACTIVO']) == "TRUE" else False
 
-        # --- CORRECCIÓN CRÍTICA: PRIORIDAD A LA MEMORIA LOCAL ---
-        # Si acabas de guardar, usamos el dato de tu bolsillo, no el de la nube vieja
+        # Cargar de Memoria Local (Prioridad)
         if 'PROYECTO_LOCAL' in st.session_state:
             local = st.session_state['PROYECTO_LOCAL']
-            # Sobrescribimos los datos de la nube con los locales recientes
             d_servicio = local.get('SERVICIO', d_servicio)
             d_pa = local.get('NOMBRE_PA', d_pa)
             d_psp = local.get('NOMBRE_PSP', d_psp)
             d_fase_full = local.get('FASE_ACTUAL', d_fase_full)
-            
-            # Recuperar días y estado activo
-            if local.get('DIAS_PSP'):
-                d_dias = local['DIAS_PSP'].split(",")
-            
-            # AQUÍ ESTÁ EL FIX DEL CHECKBOX:
-            val_activo = local.get('ACTIVO') # Puede ser "TRUE", True, "True"
-            d_activo = True if str(val_activo).upper() == "TRUE" else False
+            if local.get('DIAS_PSP'): d_dias = local['DIAS_PSP'].split(",")
+            d_activo = True if str(local.get('ACTIVO')).upper() == "TRUE" else False
 
-        # 3. EL FORMULARIO INTELIGENTE
+        # =====================================================================
+        # PASO 1: SELECTOR DE SERVICIO (FUERA DEL FORMULARIO PARA SER DINÁMICO)
+        # =====================================================================
+        st.subheader("1. Identidad del Servicio")
+        
+        # Calcular índice inicial basado en la memoria
+        idx_serv = 0
+        if "Inicial" in d_servicio: idx_serv = 1
+        elif "Aula Integrada" in d_servicio: idx_serv = 2
+        
+        # ESTE SELECTBOX AHORA REFRESCA LA PÁGINA AL CAMBIAR
+        servicio_seleccionado = st.selectbox(
+            "¿A qué Modalidad o Servicio pertenece usted?",
+            ["Taller de Educación Laboral (T.E.L.)", "Educación Inicial / I.E.E. (Escuela)", "Aula Integrada / U.P.E. / C.A.I.P.A."],
+            index=idx_serv,
+            key="selector_servicio_dinamico"
+        )
+        
+        # Detectamos si es taller AHORA MISMO (Visualmente)
+        es_taller_visual = "Taller" in servicio_seleccionado
+        es_especial_visual = "Aula Integrada" in servicio_seleccionado
+
+        st.divider()
+
+        # =====================================================================
+        # PASO 2: EL FORMULARIO (ADAPTABLE)
+        # =====================================================================
         with st.form("form_proyecto_maestro"):
-            
-            # A. SERVICIO
-            st.subheader("1. Identidad del Servicio")
-            idx_serv = 0
-            if "Inicial" in d_servicio: idx_serv = 1
-            elif "Aula Integrada" in d_servicio: idx_serv = 2
-            
-            servicio_seleccionado = st.selectbox(
-                "¿A qué Modalidad o Servicio pertenece usted?",
-                ["Taller de Educación Laboral (T.E.L.)", "Educación Inicial / I.E.E. (Escuela)", "Aula Integrada / U.P.E. / C.A.I.P.A."],
-                index=idx_serv
-            )
-
-            st.divider()
-
-            # B. DATOS DEL PLAN
             st.subheader("2. Datos del Plan")
-            es_taller = "Taller" in servicio_seleccionado
             
+            # A. CAMPO PROYECTO DE APRENDIZAJE (Etiqueta Dinámica)
             label_pa = "Nombre del Proyecto de Aprendizaje (P.A.):"
             placeholder_pa = "Ej: Conociendo los animales..."
             
-            if "Aula Integrada" in servicio_seleccionado:
+            if es_especial_visual:
                 label_pa = "Nombre de la Línea de Acción / P.A.I.:"
-                placeholder_pa = "Ej: Superando barreras..."
-            elif es_taller:
-                placeholder_pa = "Ej: Seguridad e Higiene Industrial..."
+                placeholder_pa = "Ej: Superando barreras de lecto-escritura..."
+            elif es_taller_visual:
+                label_pa = "Nombre del Proyecto de Aprendizaje (P.A.) - Aula:"
+                placeholder_pa = "Ej: Valores para el Trabajo Liberador..."
             
             nombre_pa = st.text_input(label_pa, value=d_pa, placeholder=placeholder_pa)
 
+            # B. CAMPOS EXCLUSIVOS DE TALLER (Solo aparecen si es Taller)
             nombre_psp = ""
             dias_psp = []
             
-            if es_taller:
-                st.info("🛠️ **Modo Taller Activado:**")
-                nombre_psp = st.text_input("Nombre del Proyecto Socio-Productivo (P.S.P.):", value=d_psp, placeholder="Ej: Vivero...")
-                dias_psp = st.multiselect("Días de Práctica:", ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"], default=[d.strip() for d in d_dias if d.strip()])
+            if es_taller_visual:
+                st.info("🛠️ **Configuración de Taller Laboral:**")
+                nombre_psp = st.text_input("Nombre del Proyecto Socio-Productivo (P.S.P.) - Taller:", 
+                                         value=d_psp, 
+                                         placeholder="Ej: Vivero Ornamental...")
+                
+                dias_psp = st.multiselect("Días de Práctica (Con Instructor):", 
+                                        ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"], 
+                                        default=[d.strip() for d in d_dias if d.strip()])
             else:
+                # Si no es taller, guardamos "N/A" internamente
                 nombre_psp = "N/A"
 
-            # C. FASE (Con recuperación inteligente)
+            # C. FASE (Cronología)
             st.markdown("---")
-            st.subheader("3. Etapa del Proyecto (Cronología)")
+            st.subheader("3. Etapa del Proyecto")
             
             opciones_fases = [
                 "Fase 1: Diagnóstico, Sensibilización y Selección (Inicio)",
@@ -1322,10 +1331,9 @@ else:
                 "Fase 4: Cierre, Evaluación y Comercialización (Final)"
             ]
             
+            # Recuperar fase guardada
             index_fase = 0
             detalle_previo = d_fase_full
-            
-            # Buscamos qué fase estaba seleccionada
             for i, op in enumerate(opciones_fases):
                 if op.split(":")[0] in d_fase_full:
                     index_fase = i
@@ -1333,27 +1341,26 @@ else:
                     break
             
             fase_select = st.selectbox("Seleccione la Etapa Macro:", opciones_fases, index=index_fase)
-            detalle_fase = st.text_area("Detalle específico:", value=detalle_previo, placeholder="Ej: Iniciando la preparación...")
+            detalle_fase = st.text_area("Detalle específico de la semana:", value=detalle_previo)
 
             st.divider()
 
             # D. ACTIVACIÓN
             col_act, col_info = st.columns([1, 2])
             with col_act:
-                # El valor viene de la memoria local si existe, si no de la nube
                 activo = st.toggle("✅ ACTIVAR PROYECTO", value=d_activo)
             with col_info:
-                if activo: st.caption("Estado: **ACTIVO**. La IA priorizará este plan.")
-                else: st.caption("Estado: **PAUSADO**. Solo planificará por tema manual.")
+                if activo: st.caption("Estado: **ACTIVO**. La IA usará estos datos.")
+                else: st.caption("Estado: **PAUSADO**.")
 
             # BOTÓN GUARDAR
             if st.form_submit_button("💾 Guardar Configuración"):
                 fase_final = f"{fase_select} || Detalle: {detalle_fase}"
-                str_dias = ",".join(dias_psp) if es_taller else ""
+                str_dias = ",".join(dias_psp) if es_taller_visual else ""
                 str_activo = "TRUE" if activo else "FALSE"
                 
                 try:
-                    with st.spinner("Guardando..."):
+                    with st.spinner("Actualizando perfil..."):
                         # Lectura de seguridad
                         df_seg = conn.read(spreadsheet=URL_HOJA, worksheet="CONFIG_PROYECTO", ttl=0)
                         
@@ -1364,7 +1371,7 @@ else:
                         
                         nuevo_reg = pd.DataFrame([{
                             "USUARIO": st.session_state.u['NOMBRE'],
-                            "SERVICIO": servicio_seleccionado,
+                            "SERVICIO": servicio_seleccionado, # Usamos el del selector externo
                             "NOMBRE_PA": nombre_pa,
                             "NOMBRE_PSP": nombre_psp,
                             "FASE_ACTUAL": fase_final,
@@ -1374,7 +1381,7 @@ else:
                         
                         conn.update(spreadsheet=URL_HOJA, worksheet="CONFIG_PROYECTO", data=pd.concat([df_clean, nuevo_reg], ignore_index=True))
                         
-                        # GUARDAR EN MEMORIA LOCAL (CRÍTICO PARA QUE NO SE BORRE EL CHECK)
+                        # Actualizar Memoria Local
                         st.session_state['PROYECTO_LOCAL'] = {
                             'ACTIVO': str_activo,
                             'SERVICIO': servicio_seleccionado,
@@ -1384,12 +1391,12 @@ else:
                             'DIAS_PSP': str_dias
                         }
                         
-                        st.success("✅ Guardado.")
+                        st.success("✅ Configuración guardada.")
                         time.sleep(1)
                         st.rerun()
                         
                 except Exception as e:
-                    st.error(f"Error: {e}")
+                    st.error(f"Error al guardar: {e}")
    # -------------------------------------------------------------------------
     # VISTA: REGISTRO DE EVALUACIONES (v7.0 EXPEDIENTE COMPARTIDO)
     # -------------------------------------------------------------------------
