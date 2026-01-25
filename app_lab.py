@@ -838,7 +838,7 @@ if foto_sal:
                         time.sleep(3)
                         st.session_state.pagina_actual = "HOME"
                         st.rerun()
-else:
+        else:
             st.info("✅ Registro del día completado.")
             if st.button("⬅️ Volver"):
                 st.session_state.pagina_actual = "HOME"
