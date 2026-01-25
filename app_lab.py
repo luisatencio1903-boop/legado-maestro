@@ -1139,42 +1139,38 @@ else:
                         st.balloons(); st.success("✅ Actividad culminada."); time.sleep(3); st.session_state.pagina_actual = "HOME"; st.rerun()
                     else: st.error("Escribe el resumen antes de finalizar.")
 # -------------------------------------------------------------------------
-    # VISTA: GESTIÓN DE PROYECTOS Y PLANES (MÓDULO INTELIGENTE 7 COLUMNAS)
+    # VISTA: GESTIÓN DE PROYECTOS Y PLANES (PARCHE V2: SELECTOR DE FASES)
     # -------------------------------------------------------------------------
     elif opcion == "🏗️ GESTIÓN DE PROYECTOS Y PLANES":
         st.header("🏗️ Configuración de Proyectos y Planes")
-        st.markdown("Defina su hoja de ruta. La IA adaptará las planificaciones según su **Servicio** y la **Fase** del proyecto.")
+        st.markdown("Defina su hoja de ruta. El sistema usará la **Etapa Seleccionada** para ajustar la exigencia práctica.")
 
-        # 1. LEER LA HOJA DE GOOGLE SHEETS (CONFIG_PROYECTO)
+        # 1. LEER LA HOJA DE GOOGLE SHEETS
         try:
-            # Leemos sin caché (ttl=0) para ver cambios al instante
             df_proy = conn.read(spreadsheet=URL_HOJA, worksheet="CONFIG_PROYECTO", ttl=0)
-            # Filtramos solo la fila de ESTE usuario (Privacidad)
             mi_proy = df_proy[df_proy['USUARIO'] == st.session_state.u['NOMBRE']]
         except Exception as e:
             st.error(f"Error de conexión con la Base de Datos: {e}")
             mi_proy = pd.DataFrame()
 
-        # 2. CARGAR VALORES GUARDADOS (O dejar en blanco si es nuevo)
-        # Valores por defecto
-        d_servicio = "Taller de Educación Laboral (T.E.L.)" # Default
+        # 2. CARGAR VALORES GUARDADOS
+        d_servicio = "Taller de Educación Laboral (T.E.L.)"
         d_pa = ""
         d_psp = ""
-        d_fase = ""
+        d_fase_full = "" # Valor completo guardado (Ej: "Fase 2... || Detalles...")
         d_dias = []
         d_activo = False
 
         if not mi_proy.empty:
             fila = mi_proy.iloc[0]
-            # Recuperamos datos de las columnas
             d_servicio = fila['SERVICIO'] if pd.notna(fila['SERVICIO']) and fila['SERVICIO'] != "" else d_servicio
             d_pa = fila['NOMBRE_PA'] if pd.notna(fila['NOMBRE_PA']) else ""
             d_psp = fila['NOMBRE_PSP'] if pd.notna(fila['NOMBRE_PSP']) else ""
-            d_fase = fila['FASE_ACTUAL'] if pd.notna(fila['FASE_ACTUAL']) else ""
+            d_fase_full = fila['FASE_ACTUAL'] if pd.notna(fila['FASE_ACTUAL']) else ""
             d_dias = str(fila['DIAS_PSP']).split(",") if pd.notna(fila['DIAS_PSP']) and fila['DIAS_PSP'] != "" else []
             d_activo = True if str(fila['ACTIVO']) == "TRUE" else False
 
-        # 3. EL FORMULARIO INTELIGENTE
+        # 3. EL FORMULARIO INTELIGENTE (MEJORADO CON SELECTOR)
         with st.form("form_proyecto_maestro"):
             
             # --- SECCIÓN A: IDENTIDAD DEL SERVICIO ---
@@ -1186,8 +1182,7 @@ else:
                     "Educación Inicial / I.E.E. (Escuela)",
                     "Aula Integrada / U.P.E. / C.A.I.P.A."
                 ],
-                index=0 if "Taller" in d_servicio else (1 if "Inicial" in d_servicio else 2),
-                help="Esto define si trabajaremos con Proyectos Productivos o Planes de Atención."
+                index=0 if "Taller" in d_servicio else (1 if "Inicial" in d_servicio else 2)
             )
 
             st.divider()
@@ -1195,25 +1190,21 @@ else:
             # --- SECCIÓN B: CONTENIDO DEL PROYECTO ---
             st.subheader("2. Datos del Plan")
             
-            # LÓGICA CONDICIONAL VISUAL
             es_taller = "Taller" in servicio_seleccionado
             
-            # CAMPO 1: EL PEDAGÓGICO (Para todos, pero cambia el nombre)
+            # CAMPO 1: PEDAGÓGICO
             label_pa = "Nombre del Proyecto de Aprendizaje (P.A.):"
-            help_pa = "Tema generador pedagógico, valores o habilidades blandas."
-            
             if "Aula Integrada" in servicio_seleccionado:
                 label_pa = "Nombre de la Línea de Acción / P.A.I.:"
-                help_pa = "Enfoque remedial o plan de atención específico."
             
-            nombre_pa = st.text_input(label_pa, value=d_pa, help=help_pa, placeholder="Ej: Fortaleciendo la lectura / Conociendo mi entorno")
+            nombre_pa = st.text_input(label_pa, value=d_pa, placeholder="Ej: Fortaleciendo la lectura / Conociendo mi entorno")
 
-            # CAMPO 2: EL PRODUCTIVO (Solo aparece si es Taller)
+            # CAMPO 2: PRODUCTIVO (SOLO TALLER)
             nombre_psp = ""
             dias_psp = []
             
             if es_taller:
-                st.info("🛠️ **Modo Taller Activado:** Complete los datos del Proyecto Productivo.")
+                st.info("🛠️ **Modo Taller Activado:**")
                 nombre_psp = st.text_input("Nombre del Proyecto Socio-Productivo (P.S.P.):", 
                                           value=d_psp if d_psp != "N/A" else "",
                                           placeholder="Ej: Vivero Ornamental / Panadería Escolar")
@@ -1222,53 +1213,77 @@ else:
                                          ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
                                          default=[d.strip() for d in d_dias if d.strip()])
             else:
-                # Si no es taller, guardamos "N/A" internamente
-                nombre_psp = "N/A" 
+                nombre_psp = "N/A"
 
-            # CAMPO 3: FASE O MOMENTO (Para todos)
-            st.markdown("<br>", unsafe_allow_html=True)
-            fase_actual = st.text_area("Fase Actual / Momento:", 
-                                      value=d_fase,
-                                      help="Dígale a la IA en qué etapa están para que ajuste la dificultad.", 
-                                      placeholder="Ej: Estamos iniciando, solo teoría. / Estamos en plena producción para la venta.")
+            # --- SECCIÓN C: FASE O MOMENTO (SELECTOR ROBUSTO) ---
+            st.markdown("---")
+            st.subheader("3. Etapa del Proyecto (Cronología)")
+            
+            # Opciones estandarizadas para evitar confusión
+            opciones_fases = [
+                "Fase 1: Diagnóstico, Sensibilización y Selección (Inicio)",
+                "Fase 2: Formación Teórica y Planificación (Preparación)",
+                "Fase 3: Ejecución, Producción y Práctica (Desarrollo)",
+                "Fase 4: Cierre, Evaluación y Comercialización (Final)"
+            ]
+            
+            # Lógica para detectar qué fase estaba guardada
+            index_fase = 0
+            detalle_previo = d_fase_full
+            
+            # Intentamos buscar si alguna opción está dentro del texto guardado
+            for i, op in enumerate(opciones_fases):
+                if op.split(":")[0] in d_fase_full: # Busca "Fase 1", "Fase 2", etc.
+                    index_fase = i
+                    # Limpiamos el texto para dejar solo el detalle manual en el cuadro de abajo
+                    detalle_previo = d_fase_full.replace(op, "").replace(" || Detalle: ", "").strip()
+                    break
+            
+            # 1. El Selector (Obligatorio)
+            fase_select = st.selectbox("Seleccione la Etapa Macro en la que se encuentran:", opciones_fases, index=index_fase)
+            
+            # 2. El Detalle (Manual)
+            detalle_fase = st.text_area("Detalle específico de la semana (Contexto extra para la IA):", 
+                                      value=detalle_previo,
+                                      help="Escriba aquí qué están haciendo exactamente esta semana. Ej: 'Estamos comprando las semillas'.", 
+                                      placeholder="Ej: Iniciando la preparación del terreno.")
 
             st.divider()
 
-            # --- SECCIÓN C: ACTIVACIÓN ---
+            # --- SECCIÓN D: ACTIVACIÓN ---
             col_act, col_info = st.columns([1, 2])
             with col_act:
                 activo = st.toggle("✅ ACTIVAR PROYECTO", value=d_activo)
             with col_info:
                 if activo:
-                    st.success("La IA priorizará este proyecto sobre el tema manual.")
+                    st.caption("Estado: **ACTIVO**. La IA priorizará este plan.")
                 else:
-                    st.warning("Proyecto en PAUSA. La IA usará solo el tema manual semanal.")
+                    st.caption("Estado: **PAUSADO**. Solo planificará por tema manual.")
 
             # BOTÓN DE GUARDAR
             if st.form_submit_button("💾 Guardar Configuración"):
                 
-                # Preparar datos para las 7 COLUMNAS
+                # Concatenamos Selector + Detalle para guardar un solo string robusto
+                fase_final_guardar = f"{fase_select} || Detalle: {detalle_fase}"
+                
                 str_dias = ",".join(dias_psp) if es_taller else ""
                 str_activo = "TRUE" if activo else "FALSE"
                 
-                # Limpieza de datos viejos
                 df_clean = df_proy[df_proy['USUARIO'] != st.session_state.u['NOMBRE']]
                 
-                # Crear el nuevo registro (7 COLUMNAS EXACTAS)
                 nuevo_reg = pd.DataFrame([{
                     "USUARIO": st.session_state.u['NOMBRE'],
-                    "SERVICIO": servicio_seleccionado,      # <--- La columna nueva vital
+                    "SERVICIO": servicio_seleccionado,
                     "NOMBRE_PA": nombre_pa,
                     "NOMBRE_PSP": nombre_psp,
-                    "FASE_ACTUAL": fase_actual,
+                    "FASE_ACTUAL": fase_final_guardar, # <--- AQUÍ SE GUARDA TODO JUNTO
                     "DIAS_PSP": str_dias,
                     "ACTIVO": str_activo
                 }])
                 
-                # Guardar en Google Sheets
                 try:
                     conn.update(spreadsheet=URL_HOJA, worksheet="CONFIG_PROYECTO", data=pd.concat([df_clean, nuevo_reg], ignore_index=True))
-                    st.success("✅ ¡Configuración actualizada! Ahora la IA conoce su contexto.")
+                    st.success("✅ ¡Etapa del Proyecto actualizada!")
                     time.sleep(1.5)
                     st.rerun()
                 except Exception as e:
