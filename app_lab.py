@@ -321,10 +321,11 @@ if 'av_resumen' not in st.session_state: st.session_state.av_resumen = ""
 def obtener_plan_activa_usuario(usuario_nombre):
     """
     Obtiene la planificación activa actual del usuario desde la nube.
+    MODO ECO ACTIVADO: Consulta cada 60 segundos, no cada 5.
     """
     try:
-        # Leemos con un TTL bajo (5 seg) para tener datos frescos
-        df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=5)
+        # CAMBIO AQUÍ: ttl=60 (Antes era 5)
+        df_activa = conn.read(spreadsheet=URL_HOJA, worksheet="PLAN_ACTIVA", ttl=60)
         
         # Filtramos por usuario y estado activo
         plan_activa = df_activa[
