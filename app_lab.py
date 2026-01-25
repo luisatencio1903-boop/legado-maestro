@@ -876,12 +876,12 @@ else:
         
         notas = st.text_area("Tema Generador / Referente Ético / Notas:", height=100)
 
-      # =============================================================================
-        # BOTÓN MAESTRO: GENERACIÓN HÍBRIDA (PROYECTO + MANUAL + VALIDACIONES)
+     # =============================================================================
+        # BOTÓN MAESTRO: FUSIÓN TOTAL (VALIDACIONES + PROYECTO + VOCABULARIO ANTIGUO)
         # =============================================================================
         if st.button("🚀 Generar Planificación Estructurada", type="primary"):
             
-            # 1. VALIDACIONES DE SEGURIDAD (CONSERVANDO TU LÓGICA ANTIGUA)
+            # 1. VALIDACIONES DE SEGURIDAD (TU LÓGICA ORIGINAL INTACTA)
             if not rango or not notas:
                 st.error("⚠️ Por favor ingrese el Lapso y el Tema.")
             elif is_pei and not perfil_alumno:
@@ -889,59 +889,91 @@ else:
             elif modalidad == "Taller de Educación Laboral (T.E.L.)" and not aula_especifica:
                 st.error("⚠️ Especifique el área del Taller.")
             else:
-                with st.spinner('Conectando con el Cerebro Pedagógico y la Base de Datos...'):
+                with st.spinner('Fusionando lógica de Proyectos con Vocabulario Técnico...'):
                     
-                    # 2. RECUPERAR DATOS DEL PROYECTO (NUEVA LÓGICA)
+                    # ---------------------------------------------------------
+                    # A. RECUPERAR VOCABULARIO Y TONO (TU ESENCIA ORIGINAL)
+                    # ---------------------------------------------------------
+                    vocabulario_sugerido = ""
+                    tono_redaccion = ""
+                    
+                    if "Inicial" in modalidad:
+                        tono_redaccion = "AFECTIVO, LÚDICO Y MATERNAL. Todo es a través del juego."
+                        vocabulario_sugerido = "- INICIO: Cantamos, La ronda, Títeres.\n- DESARROLLO: Rasgamos, Pintamos, Exploramos texturas.\n- CIERRE: Canción de guardar, Abrazos."
+                    elif "Taller" in modalidad:
+                        tono_redaccion = "TÉCNICO, PRE-PROFESIONAL Y PRODUCTIVO. Enfoque en el oficio."
+                        vocabulario_sugerido = "- INICIO: Normas de seguridad, Organización.\n- DESARROLLO: Lijamos, Medimos, Ensamblamos, Sembramos, Reparamos.\n- CIERRE: Limpieza del taller, Control de calidad."
+                    elif "Aula Integrada" in modalidad or "U.P.E." in modalidad:
+                        tono_redaccion = "PSICO-EDUCATIVO Y REMEDIAL."
+                        vocabulario_sugerido = "- INICIO: Gimnasia cerebral, Lectura motivadora.\n- DESARROLLO: Leemos, Escribimos, Calculamos, Asociamos.\n- CIERRE: Autocorrección, Refuerzo positivo."
+                    elif "Autismo" in modalidad or "C.A.I.P.A." in modalidad:
+                        tono_redaccion = "ESTRUCTURADO, VISUAL Y ANTICIPADO."
+                        vocabulario_sugerido = "- INICIO: Agenda visual, Anticipación.\n- DESARROLLO: Clasificamos, Seriamos, Encajamos.\n- CIERRE: Guardado estructurado."
+                    else: 
+                        tono_redaccion = "SENSORIAL, HÁBITOS Y VIDA DIARIA."
+                        vocabulario_sugerido = "- INICIO: Rutina de saludo.\n- DESARROLLO: Estimulación sensorial, Higiene, Vestido.\n- CIERRE: Aseo, Merienda."
+
+                    # ---------------------------------------------------------
+                    # B. LÓGICA DE PROYECTOS (LA INTELIGENCIA NUEVA)
+                    # ---------------------------------------------------------
                     texto_instruccion_proyecto = ""
-                    etiqueta_titulo_dinamica = "TÍTULO DE LA ACTIVIDAD" # Default
+                    etiqueta_titulo_dinamica = "TÍTULO DE LA ACTIVIDAD"
                     
-                    try:
-                        # Leemos la hoja de configuración
-                        df_p = conn.read(spreadsheet=URL_HOJA, worksheet="CONFIG_PROYECTO", ttl=60)
-                        # Buscamos al usuario actual
-                        user_p = df_p[df_p['USUARIO'] == st.session_state.u['NOMBRE']]
+                    # INTENTO DE LECTURA HÍBRIDA (BOLSILLO -> NUBE)
+                    datos_proyecto = None
+                    if 'PROYECTO_LOCAL' in st.session_state:
+                        datos_proyecto = st.session_state['PROYECTO_LOCAL']
+                    
+                    if datos_proyecto is None:
+                        try:
+                            df_p = conn.read(spreadsheet=URL_HOJA, worksheet="CONFIG_PROYECTO", ttl=60)
+                            user_p = df_p[df_p['USUARIO'] == st.session_state.u['NOMBRE']]
+                            if not user_p.empty:
+                                fila = user_p.iloc[0]
+                                datos_proyecto = {
+                                    'ACTIVO': str(fila['ACTIVO']).upper().strip(),
+                                    'SERVICIO': fila['SERVICIO'],
+                                    'NOMBRE_PA': fila['NOMBRE_PA'],
+                                    'NOMBRE_PSP': fila['NOMBRE_PSP'],
+                                    'FASE_ACTUAL': fila['FASE_ACTUAL'],
+                                    'DIAS_PSP': str(fila['DIAS_PSP'])
+                                }
+                        except:
+                            datos_proyecto = None
+
+                    # INTERPRETACIÓN DE DATOS
+                    if datos_proyecto and datos_proyecto.get('ACTIVO') == "TRUE":
+                        servicio = datos_proyecto['SERVICIO']
+                        pa = datos_proyecto['NOMBRE_PA']
+                        psp = datos_proyecto['NOMBRE_PSP']
+                        fase = datos_proyecto['FASE_ACTUAL']
+                        dias_prod = datos_proyecto['DIAS_PSP']
                         
-                        if not user_p.empty and str(user_p.iloc[0]['ACTIVO']) == "TRUE":
-                            # ¡HAY PROYECTO ACTIVO!
-                            fila = user_p.iloc[0]
-                            servicio = fila['SERVICIO']
-                            pa = fila['NOMBRE_PA']
-                            psp = fila['NOMBRE_PSP']
-                            fase = fila['FASE_ACTUAL']
-                            dias_prod = str(fila['DIAS_PSP'])
-                            
-                            # Lógica de Etiquetas según Servicio
-                            if "Taller" in servicio:
-                                etiqueta_titulo_dinamica = "TÍTULO (P.A. o P.S.P.)"
-                                texto_instruccion_proyecto = f"""
-                                🚨 **MODO TALLER LABORAL ACTIVO:**
-                                - P.A. (Aula): "{pa}" | P.S.P. (Taller): "{psp}"
-                                - FASE: {fase} | DÍAS PRÁCTICOS: {dias_prod}
-                                INSTRUCCIÓN: Si el día es {dias_prod}, planifica PRÁCTICA DEL P.S.P. Si no, planifica TEORÍA DEL P.A. o TEMA MANUAL.
-                                """
-                            elif "Aula Integrada" in servicio or "U.P.E." in servicio:
-                                etiqueta_titulo_dinamica = "LÍNEA DE ACCIÓN"
-                                texto_instruccion_proyecto = f"""
-                                🚨 **MODO ATENCIÓN ESPECIALIZADA:**
-                                - LÍNEA: "{pa}" | FASE: {fase}
-                                INSTRUCCIÓN: Centra todo en esta línea de acción correctiva.
-                                """
-                            else: # Inicial / IEEB
-                                etiqueta_titulo_dinamica = "TÍTULO LÚDICO DEL PROYECTO"
-                                texto_instruccion_proyecto = f"""
-                                🚨 **MODO PROYECTO DE APRENDIZAJE:**
-                                - PROYECTO: "{pa}" | MOMENTO: {fase}
-                                INSTRUCCIÓN: Planifica en base a este proyecto lúdico.
-                                """
+                        if "Taller" in servicio:
+                            etiqueta_titulo_dinamica = "TÍTULO (P.A. o P.S.P.)"
+                            texto_instruccion_proyecto = f"""
+                            🚨 **PRIORIDAD: PROYECTO TALLER ACTIVO**
+                            - P.S.P. (Taller): "{psp}" | P.A. (Aula): "{pa}"
+                            - FASE: {fase} | DÍAS PRÁCTICOS: {dias_prod}
+                            INSTRUCCIÓN: Si hoy es {dias_prod}, planifica PRÁCTICA DEL P.S.P. Si no, usa el P.A.
+                            """
+                        elif "Aula Integrada" in servicio or "U.P.E." in servicio:
+                            etiqueta_titulo_dinamica = "LÍNEA DE ACCIÓN"
+                            texto_instruccion_proyecto = f"""
+                            🚨 **MODO ATENCIÓN ESPECIALIZADA:** LÍNEA: "{pa}" | FASE: {fase}.
+                            """
                         else:
-                            # MODO MANUAL PURO
-                            texto_instruccion_proyecto = "NO HAY PROYECTO ACTIVO. Planifica EXCLUSIVAMENTE basado en el TEMA MANUAL."
-                            etiqueta_titulo_dinamica = "TÍTULO DE LA CLASE"
+                            etiqueta_titulo_dinamica = "TÍTULO DEL PROYECTO"
+                            texto_instruccion_proyecto = f"""
+                            🚨 **MODO PROYECTO DE APRENDIZAJE:** PROYECTO: "{pa}" | MOMENTO: {fase}.
+                            """
+                    else:
+                        texto_instruccion_proyecto = "NO HAY PROYECTO ACTIVO. Planifica basado en el TEMA MANUAL."
+                        etiqueta_titulo_dinamica = "TÍTULO DE LA CLASE"
 
-                    except Exception as e:
-                        texto_instruccion_proyecto = "Planifica basado en TEMA MANUAL (Sin conexión a proyectos)."
-
-                    # 3. CONSTRUCCIÓN DEL PROMPT (CONSERVANDO TUS REGLAS DE FORMATO)
+                    # ---------------------------------------------------------
+                    # C. CONSTRUCCIÓN DEL PROMPT (FUSIÓN DE AMBOS MUNDOS)
+                    # ---------------------------------------------------------
                     tipo_plan = "Individualizado (P.E.I.)" if is_pei else "Grupal"
                     perfil_txt = f"PERFIL DEL ALUMNO: {perfil_alumno}" if is_pei else ""
                     contexto_aula = f" del área de {aula_especifica}" if aula_especifica else ""
@@ -953,76 +985,37 @@ else:
                     TEMA MANUAL: {notas}.
                     TIPO: {tipo_plan} {perfil_txt}
                     
+                    DATOS DEL PROYECTO:
                     {texto_instruccion_proyecto}
                     
-                    🚨 **REGLAS OBLIGATORIAS DE FORMATO Y PEDAGOGÍA (TU ESTÁNDAR DE CALIDAD):**
+                    ESTILO Y VOCABULARIO REQUERIDO:
+                    - Tono: {tono_redaccion}
+                    - Palabras clave sugeridas: {vocabulario_sugerido}
                     
-                    1. **{etiqueta_titulo_dinamica}:** Escribe SOLO el nombre corto.
-                    2. **COMPETENCIA TÉCNICA:** Estructura OBLIGATORIA: Verbo Infinitivo + Contenido + Condición.
-                    3. **ESTRATEGIAS:** Usa SOLO TÉCNICAS REALES (Lluvia de ideas, Modelado docente, Práctica guiada, Trabajo cooperativo). NO describas la actividad aquí.
+                    🚨 **REGLAS OBLIGATORIAS DE FORMATO:**
+                    1. **{etiqueta_titulo_dinamica}:** Solo nombre corto.
+                    2. **COMPETENCIA TÉCNICA:** Verbo Infinitivo + Contenido + Condición.
+                    3. **ESTRATEGIAS:** Solo técnicas reales (Lluvia de ideas, Modelado, etc.).
                     
                     ESTRUCTURA DE SALIDA (Doble espacio, Lunes a Viernes):
-
                     ### [DÍA Y FECHA]
-                    
                     **1. {etiqueta_titulo_dinamica}:** [Nombre]
-                    
-                    **2. COMPETENCIA TÉCNICA:** [Redacción Experta]
-                    
-                    **3. EXPLORACIÓN (Inicio):** [Dinámica motivadora / Revisión de conocimientos]
-                    
-                    **4. DESARROLLO (Proceso):** [Actividad central. Si es día de Taller Práctico, detalla el uso de herramientas con el Instructor. Si es Aula, detalla la mediación.]
-                    
-                    **5. REFLEXIÓN (Cierre):** [Socialización / Valoración del trabajo]
-                    
-                    **6. ESTRATEGIAS:** [Listado de técnicas]
-                    
-                    **7. RECURSOS:** [Materiales físicos y de provecho]
-                    
+                    **2. COMPETENCIA TÉCNICA:** [Redacción]
+                    **3. EXPLORACIÓN (Inicio):** [Actividad]
+                    **4. DESARROLLO (Proceso):** [Actividad]
+                    **5. REFLEXIÓN (Cierre):** [Actividad]
+                    **6. ESTRATEGIAS:** [Técnicas]
+                    **7. RECURSOS:** [Materiales]
                     ---------------------------------------------------
                     Genera la planificación para el lapso: {rango}.
                     """
                     
-                    # 4. GENERACIÓN
+                    # 4. GENERACIÓN IA
                     st.session_state.plan_actual = generar_respuesta([
                         {"role":"system","content":INSTRUCCIONES_TECNICAS}, 
                         {"role":"user","content":prompt}
                     ], 0.6)
                     st.rerun()
-  # --- VISUALIZACIÓN Y GUARDADO (ESTO DEBE APARECER UNA SOLA VEZ) ---
-    if st.session_state.plan_actual and opcion == "🧠 PLANIFICADOR INTELIGENTE":
-        st.divider()
-        st.success("✅ **Planificación Generada**")
-        st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
-        
-        col_s, col_d = st.columns([2, 1])
-        with col_s:
-            # HE CAMBIADO LA KEY AQUI A "btn_guardar_final" PARA QUE NO DE ERROR
-            if st.button("💾 Guardar en Archivo", key="btn_guardar_final"):
-                try:
-                    df = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-                    t = st.session_state.get('temp_tema', 'Planificación')
-                    
-                    row = pd.DataFrame([{
-                        "FECHA": ahora_ve().strftime("%d/%m/%Y"), 
-                        "USUARIO": st.session_state.u['NOMBRE'], 
-                        "TEMA": t[:50], 
-                        "CONTENIDO": st.session_state.plan_actual, 
-                        "ESTADO": "GUARDADO", 
-                        "HORA_INICIO": "--", "HORA_FIN": "--"
-                    }])
-                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df, row], ignore_index=True))
-                    st.success("Guardado correctamente.")
-                    time.sleep(2)
-                    st.session_state.pagina_actual = "📂 Mi Archivo Pedagógico"
-                    st.rerun()
-                except Exception as e: st.error(f"Error: {e}")
-        
-        with col_d:
-            # HE CAMBIADO LA KEY AQUI TAMBIÉN A "btn_descartar_final"
-            if st.button("🗑️ Descartar", key="btn_descartar_final"):
-                st.session_state.plan_actual = ""
-                st.rerun()
 # -------------------------------------------------------------------------
     # VISTA: AULA VIRTUAL (v11.2 - SINCRONIZACIÓN DE NOMBRES)
     # -------------------------------------------------------------------------
