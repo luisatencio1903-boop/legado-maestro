@@ -1758,9 +1758,11 @@ else:
                                         df_new = df_ejecucion.drop(logro.name)
                                         conn.update(spreadsheet=URL_HOJA, worksheet="EJECUCION", data=df_new)
                                         st.warning("🗑️ Registro eliminado correctamente.")
-                                        time.sleep(1)
-                                        st.rerun()
-         # PESTAÑA 3: HISTORIAL (Asegúrate que esté indentado dentro de 'with tab_historial_ev:')
+                                       time.sleep(1)
+                        st.rerun()
+            except: 
+                pass 
+
     with tab_historial_ev:
         st.subheader("📊 Expediente Estudiantil (Edición Activada)")
         
