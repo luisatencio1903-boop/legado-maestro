@@ -1551,71 +1551,53 @@ else:
                 except Exception as e:
                     st.error(f"Error al guardar: {e}")
   # -------------------------------------------------------------------------
-    # VISTA: REGISTRO DE EVALUACIONES (v12.5 BLINDADO CON COLUMNAS)
+    # VISTA: REGISTRO DE EVALUACIONES (v12.5 PRUEBA FINAL)
     # -------------------------------------------------------------------------
     elif opcion == "📊 Registro de Evaluaciones":
+        # 1. CAMBIO VISIBLE: Si no ves este título, NO se ha guardado el archivo
+        st.title("🛠️ MODO MANTENIMIENTO: BORRADO") 
+        
         try:
             df_historial = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
             
-            # Filtro de Titularidad
+            # Filtro
             mis_alumnos_data = df_historial[df_historial['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
             
             if mis_alumnos_data.empty:
-                st.info("📂 No hay evaluaciones registradas.")
+                st.info("No hay datos.")
             else:
-                lista_alumnos_hist = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
-                alumno_sel = st.selectbox("Seleccione Alumno:", lista_alumnos_hist)
+                lista = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
+                alumno_sel = st.selectbox("Alumno:", lista)
+                registros = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
                 
-                registros_alumno = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
-                
-                st.metric("Total Notas", len(registros_alumno))
-                st.markdown("---")
-                
-                # BUCLE DE TARJETAS
-                for _, fila in registros_alumno.iloc[::-1].iterrows():
+                st.write(f"Encontradas: {len(registros)}")
+                st.divider()
+
+                # BUCLE SIMPLIFICADO
+                for _, fila in registros.iloc[::-1].iterrows():
                     
-                    # 1. Abrimos tarjeta
-                    with st.expander(f"📅 {fila['FECHA']} | Evalúa: {fila['USUARIO']}"):
-                        
-                        # Contenido
-                        if fila['USUARIO'] != st.session_state.u['NOMBRE']:
-                            st.caption(f"ℹ️ Suplente: {fila['USUARIO']}")
-                        
+                    # 1. LA TARJETA (Solo para ver)
+                    with st.expander(f"📅 {fila['FECHA']} | {fila['USUARIO']}"):
                         st.write(fila['EVALUACION_IA'])
-                        st.caption(f"Original: {fila.get('ANECDOTA', '-')}")
-
-                        # 2. ZONA DE BORRADO (CON COLUMNAS PARA FORZAR VISIBILIDAD)
-                        st.markdown("---") # Línea divisoria
-                        
-                        # --- AQUÍ ESTÁ LA MAGIA QUE FALTABA EN TU CÓDIGO ---
-                        c_text, c_btn = st.columns([0.6, 0.4]) 
-                        
-                        with c_text:
-                            st.caption("⚠️ **ZONA DE PELIGRO**: Borrar nota.")
-                        
-                        with c_btn:
-                            # Botón ROJO (primary) para que resalte
-                            if st.button("🗑️ BORRAR NOTA", key=f"del_{fila.name}", type="primary"):
-                                df_ev_new = df_historial.drop(fila.name)
-                                conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_ev_new)
-                                st.success("¡Eliminado!")
-                                time.sleep(1)
-                                st.rerun()
-
-                # BOTÓN DE INFORME (FUERA DEL BUCLE)
-                st.markdown("---")
-                if st.button("📝 Generar Informe de Progreso", key="btn_inf_progreso"):
-                    with st.spinner("Generando informe..."):
-                        historico_txt = registros_alumno['EVALUACION_IA'].str.cat(sep='\n\n')
-                        prompt_text = f"Genera un informe de progreso para {alumno_sel}: {historico_txt}"
-                        try:
-                            informe = generar_respuesta([{"role":"user", "content":prompt_text}])
-                            st.markdown(f'<div class="plan-box">{informe}</div>', unsafe_allow_html=True)
-                        except Exception as e:
-                            st.error(f"Error IA: {e}")
+                    
+                    # 2. EL BOTÓN (AFUERA DE LA TARJETA - IMPOSIBLE NO VERLO)
+                    # Está al mismo nivel que el expander, no adentro.
+                    col_a, col_b = st.columns([0.7, 0.3])
+                    with col_a:
+                        st.caption("👆 Revisa la nota arriba antes de borrar.")
+                    with col_b:
+                        # Botón directo, sin complicaciones
+                        if st.button("🗑️ BORRAR", key=f"del_{fila.name}", type="primary"):
+                            df_new = df_historial.drop(fila.name)
+                            conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_new)
+                            st.success("¡Borrado!")
+                            time.sleep(1)
+                            st.rerun()
+                    
+                    st.divider() # Línea para separar cada nota
 
         except Exception as e:
-            st.error(f"Error cargando evaluaciones: {e}")
+            st.error(f"Error: {e}")
 # -------------------------------------------------------------------------
     # VISTA: MI ARCHIVO PEDAGÓGICO (v12.4 - BITÁCORA SEMANAL + CRUCE DE DATOS)
     # -------------------------------------------------------------------------
