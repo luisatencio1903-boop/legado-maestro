@@ -1737,6 +1737,17 @@ else:
                                 
                                 st.markdown("---")
 
+                                # --- ZONA DE CORRECCIÓN (v12.5) ---
+                                with st.expander("⚙️ Opciones de Registro"):
+                                    st.caption("Si este registro es un error o está duplicado, elimínalo aquí.")
+                                    # Usamos key única para no confundir botones
+                                    if st.button("🗑️ Eliminar Actividad", key=f"del_act_{sem}_{i}"):
+                                        # Borrado seguro usando el índice exacto
+                                        df_new = df_ejecucion.drop(logro.name)
+                                        conn.update(spreadsheet=URL_HOJA, worksheet="EJECUCION", data=df_new)
+                                        st.warning("🗑️ Registro eliminado correctamente.")
+                                        time.sleep(1)
+                                        st.rerun()
             # =================================================================
             # PESTAÑA 3: HISTORIAL EVALUACIONES (INTACTO)
             # =================================================================
@@ -1789,6 +1800,12 @@ else:
             res = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":d}])
             st.info(res)
 
-# --- FIN DEL DOCUMENTO ---
+# --- PIE DE PÁGINA: SUPER DOCENTE ---
 st.markdown("---")
-st.caption("SUPER DOCENTE 1.0 | Desarrollado para EDUCACION ESPECIAL por Bachiller Luis Atencio")
+col_f1, col_f2 = st.columns([3, 1])
+with col_f1:
+    st.markdown("**© 2026 SUPER DOCENTE**")
+    st.caption("Tecnología educativa hecha en La Concepción, Zulia.")
+    st.caption("Desarrollado por: **Luis Atencio** (Bachiller Docente).")
+with col_f2:
+    st.caption(f"v12.5 | {ahora_ve().strftime('%I:%M %p')}")
