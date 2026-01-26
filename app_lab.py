@@ -1555,56 +1555,65 @@ else:
     # -------------------------------------------------------------------------
     elif opcion == "📊 Registro de Evaluaciones":
         try:
+            # 1. Carga de datos
             df_historial = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
             
-            # FILTRO CRÍTICO: El docente solo ve los alumnos de los que es TITULAR
+            # 2. FILTRO DE SEGURIDAD: Solo mostrar alumnos del docente actual
             mis_alumnos_data = df_historial[df_historial['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
             
             if mis_alumnos_data.empty:
-                st.info("Aún no hay evaluaciones registradas para tus alumnos.")
+                st.info("📂 Aún no hay evaluaciones registradas bajo tu titularidad.")
             else:
+                # 3. Selector de Alumno
                 lista_alumnos_hist = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
-                alumno_sel = st.selectbox("Seleccione Alumno para ver su historial:", lista_alumnos_hist)
+                alumno_sel = st.selectbox("Seleccione Alumno para ver su expediente:", lista_alumnos_hist)
                 
+                # Filtramos las notas de ESE alumno
                 registros_alumno = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
                 
                 st.metric("Total de Evaluaciones", len(registros_alumno))
                 st.markdown("---")
                 
-                # 1. BUCLE DE TARJETAS (HISTORIAL)
+                # 4. BUCLE DE HISTORIAL (Tarjetas)
                 for _, fila in registros_alumno.iloc[::-1].iterrows():
-                    # A. Abrimos la tarjeta
+                    
+                    # A. La Tarjeta (Expander)
                     with st.expander(f"📅 {fila['FECHA']} | Evalúa: {fila['USUARIO']}"):
-                        # Contenido de la tarjeta
-                        if fila['USUARIO'] != st.session_state.u['NOMBRE']:
-                            st.caption(f"ℹ️ Suplente: {fila['USUARIO']}")
-                        st.write(fila['EVALUACION_IA'])
-                        st.caption(f"Original: {fila.get('ANECDOTA', '-')}")
                         
+                        # Contenido visual
+                        if fila['USUARIO'] != st.session_state.u['NOMBRE']:
+                            st.caption(f"ℹ️ Evaluado por suplente: {fila['USUARIO']}")
+                        
+                        st.write(fila['EVALUACION_IA'])
+                        # Usamos .get para evitar error si no existe la columna
+                        st.caption(f"Original: {fila.get('ANECDOTA', '-')}")
+
                         # B. BOTÓN DE BORRAR (Alineado DENTRO de la tarjeta)
                         st.markdown("---")
+                        # Fíjate: este 'if' está alineado con 'st.write' de arriba
                         if st.button("🗑️ Eliminar Nota", key=f"del_nota_{fila.name}"):
+                            # Borrado seguro
                             df_ev_new = df_historial.drop(fila.name)
                             conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_ev_new)
-                            st.warning("🗑️ Eliminada.")
+                            st.warning("🗑️ Nota eliminada.")
                             time.sleep(1)
                             st.rerun()
 
-                # 2. BOTÓN DE INFORME (Alineado FUERA del bucle)
+                # 5. GENERADOR DE INFORMES (Alineado AFUERA del bucle)
                 st.markdown("---")
                 if st.button("📝 Generar Informe de Progreso", key="btn_inf_progreso"):
-                    with st.spinner("Analizando historial..."):
+                    with st.spinner("Analizando historial académico..."):
                         historico_txt = registros_alumno['EVALUACION_IA'].str.cat(sep='\n\n')
                         prompt_text = f"Genera un informe de progreso técnico para {alumno_sel} basado en: {historico_txt}"
                         try:
-                            # Usamos tu función de IA existente
+                            # Función de IA existente
                             informe = generar_respuesta([{"role":"user", "content":prompt_text}])
                             st.markdown(f'<div class="plan-box">{informe}</div>', unsafe_allow_html=True)
-                        except:
-                            st.error("Error conectando con la IA. Intente de nuevo.")
+                        except Exception as e_ia:
+                            st.error(f"Error IA: {e_ia}")
 
         except Exception as e:
-            st.error(f"Error al cargar el historial: {e}")
+            st.error(f"Error al cargar el módulo de evaluaciones: {e}")
 # -------------------------------------------------------------------------
     # VISTA: MI ARCHIVO PEDAGÓGICO (v12.4 - BITÁCORA SEMANAL + CRUCE DE DATOS)
     # -------------------------------------------------------------------------
