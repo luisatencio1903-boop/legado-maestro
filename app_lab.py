@@ -1760,43 +1760,56 @@ else:
                                         st.warning("🗑️ Registro eliminado correctamente.")
                                         time.sleep(1)
                                         st.rerun()
-           # --- CÓDIGO NUEVO PARA LA PESTAÑA 3 (CON BOTÓN DE BORRAR) ---
+          # ---------------------------------------------------------------------
+        # CONTENIDO DE LA PESTAÑA 3: EXPEDIENTE (CORREGIDO)
+        # ---------------------------------------------------------------------
         st.subheader("📊 Expediente Estudiantil (Edición Activada)")
-        
-        # Leemos la base de datos fresca para poder borrar
-        df_historial = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
-        mis_alumnos_data = df_historial[df_historial['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
 
-        if mis_alumnos_data.empty:
-            st.info("No hay registros en el expediente.")
-        else:
-            # Selector de alumno (con clave única para no chocar con el otro menú)
-            lista_alumnos_hist = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
-            alumno_sel = st.selectbox("Seleccione Alumno:", lista_alumnos_hist, key="sel_tab3_v125")
+        try:
+            # 1. Cargar datos frescos
+            df_historial = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
             
-            registros_alumno = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
-            
-            st.caption(f"Total de notas: {len(registros_alumno)}")
-            st.divider()
+            # 2. Filtrar por docente titular
+            mis_alumnos_data = df_historial[df_historial['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
 
-            # Bucle de tarjetas
-            for _, fila in registros_alumno.iloc[::-1].iterrows():
-                with st.expander(f"📅 {fila['FECHA']} | Evalúa: {fila['USUARIO']}"):
-                    st.write(fila['EVALUACION_IA'])
-                    st.caption(f"Original: {fila.get('ANECDOTA', '-')}")
-                    
-                    # --- ZONA DE BORRADO (Aquí está tu botón esperado) ---
-                    st.divider()
-                    col_a, col_b = st.columns([0.6, 0.4])
-                    with col_a:
-                        st.caption("⚠️ **Zona de Peligro**")
-                    with col_b:
-                        if st.button("🗑️ ELIMINAR NOTA", key=f"del_tab3_{fila.name}", type="primary"):
-                            df_new = df_historial.drop(fila.name)
-                            conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_new)
-                            st.success("¡Eliminada!")
-                            time.sleep(1)
-                            st.rerun()
+            if mis_alumnos_data.empty:
+                st.info("📭 No se encontraron registros en el expediente.")
+            else:
+                # 3. Selector de Alumno (Con key única para no chocar)
+                lista_alumnos_hist = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
+                alumno_sel = st.selectbox("Seleccione Alumno:", lista_alumnos_hist, key="sel_tab3_fix")
+                
+                registros_alumno = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
+                
+                st.caption(f"Total de notas encontradas: {len(registros_alumno)}")
+                st.divider()
+
+                # 4. Bucle de Tarjetas
+                for _, fila in registros_alumno.iloc[::-1].iterrows():
+                    with st.expander(f"📅 {fila['FECHA']} | Evalúa: {fila['USUARIO']}"):
+                        # Contenido de la nota
+                        st.write(fila['EVALUACION_IA'])
+                        st.caption(f"Original: {fila.get('ANECDOTA', '-')}")
+                        
+                        # --- ZONA DE BORRADO (Aquí está el botón rojo) ---
+                        st.divider()
+                        col_a, col_b = st.columns([0.6, 0.4])
+                        
+                        with col_a:
+                            st.caption("⚠️ **Zona de Peligro**")
+                        
+                        with col_b:
+                            if st.button("🗑️ ELIMINAR NOTA", key=f"del_tab3_{fila.name}", type="primary"):
+                                # Acción de borrado
+                                df_new = df_historial.drop(fila.name)
+                                conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_new)
+                                st.success("¡Eliminada correctamente!")
+                                time.sleep(1)
+                                st.rerun()
+
+        except Exception as e:
+            # Este es el paracaídas que faltaba antes
+            st.error(f"Error cargando el expediente: {e}")
     # -------------------------------------------------------------------------
     # VISTAS: EXTRAS (ORIGINALES PRESERVADAS)
     # -------------------------------------------------------------------------
