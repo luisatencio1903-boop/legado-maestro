@@ -1664,8 +1664,7 @@ else:
                             if not modo_suplencia_arch:
                                 if col_btns[2].button(f"🗑️ Borrar", key=f"del_btn_{i}"):
                                     conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_total_planes.drop(i)); st.rerun()
-
-          except Exception as e:
+                             except Exception as e:
                 st.error(f"Error en el proceso anterior: {e}")
 
     # =================================================================
