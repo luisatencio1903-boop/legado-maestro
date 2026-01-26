@@ -1760,38 +1760,43 @@ else:
                                         st.warning("🗑️ Registro eliminado correctamente.")
                                         time.sleep(1)
                                         st.rerun()
-            # =================================================================
-            # PESTAÑA 3: HISTORIAL EVALUACIONES (INTACTO)
-            # =================================================================
-            with tab_historial_ev:
-                st.write("### 📊 Expediente Estudiantil")
-                mis_alumnos_data = df_evaluaciones[df_evaluaciones['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
-                
-                if mis_alumnos_data.empty:
-                    st.info("Sin registros.")
-                else:
-                    lista_alumnos_hist = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
-                    alumno_sel = st.selectbox("Seleccione Alumno:", lista_alumnos_hist, key="sel_al_hist_v11")
-                    registros_alumno = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
-                    
-                    st.metric("Total Notas", len(registros_alumno))
-                    st.markdown("---")
-                    
-                    for _, fila in registros_alumno.iloc[::-1].iterrows():
-                        with st.expander(f"📅 {fila['FECHA']} | Evalúa: {fila['USUARIO']}"):
-                            if fila['USUARIO'] != st.session_state.u['NOMBRE']:
-                                st.caption(f"ℹ️ Por Suplente: {fila['USUARIO']}")
-                            st.write(fila['EVALUACION_IA'])
-                            st.caption(f"Original: {fila['ANECDOTA']}")
-                            
-                    if st.button("📝 Informe de Progreso", key="btn_gen_inf_v11"):
-                        with st.spinner("Generando..."):
-                            historico_txt = registros_alumno['EVALUACION_IA'].str.cat(sep='\n\n')
-                            informe = generar_respuesta([{"role":"user","content":f"Genera informe de progreso para {alumno_sel}: {historico_txt}"}])
-                            st.markdown(f'<div class="plan-box">{informe}</div>', unsafe_allow_html=True)
+           # --- CÓDIGO NUEVO PARA LA PESTAÑA 3 (CON BOTÓN DE BORRAR) ---
+        st.subheader("📊 Expediente Estudiantil (Edición Activada)")
+        
+        # Leemos la base de datos fresca para poder borrar
+        df_historial = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
+        mis_alumnos_data = df_historial[df_historial['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
 
-        except Exception as e:
-            st.error(f"Error técnico en archivo: {e}")
+        if mis_alumnos_data.empty:
+            st.info("No hay registros en el expediente.")
+        else:
+            # Selector de alumno (con clave única para no chocar con el otro menú)
+            lista_alumnos_hist = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
+            alumno_sel = st.selectbox("Seleccione Alumno:", lista_alumnos_hist, key="sel_tab3_v125")
+            
+            registros_alumno = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
+            
+            st.caption(f"Total de notas: {len(registros_alumno)}")
+            st.divider()
+
+            # Bucle de tarjetas
+            for _, fila in registros_alumno.iloc[::-1].iterrows():
+                with st.expander(f"📅 {fila['FECHA']} | Evalúa: {fila['USUARIO']}"):
+                    st.write(fila['EVALUACION_IA'])
+                    st.caption(f"Original: {fila.get('ANECDOTA', '-')}")
+                    
+                    # --- ZONA DE BORRADO (Aquí está tu botón esperado) ---
+                    st.divider()
+                    col_a, col_b = st.columns([0.6, 0.4])
+                    with col_a:
+                        st.caption("⚠️ **Zona de Peligro**")
+                    with col_b:
+                        if st.button("🗑️ ELIMINAR NOTA", key=f"del_tab3_{fila.name}", type="primary"):
+                            df_new = df_historial.drop(fila.name)
+                            conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_new)
+                            st.success("¡Eliminada!")
+                            time.sleep(1)
+                            st.rerun()
     # -------------------------------------------------------------------------
     # VISTAS: EXTRAS (ORIGINALES PRESERVADAS)
     # -------------------------------------------------------------------------
