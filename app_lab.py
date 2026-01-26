@@ -1578,8 +1578,8 @@ else:
                             st.caption(f"ℹ️ Esta nota fue cargada por un docente suplente ({fila['USUARIO']})")
                         st.write(fila['EVALUACION_IA'])
                  # --- CÓDIGO NUEVO PARA BORRAR NOTAS (v12.5) ---
-            st.markdown("---")
-            if st.button("🗑️ Eliminar esta Nota", key=f"del_nota_{fila.name}"):
+                st.markdown("---")
+                if st.button("🗑️ Eliminar esta Nota", key=f"del_nota_{fila.name}"):
                 # Borramos la fila exacta usando su índice único
                 df_ev_new = df_historial.drop(fila.name)
                 conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_ev_new)
