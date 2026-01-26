@@ -1598,237 +1598,183 @@ else:
 
         except Exception as e:
             st.error(f"Error: {e}")
-# -------------------------------------------------------------------------
-    # VISTA: MI ARCHIVO PEDAGÓGICO (v12.4 - BITÁCORA SEMANAL + CRUCE DE DATOS)
-    # -------------------------------------------------------------------------
+# =========================================================================
+    # SECCIÓN: MI ARCHIVO PEDAGÓGICO (VISTA MAESTRA INTEGRADA v12.5)
+    # =========================================================================
     elif opcion == "📂 Mi Archivo Pedagógico":
-        st.markdown("### 📂 Mi Archivo Pedagógico Digital")
+        st.header(f"📂 Archivo Pedagógico de {st.session_state.u['NOMBRE']}")
         
         try:
-            # 1. CARGA DE DATOS (MODO ECO)
-            df_total_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=60)
-            df_ejecucion = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=60)
-            df_evaluaciones = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=60)
+            # 1. CARGA DE DATOS CENTRALIZADA
+            df_total_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+            df_ejecucion = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=0)
+            df_evaluaciones = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
             
-            tab_archivo, tab_consolidados, tab_historial_ev = st.tabs(["📝 Mis Planificaciones", "📚 Bitácora de Clases (Logros)", "📊 Historial Evaluaciones"])
+            # 2. CREACIÓN DE PESTAÑAS
+            tab_archivo, tab_consolidados, tab_historial_ev = st.tabs([
+                "📝 Mis Planificaciones", 
+                "📚 Bitácora de Clases", 
+                "📊 Historial Expediente"
+            ])
 
-            # =================================================================
-            # PESTAÑA 1: GESTIÓN DE PLANES (INTACTO - CON EDITOR Y CSV)
-            # =================================================================
+            # -----------------------------------------------------------------
+            # PESTAÑA 1: GESTIÓN DE PLANES (EDITOR + ACTIVACIÓN)
+            # -----------------------------------------------------------------
             with tab_archivo:
                 col_filtros, col_backup = st.columns([3, 1])
                 with col_filtros:
-                    modo_suplencia_arch = st.checkbox("🦸 **Modo Suplencia**", key="check_supl_v72")
+                    modo_suplencia_arch = st.checkbox("🦸 **Modo Suplencia**", key="check_supl_master")
                     if modo_suplencia_arch:
-                        usuario_a_consultar = st.selectbox("Ver archivo de:", LISTA_DOCENTES, key="sel_doc_v72")
+                        usuario_a_consultar = st.selectbox("Ver archivo de:", LISTA_DOCENTES, key="sel_doc_master")
                         st.warning(f"Gestionando archivo de: **{usuario_a_consultar}**")
                     else:
                         usuario_a_consultar = st.session_state.u['NOMBRE']
-                        st.info("Viendo tus planificaciones.")
+                        st.caption("Gestionando tu propio archivo.")
 
                 with col_backup:
                     mis_datos_raw = df_total_planes[df_total_planes['USUARIO'] == st.session_state.u['NOMBRE']]
                     if not mis_datos_raw.empty:
                         csv_data = mis_datos_raw.to_csv(index=False).encode('utf-8')
-                        st.download_button(label="📥 Respaldo", data=csv_data, file_name=f"Respaldo_Planes_{st.session_state.u['NOMBRE']}.csv", mime="text/csv")
-
-                pa = obtener_plan_activa_usuario(usuario_a_consultar)
-                if pa:
-                    st.success(f"📌 **PLAN ACTIVO:** {pa['RANGO']}")
-                    if st.button(f"Desactivar", key="btn_des_v72"): desactivar_plan_activa(usuario_a_consultar); st.rerun()
-                else: st.warning(f"⚠️ {usuario_a_consultar} no tiene plan activo.")
+                        st.download_button(label="📥 Respaldo CSV", data=csv_data, file_name="Mis_Planes.csv", mime="text/csv")
 
                 st.divider()
 
+                # Lógica de Plan Activo
+                pa = obtener_plan_activa_usuario(usuario_a_consultar)
+                if pa:
+                    st.success(f"📌 **PLAN ACTIVO ACTUAL:** {pa['RANGO']}")
+                    if st.button("Desactivar Plan", key="btn_des_master"): 
+                        desactivar_plan_activa(usuario_a_consultar)
+                        st.rerun()
+                else: 
+                    st.info(f"⚠️ {usuario_a_consultar} no tiene un plan activo en este momento.")
+
+                st.markdown("---")
+
+                # Listado de Planes Guardados
                 mis_p = df_total_planes[df_total_planes['USUARIO'] == usuario_a_consultar]
-                if mis_p.empty: st.warning("No hay planes guardados.")
+                
+                if mis_p.empty: 
+                    st.warning("📭 No se encontraron planes guardados.")
                 else:
                     for i, fila in mis_p.iloc[::-1].iterrows():
                         es_este_activo = (pa['CONTENIDO_PLAN'] == fila['CONTENIDO']) if pa else False
-                        titulo_expander = f"{'⭐ ACTIVO | ' if es_este_activo else ''}📅 {fila['FECHA']} | {str(fila['TEMA'])[:35]}..."
-                        with st.expander(titulo_expander):
-                            contenido_editado = st.text_area("Contenido del Plan (Editable):", value=fila["CONTENIDO"], height=300, key=f"editor_{i}")
-                            col_btns = st.columns([1, 1, 1])
+                        titulo = f"{'⭐ ACTIVO | ' if es_este_activo else ''}📅 {fila['FECHA']} | {str(fila['TEMA'])[:40]}..."
+                        
+                        with st.expander(titulo):
+                            # Editor de contenido
+                            contenido_editado = st.text_area("Editar Plan:", value=fila["CONTENIDO"], height=250, key=f"edit_{i}")
                             
+                            c_save, c_act, c_del = st.columns(3)
+                            
+                            # Botón Guardar
                             if contenido_editado != fila["CONTENIDO"]:
-                                if col_btns[0].button("💾 Guardar Cambios", key=f"btn_upd_{i}"):
+                                if c_save.button("💾 Guardar", key=f"save_{i}"):
                                     df_total_planes.at[i, 'CONTENIDO'] = contenido_editado
                                     conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_total_planes)
-                                    st.success("Actualizado."); time.sleep(1); st.rerun()
-
-                            if not es_este_activo:
-                                if col_btns[1].button(f"📌 Activar", key=f"act_btn_{i}"):
-                                    establecer_plan_activa(usuario_a_consultar, str(i), contenido_editado, fila['FECHA'], "Taller/Aula")
-                                    st.success("Activado."); time.sleep(1); st.rerun()
+                                    st.toast("Plan actualizado.")
+                                    time.sleep(1)
+                                    st.rerun()
                             
+                            # Botón Activar (Si no es el activo)
+                            if not es_este_activo:
+                                if c_act.button("📌 Activar", key=f"act_{i}"):
+                                    establecer_plan_activa(usuario_a_consultar, str(i), contenido_editado, fila['FECHA'], "Aula")
+                                    st.toast("¡Plan Activado!")
+                                    time.sleep(1)
+                                    st.rerun()
+                            
+                            # Botón Borrar (Solo si no es suplencia)
                             if not modo_suplencia_arch:
-                                if col_btns[2].button(f"🗑️ Borrar", key=f"del_btn_{i}"):
-                                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_total_planes.drop(i)); st.rerun()
-                             except Exception as e:
-                st.error(f"Error en el proceso anterior: {e}")
+                                if c_del.button("🗑️ Borrar", key=f"del_plan_{i}"):
+                                    df_new = df_total_planes.drop(i)
+                                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_new)
+                                    st.toast("Plan eliminado.")
+                                    time.sleep(1)
+                                    st.rerun()
 
-    # =================================================================
-    # PESTAÑA 2: BITÁCORA SEMANAL
-    # =================================================================
-    with tab_consolidados:
-        st.write("### 📚 Bitácora de Clases Ejecutadas")
-        
-        # Filtramos solo tus logros
-        mis_logros = df_ejecucion[df_ejecucion['USUARIO'] == st.session_state.u['NOMBRE']].copy()
-        
-        if mis_logros.empty:
-            st.info("Aún no tienes actividades consolidadas.")
-        else:
-            # 1. PROCESAMIENTO DE FECHAS
-            try:
-                mis_logros['FECHA_DT'] = pd.to_datetime(mis_logros['FECHA'], dayfirst=True, errors='coerce')
-                mis_logros['SEMANA_NUM'] = mis_logros['FECHA_DT'].dt.isocalendar().week
-                mis_logros = mis_logros.sort_values('FECHA_DT', ascending=False)
-            except:
-                mis_logros['SEMANA_NUM'] = 0
-
-            # 2. ITERAMOS POR SEMANA
-            semanas_unicas = mis_logros['SEMANA_NUM'].unique()
-            
-            for sem in semanas_unicas:
-                datos_semana = mis_logros[mis_logros['SEMANA_NUM'] == sem]
-                if datos_semana.empty: continue
+            # -----------------------------------------------------------------
+            # PESTAÑA 2: BITÁCORA (LOGROS + ANÁLISIS IA)
+            # -----------------------------------------------------------------
+            with tab_consolidados:
+                st.subheader("📚 Bitácora de Clases Ejecutadas")
+                mis_logros = df_ejecucion[df_ejecucion['USUARIO'] == st.session_state.u['NOMBRE']].copy()
                 
-                fecha_ref = datos_semana.iloc[0]['FECHA']
-                cant_act = len(datos_semana)
-                
-                with st.expander(f"📂 SEMANA: {fecha_ref} (Actividades: {cant_act})", expanded=True):
-                    
-                    # USAMOS ENUMERATE PARA TENER UN ÍNDICE ÚNICO (i)
-                    for i, (_, logro) in enumerate(datos_semana.iterrows()):
-                        st.markdown(f"##### 🗓️ {logro['FECHA']} | {logro['ACTIVIDAD_TITULO']}")
-                        
-                        # A. FOTOS
-                        fotos = str(logro['EVIDENCIA_FOTO']).split('|')
-                        c1, c2 = st.columns(2)
-                        with c1:
-                            if len(fotos) > 0 and fotos[0].strip() != "-": 
-                                st.image(fotos[0].strip(), caption="Inicio", width=150)
-                        with c2:
-                            if len(fotos) > 1 and fotos[1].strip() != "-": 
-                                st.image(fotos[1].strip(), caption="Cierre", width=150)
+                if mis_logros.empty:
+                    st.info("No hay registros en la bitácora.")
+                else:
+                    # Procesar fechas para ordenar
+                    try:
+                        mis_logros['FECHA_DT'] = pd.to_datetime(mis_logros['FECHA'], dayfirst=True, errors='coerce')
+                        mis_logros = mis_logros.sort_values('FECHA_DT', ascending=False)
+                    except: pass
 
-                        # B. RESUMEN
-                        st.info(f"**📝 Tu Resumen:** {logro['RESUMEN_LOGROS']}")
-                        
-                        # C. CRUCE CON ALUMNOS
-                        ev_dia = df_evaluaciones[
-                            (df_evaluaciones['FECHA'] == logro['FECHA']) & 
-                            (df_evaluaciones['USUARIO'] == st.session_state.u['NOMBRE'])
-                        ]
-                        
-                        if not ev_dia.empty:
-                            with st.expander(f"👥 Ver {len(ev_dia)} Evaluaciones de este día"):
-                                for _, e in ev_dia.iterrows():
-                                    st.markdown(f"**• {e['ESTUDIANTE']}:** {e['EVALUACION_IA']}")
-                                    st.caption(f"*(Anecdota: {e['ANECDOTA']})*")
-                                    st.divider()
-
-                        # D. ANÁLISIS IA
-                        key_unica = f"btn_ia_sem{sem}_item{i}"
-                        
-                        if st.button("🧠 Analizar Jornada (IA)", key=key_unica):
-                            with st.spinner("La IA está leyendo tu bitácora..."):
-                                contexto_alumnos = ""
-                                if not ev_dia.empty:
-                                    contexto_alumnos = "EVALUACIONES ALUMNOS: " + ev_dia['EVALUACION_IA'].str.cat(sep=" | ")
-                                
-                                prompt_analisis = f"""
-                                Analiza esta jornada escolar completa de Educación Especial.
-                                ACTIVIDAD: {logro['ACTIVIDAD_TITULO']}.
-                                RESUMEN DOCENTE: {logro['RESUMEN_LOGROS']}.
-                                {contexto_alumnos}
-                                
-                                Genera un reporte breve con:
-                                1. Logro consolidado.
-                                2. Incidencias detectadas (si las hay).
-                                3. Sugerencia pedagógica para la siguiente clase.
-                                """
-                                try:
-                                    res_ia = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":prompt_analisis}], 0.5)
-                                    st.markdown(f'<div class="eval-box">{res_ia}</div>', unsafe_allow_html=True)
-                                except Exception as e_ia:
-                                    st.error("Error conectando con la IA.")
-                        
-                        st.markdown("---")
-
-                        # --- ZONA DE CORRECCIÓN (BORRAR BITÁCORA) ---
-                        with st.expander("⚙️ Opciones de Registro"):
-                            st.caption("Si este registro es un error, elimínalo aquí.")
-                            if st.button("🗑️ Eliminar Actividad", key=f"del_act_{sem}_{i}"):
+                    for i, (_, logro) in enumerate(mis_logros.iterrows()):
+                        with st.expander(f"🗓️ {logro['FECHA']} | {logro['ACTIVIDAD_TITULO']}"):
+                            
+                            # Fotos
+                            fotos = str(logro['EVIDENCIA_FOTO']).split('|')
+                            c1, c2 = st.columns(2)
+                            if len(fotos) > 0 and fotos[0] != "-": c1.image(fotos[0], width=150, caption="Inicio")
+                            if len(fotos) > 1 and fotos[1] != "-": c2.image(fotos[1], width=150, caption="Cierre")
+                            
+                            st.info(f"**Resumen:** {logro['RESUMEN_LOGROS']}")
+                            
+                            # Botón IA
+                            if st.button("🧠 Analizar con IA", key=f"ia_bit_{i}"):
+                                with st.spinner("Analizando..."):
+                                    prompt = f"Analiza esta clase de Educación Especial: {logro['RESUMEN_LOGROS']}"
+                                    try:
+                                        res = generar_respuesta([{"role":"user","content":prompt}])
+                                        st.success(res)
+                                    except: st.error("Error IA")
+                            
+                            # Botón Borrar Bitácora
+                            st.divider()
+                            if st.button("🗑️ Eliminar Registro Bitácora", key=f"del_bit_{i}"):
                                 df_new = df_ejecucion.drop(logro.name)
                                 conn.update(spreadsheet=URL_HOJA, worksheet="EJECUCION", data=df_new)
-                                st.warning("🗑️ Registro eliminado.")
-                                time.sleep(1)
                                 st.rerun()
 
-    # =================================================================
-    # PESTAÑA 3: EXPEDIENTE ESTUDIANTIL (CORREGIDO)
-    # =================================================================
-    with tab_historial_ev:
-        st.subheader("📊 Expediente Estudiantil (Edición Activada)")
-        
-        try:
-            # 1. Cargar datos
-            df_historial = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
-            mis_alumnos_data = df_historial[df_historial['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
-
-            if mis_alumnos_data.empty:
-                st.info("No hay evaluaciones registradas en el expediente.")
-            else:
-                # 2. Selector
-                lista = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
-                alumno_sel = st.selectbox("Seleccione Alumno:", lista, key="sel_tab3_final_v12")
-                registros = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
+            # -----------------------------------------------------------------
+            # PESTAÑA 3: EXPEDIENTE ESTUDIANTIL (CON BOTÓN ROJO DE BORRAR)
+            # -----------------------------------------------------------------
+            with tab_historial_ev:
+                st.subheader("📊 Expediente Estudiantil (Edición)")
                 
-                st.caption(f"Notas encontradas: {len(registros)}")
-                st.divider()
+                # Filtro de Titularidad
+                mis_alumnos_data = df_evaluaciones[df_evaluaciones['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
+                
+                if mis_alumnos_data.empty:
+                    st.info("No hay evaluaciones registradas.")
+                else:
+                    lista = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
+                    alumno_sel = st.selectbox("Seleccione Alumno:", lista, key="sel_exp_master")
+                    registros = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
+                    
+                    st.caption(f"Notas encontradas: {len(registros)}")
+                    st.divider()
 
-                # 3. Bucle de tarjetas
-                for _, fila in registros.iloc[::-1].iterrows():
-                    with st.expander(f"📅 {fila['FECHA']} | {fila['USUARIO']}"):
-                        st.write(fila['EVALUACION_IA'])
-                        
-                        # --- ZONA DE PELIGRO (BOTÓN ROJO) ---
-                        st.divider()
-                        c1, c2 = st.columns([0.6, 0.4])
-                        with c1:
-                            st.caption("⚠️ **Zona de Peligro**: Esta acción es irreversible.")
-                        with c2:
-                            if st.button("🗑️ ELIMINAR NOTA", key=f"del_tab3_{fila.name}", type="primary"):
-                                df_new = df_historial.drop(fila.name)
-                                conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_new)
-                                st.success("¡Borrado del expediente!")
-                                time.sleep(1)
-                                st.rerun()
+                    for _, fila in registros.iloc[::-1].iterrows():
+                        with st.expander(f"📅 {fila['FECHA']} | {fila['USUARIO']}"):
+                            st.write(fila['EVALUACION_IA'])
+                            st.caption(f"Original: {fila.get('ANECDOTA', '-')}")
+                            
+                            # --- ZONA DE PELIGRO ---
+                            st.divider()
+                            c_txt, c_btn = st.columns([0.6, 0.4])
+                            with c_txt: 
+                                st.caption("⚠️ **Zona de Peligro**")
+                            with c_btn:
+                                if st.button("🗑️ ELIMINAR NOTA", key=f"del_exp_{fila.name}", type="primary"):
+                                    df_new = df_evaluaciones.drop(fila.name)
+                                    conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_new)
+                                    st.success("¡Eliminado!")
+                                    time.sleep(1)
+                                    st.rerun()
 
         except Exception as e:
-            st.error(f"Error cargando el expediente: {e}")
-
-# -------------------------------------------------------------------------
-# VISTAS: EXTRAS Y CONSULTAS
-# -------------------------------------------------------------------------
-elif opcion == "🌟 Mensaje Motivacional":
-    if st.button("Recibir Ánimo"):
-        res = generar_respuesta([{"role":"user","content":"Frase motivadora corta para docente de educación especial en Venezuela."}])
-        st.success(res)
-        
-elif opcion == "💡 Ideas de Actividades":
-    t = st.text_input("Tema:")
-    if st.button("Sugerir"):
-        res = generar_respuesta([{"role":"user","content":f"3 actividades vivenciales cortas para Taller Laboral sobre: {t}"}])
-        st.markdown(res)
-        
-elif opcion == "❓ Consultas Técnicas":
-    d = st.text_area("Pregunta sobre tu planificación:")
-    if st.button("Consultar"):
-        res = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":d}])
-        st.info(res)
+            st.error(f"Error general en el módulo de Archivo: {e}")
 
 # --- PIE DE PÁGINA: SUPER DOCENTE ---
 st.markdown("---")
