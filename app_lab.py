@@ -1764,7 +1764,42 @@ else:
         except Exception as e:
             st.error(f"Error general en el módulo de Archivo: {e}")
 
-# --- PIE DE PÁGINA: SUPER DOCENTE ---
+    # =========================================================================
+    # SECCIÓN: RECURSOS EXTRA (RECUPERADOS)
+    # =========================================================================
+    elif opcion == "🌟 Mensaje Motivacional":
+        st.header("🌟 Dosis de Ánimo Docente")
+        st.info("Un espacio para recargar energías.")
+        if st.button("✨ Recibir Mensaje de Aliento", use_container_width=True):
+            with st.spinner("Conectando con la inspiración..."):
+                prompt = "Escribe una frase motivadora, corta y emotiva para un docente de Educación Especial en Venezuela que trabaja con el corazón a pesar de las dificultades."
+                res = generar_respuesta([{"role":"user","content":prompt}], 0.8)
+                st.success(f"🗣️ {res}")
+
+    elif opcion == "💡 Ideas de Actividades":
+        st.header("💡 Generador de Estrategias")
+        st.markdown("¿Te quedaste sin ideas? Pide sugerencias rápidas.")
+        
+        tema = st.text_input("¿Qué tema quieres trabajar?", placeholder="Ej: La Siembra, Valores, Higiene...")
+        if st.button("🎲 Generar 3 Ideas", type="primary") and tema:
+            with st.spinner("Diseñando actividades vivenciales..."):
+                prompt = f"Dame 3 actividades vivenciales, cortas y con recursos de provecho para estudiantes de Educación Especial sobre: {tema}."
+                res = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":prompt}], 0.7)
+                st.markdown(f'<div class="plan-box">{res}</div>', unsafe_allow_html=True)
+
+    elif opcion == "❓ Consultas Técnicas":
+        st.header("❓ Asesor Pedagógico IA")
+        st.markdown("Consulta dudas sobre la L.O.E., Conceptualización o Estrategias.")
+        
+        consulta = st.text_area("Escribe tu duda pedagógica:", placeholder="Ej: ¿Cómo evaluar cualitativamente en el Taller Laboral?")
+        if st.button("🔍 Consultar al Experto") and consulta:
+            with st.spinner("Analizando normativa y pedagogía..."):
+                res = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":consulta}], 0.4)
+                st.info(res)
+
+# =============================================================================
+# PIE DE PÁGINA OFICIAL (v1.0)
+# =============================================================================
 st.markdown("---")
 col_f1, col_f2 = st.columns([3, 1])
 with col_f1:
@@ -1772,5 +1807,8 @@ with col_f1:
     st.caption("Tecnología educativa hecha en La Concepción, Zulia.")
     st.caption("Desarrollado por: **Luis Atencio** (Bachiller Docente).")
 with col_f2:
-    try: st.caption(f"v1.0 | {ahora_ve().strftime('%I:%M %p')}")
-    except: st.caption("v1.0")
+    try: 
+        # Versión final para presentación
+        st.caption(f"v1.0 | {ahora_ve().strftime('%I:%M %p')}")
+    except: 
+        st.caption("v1.0")
