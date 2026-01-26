@@ -1128,39 +1128,59 @@ else:
                     st.session_state.plan_actual = ""
                     st.rerun()
 
-      # -------------------------------------------------------------------------
-    # VISTA: PLANIFICADOR MINISTERIAL (ADAPTACIÓN A EDUCACIÓN ESPECIAL)
+     # -------------------------------------------------------------------------
+    # VISTA: PLANIFICADOR MINISTERIAL (v6.0 - ADAPTACIÓN CURRICULAR + MÚSICA)
     # -------------------------------------------------------------------------
     elif opcion == "📜 PLANIFICADOR MINISTERIAL":
-        st.header("📜 Planificador y Adaptador Ministerial")
-        st.markdown("Contextualiza las orientaciones del Ministerio a tu servicio de Educación Especial.")
+        st.header("📜 Planificador Ministerial (Adaptación)")
+        st.markdown("Contextualiza las orientaciones del MPPE con enfoque profesional y artístico.")
 
         col_izq, col_der = st.columns([1, 1])
 
         with col_izq:
-            st.subheader("1. Orientación Ministerial")
+            st.subheader("1. Orientación del Ministerio")
             texto_ministerio = st.text_area("Pega aquí el contenido de la Guía Ministerial:", 
-                                          height=200, key="mppe_input",
-                                          placeholder="Ej: Efeméride de la Semana, Batalla de Carabobo...")
+                                          height=200, key="mppe_input_v6",
+                                          placeholder="Ej: Efemérides, Temas Generadores, Contenidos de la Colección Bicentenario...")
 
         with col_der:
             st.subheader("2. Contexto de Especial")
+            # Lista completa de 6 servicios con lenguaje profesional
             tipo_servicio = st.selectbox("Servicio / Modalidad:", 
-                                       ["Aula Integrada", "I.E.E. (Retardo)", "Taller Laboral", "C.A.I.P.A. (Autismo)", "U.P.E."],
-                                       key="mppe_serv")
-            nivel_grupo = st.text_input("Nivel o Grupo:", placeholder="Ej: 3er Grado", key="mppe_grado")
-            enfoque = st.radio("Adaptación:", ["De Acceso", "Curricular Significativa", "DUA"], key="mppe_radio")
+                                       ["Educación Inicial Especial", 
+                                        "I.E.E. (Compromiso Cognitivo)", 
+                                        "Taller de Educación Laboral", 
+                                        "Aula Integrada / U.P.E.", 
+                                        "C.A.I.P.A. (Autismo)", 
+                                        "U.P.E. (Deficiencia Visual/Auditiva)"],
+                                       key="mppe_serv_v6")
+            
+            nivel_grupo = st.text_input("Grado o Grupo:", placeholder="Ej: Grupo de Iniciación / 3er Grado", key="mppe_grado_v6")
+            
+            # Lógica para Música
+            incluir_musica = st.checkbox("🎵 Incluir Estrategias de Educación Musical", value=True)
+            
+            enfoque = st.radio("Enfoque de Adaptación:", ["De Acceso", "Curricular Significativa", "Estrategia Diversificada (DUA)"], key="mppe_radio_v6")
 
         if st.button("✨ GENERAR ADAPTACIÓN CURRICULAR", type="primary", use_container_width=True):
             if not texto_ministerio:
-                st.error("⚠️ Falta el texto del Ministerio.")
+                st.error("⚠️ Debes pegar el contenido del Ministerio primero.")
             else:
-                with st.spinner("🧠 Adaptando para Educación Especial..."):
+                with st.spinner("🧠 Contextualizando currículo y recursos musicales..."):
+                    
+                    extra_musica = "OBLIGATORIO: Incluye una estrategia de Educación Musical (ritmo, canto o expresión corporal) adaptada a la condición." if incluir_musica else ""
+                    
                     prompt_adapt = f"""
-                    ADAPTA ESTA PLANIFICACIÓN REGULAR: "{texto_ministerio}"
-                    PARA EL SERVICIO: {tipo_servicio}, GRUPO: {nivel_grupo}.
-                    ENFOQUE: {enfoque}.
-                    Genera: 1. Intencionalidad, 2. Inicio, 3. Desarrollo, 4. Cierre, 5. Recursos.
+                    Toma esta planificación regular: "{texto_ministerio}"
+                    ADÁPTALA para el servicio: {tipo_servicio}, grupo: {nivel_grupo}.
+                    Enfoque: {enfoque}.
+                    {extra_musica}
+                    
+                    Genera una estructura técnica de:
+                    1. Intencionalidad Pedagógica (Especializada).
+                    2. Estrategias de Inicio, Desarrollo y Cierre (Vivenciales).
+                    3. Adaptación Específica para la condición.
+                    4. Recursos (Material de provecho e instrumentos sencillos).
                     """
                     try:
                         # Usa tu función maestra de IA
@@ -1169,23 +1189,22 @@ else:
                     except: st.error("Error de conexión con el cerebro IA.")
 
         if st.session_state.get('temp_propuesta_ia'):
-            st.markdown("### 📝 Planificación Adaptada")
-            plan_final = st.text_area("Edición Final:", value=st.session_state.temp_propuesta_ia, height=300, key="mppe_edit")
+            st.markdown("### 📝 Resultado de la Adaptación")
+            plan_final = st.text_area("Edición Final:", value=st.session_state.temp_propuesta_ia, height=350, key="mppe_edit_v6")
             
-            if st.button("💾 Guardar en Mi Archivo", key="mppe_save", use_container_width=True):
+            if st.button("💾 Guardar en Mi Archivo", key="mppe_save_v6", use_container_width=True):
                 try:
-                    # Guardado en tu hoja principal 'Hoja1'
                     df_h = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
                     nuevo_r = pd.DataFrame([{
                         "FECHA": ahora_ve().strftime("%d/%m/%Y"), 
                         "USUARIO": st.session_state.u['NOMBRE'], 
-                        "TEMA": "Adaptación Ministerial", 
+                        "TEMA": "Adaptación Ministerial + Música" if incluir_musica else "Adaptación Ministerial", 
                         "CONTENIDO": plan_final, 
                         "ESTADO": "GUARDADO", 
                         "HORA_INICIO": "--", "HORA_FIN": "--"
                     }])
                     conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df_h, nuevo_r], ignore_index=True))
-                    st.success("✅ ¡Adaptación guardada exitosamente en tu archivo!")
+                    st.success("✅ ¡Adaptación guardada con lenguaje profesional!")
                     st.session_state.temp_propuesta_ia = ""
                     time.sleep(1)
                     st.rerun()
