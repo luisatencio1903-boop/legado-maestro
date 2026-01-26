@@ -1551,69 +1551,69 @@ else:
                 except Exception as e:
                     st.error(f"Error al guardar: {e}")
   # -------------------------------------------------------------------------
-    # VISTA: REGISTRO DE EVALUACIONES (v12.5 BLINDADO)
+    # VISTA: REGISTRO DE EVALUACIONES (v12.5 FINAL)
     # -------------------------------------------------------------------------
     elif opcion == "📊 Registro de Evaluaciones":
         try:
-            # 1. Carga de datos
             df_historial = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
             
-            # 2. FILTRO DE SEGURIDAD: Solo mostrar alumnos del docente actual
+            # Filtro de Titularidad
             mis_alumnos_data = df_historial[df_historial['DOCENTE_TITULAR'] == st.session_state.u['NOMBRE']]
             
             if mis_alumnos_data.empty:
-                st.info("📂 Aún no hay evaluaciones registradas bajo tu titularidad.")
+                st.info("📂 No hay evaluaciones registradas.")
             else:
-                # 3. Selector de Alumno
                 lista_alumnos_hist = sorted(mis_alumnos_data['ESTUDIANTE'].unique())
-                alumno_sel = st.selectbox("Seleccione Alumno para ver su expediente:", lista_alumnos_hist)
+                alumno_sel = st.selectbox("Seleccione Alumno:", lista_alumnos_hist)
                 
-                # Filtramos las notas de ESE alumno
                 registros_alumno = mis_alumnos_data[mis_alumnos_data['ESTUDIANTE'] == alumno_sel]
                 
-                st.metric("Total de Evaluaciones", len(registros_alumno))
+                st.metric("Total Notas", len(registros_alumno))
                 st.markdown("---")
                 
-                # 4. BUCLE DE HISTORIAL (Tarjetas)
+                # BUCLE DE TARJETAS
                 for _, fila in registros_alumno.iloc[::-1].iterrows():
                     
-                    # A. La Tarjeta (Expander)
+                    # 1. Abrimos tarjeta
                     with st.expander(f"📅 {fila['FECHA']} | Evalúa: {fila['USUARIO']}"):
                         
-                        # Contenido visual
+                        # Contenido
                         if fila['USUARIO'] != st.session_state.u['NOMBRE']:
-                            st.caption(f"ℹ️ Evaluado por suplente: {fila['USUARIO']}")
+                            st.caption(f"ℹ️ Suplente: {fila['USUARIO']}")
                         
                         st.write(fila['EVALUACION_IA'])
-                        # Usamos .get para evitar error si no existe la columna
                         st.caption(f"Original: {fila.get('ANECDOTA', '-')}")
 
-                        # B. BOTÓN DE BORRAR (Alineado DENTRO de la tarjeta)
-                        st.markdown("---")
-                        # Fíjate: este 'if' está alineado con 'st.write' de arriba
-                        if st.button("🗑️ Eliminar Nota", key=f"del_nota_{fila.name}"):
-                            # Borrado seguro
-                            df_ev_new = df_historial.drop(fila.name)
-                            conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_ev_new)
-                            st.warning("🗑️ Nota eliminada.")
-                            time.sleep(1)
-                            st.rerun()
+                        # 2. ZONA DE BORRADO (CON COLUMNAS PARA FORZAR VISIBILIDAD)
+                        st.divider() # Línea divisoria segura
+                        c_text, c_btn = st.columns([0.6, 0.4]) # Dividimos espacio
+                        
+                        with c_text:
+                            st.caption("⚠️ Esta acción es irreversible.")
+                        
+                        with c_btn:
+                            # Botón ROJO para que se vea
+                            if st.button("🗑️ Borrar", key=f"del_{fila.name}", type="primary"):
+                                df_ev_new = df_historial.drop(fila.name)
+                                conn.update(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", data=df_ev_new)
+                                st.success("¡Eliminado!")
+                                time.sleep(1)
+                                st.rerun()
 
-                # 5. GENERADOR DE INFORMES (Alineado AFUERA del bucle)
+                # BOTÓN DE INFORME (FUERA DEL BUCLE)
                 st.markdown("---")
                 if st.button("📝 Generar Informe de Progreso", key="btn_inf_progreso"):
-                    with st.spinner("Analizando historial académico..."):
+                    with st.spinner("Generando informe..."):
                         historico_txt = registros_alumno['EVALUACION_IA'].str.cat(sep='\n\n')
-                        prompt_text = f"Genera un informe de progreso técnico para {alumno_sel} basado en: {historico_txt}"
+                        prompt_text = f"Genera un informe de progreso para {alumno_sel}: {historico_txt}"
                         try:
-                            # Función de IA existente
                             informe = generar_respuesta([{"role":"user", "content":prompt_text}])
                             st.markdown(f'<div class="plan-box">{informe}</div>', unsafe_allow_html=True)
-                        except Exception as e_ia:
-                            st.error(f"Error IA: {e_ia}")
+                        except Exception as e:
+                            st.error(f"Error IA: {e}")
 
         except Exception as e:
-            st.error(f"Error al cargar el módulo de evaluaciones: {e}")
+            st.error(f"Error cargando evaluaciones: {e}")
 # -------------------------------------------------------------------------
     # VISTA: MI ARCHIVO PEDAGÓGICO (v12.4 - BITÁCORA SEMANAL + CRUCE DE DATOS)
     # -------------------------------------------------------------------------
