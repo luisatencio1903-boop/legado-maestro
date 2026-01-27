@@ -1128,87 +1128,90 @@ else:
                     st.session_state.plan_actual = ""
                     st.rerun()
 
-     # -------------------------------------------------------------------------
-    # VISTA: PLANIFICADOR MINISTERIAL (v6.0 - ADAPTACIÓN CURRICULAR + MÚSICA)
+  # -------------------------------------------------------------------------
+    # VISTA: PLANIFICADOR MINISTERIAL (v11.2 - ADAPTACIÓN CURRICULAR)
     # -------------------------------------------------------------------------
     elif opcion == "📜 PLANIFICADOR MINISTERIAL":
-        st.header("📜 Planificador Ministerial (Adaptación)")
-        st.markdown("Contextualiza las orientaciones del MPPE con enfoque profesional y artístico.")
-
-        col_izq, col_der = st.columns([1, 1])
-
-        with col_izq:
-            st.subheader("1. Orientación del Ministerio")
-            texto_ministerio = st.text_area("Pega aquí el contenido de la Guía Ministerial:", 
-                                          height=200, key="mppe_input_v6",
-                                          placeholder="Ej: Efemérides, Temas Generadores, Contenidos de la Colección Bicentenario...")
-
-        with col_der:
-            st.subheader("2. Contexto de Especial")
-            # Lista completa de 6 servicios con lenguaje profesional
-            tipo_servicio = st.selectbox("Servicio / Modalidad:", 
-                                       ["Educación Inicial Especial", 
-                                        "I.E.E. (Compromiso Cognitivo)", 
-                                        "Taller de Educación Laboral", 
-                                        "Aula Integrada / U.P.E.", 
-                                        "C.A.I.P.A. (Autismo)", 
-                                        "U.P.E. (Deficiencia Visual/Auditiva)"],
-                                       key="mppe_serv_v6")
-            
-            nivel_grupo = st.text_input("Grado o Grupo:", placeholder="Ej: Grupo de Iniciación / 3er Grado", key="mppe_grado_v6")
-            
-            # Lógica para Música
-            incluir_musica = st.checkbox("🎵 Incluir Estrategias de Educación Musical", value=True)
-            
-            enfoque = st.radio("Enfoque de Adaptación:", ["De Acceso", "Curricular Significativa", "Estrategia Diversificada (DUA)"], key="mppe_radio_v6")
-
-        if st.button("✨ GENERAR ADAPTACIÓN CURRICULAR", type="primary", use_container_width=True):
-            if not texto_ministerio:
-                st.error("⚠️ Debes pegar el contenido del Ministerio primero.")
-            else:
-                with st.spinner("🧠 Contextualizando currículo y recursos musicales..."):
+        st.markdown("### 📜 Adaptación de Lineamientos Ministeriales")
+        st.info("Pega aquí el texto recibido del Ministerio o Zona Educativa (WhatsApp/PDF) para adaptarlo a tu modalidad.")
+        
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+            modalidad_min = st.selectbox("Adaptar para la Modalidad:", [
+                "Taller de Educación Laboral (T.E.L.)",
+                "Instituto de Educación Especial (I.E.E.B.)",
+                "C.A.I.P.A.",
+                "Aula Integrada",
+                "U.P.E.",
+                "Educación Inicial"
+            ], key="min_mod")
+        with col_m2:
+            aula_min = st.text_input("Área / Aula específica:", placeholder="Ej: Carpintería, Sala 1, etc.", key="min_aula")
+        
+        texto_ministerio = st.text_area("Texto Ministerial Original (WhatsApp):", height=250, placeholder="Pega aquí el mensaje del Ministerio...")
+        
+        if st.button("🪄 Adaptar y Organizar Planificación", type="primary"):
+            if texto_ministerio:
+                with st.spinner('Super Docente adaptando contenidos...'):
+                    # Detectar posible lapso en el texto (opcional)
+                    st.session_state.temp_tema = f"Adaptación Ministerial - {modalidad_min}"
                     
-                    extra_musica = "OBLIGATORIO: Incluye una estrategia de Educación Musical (ritmo, canto o expresión corporal) adaptada a la condición." if incluir_musica else ""
+                    prompt_min = f"""
+                    ERES UN EXPERTO EN DISEÑO CURRICULAR VENEZOLANO. 
+                    TAREA: Adapta el siguiente texto ministerial para la modalidad de {modalidad_min} {f'en el área de {aula_min}' if aula_min else ''}.
                     
-                    prompt_adapt = f"""
-                    Toma esta planificación regular: "{texto_ministerio}"
-                    ADÁPTALA para el servicio: {tipo_servicio}, grupo: {nivel_grupo}.
-                    Enfoque: {enfoque}.
-                    {extra_musica}
+                    TEXTO ORIGINAL:
+                    "{texto_ministerio}"
                     
-                    Genera una estructura técnica de:
-                    1. Intencionalidad Pedagógica (Especializada).
-                    2. Estrategias de Inicio, Desarrollo y Cierre (Vivenciales).
-                    3. Adaptación Específica para la condición.
-                    4. Recursos (Material de provecho e instrumentos sencillos).
+                    REGLAS DE ADAPTACIÓN:
+                    1. Si el texto tiene actividades abstractas (investigar, leer), cámbiarlas por actividades VIVENCIALES (limpiar, armar, cocinar, modelar).
+                    2. Traduce los objetivos a COMPETENCIAS TÉCNICAS (Acción+Objeto+Condición).
+                    3. Mantén la fidelidad al tema central del Ministerio pero con el enfoque de Educación Especial.
+                    
+                    ESTRUCTURA OBLIGATORIA (De Lunes a Viernes):
+                    ### [DÍA]
+                    **1. TÍTULO LÚDICO**
+                    **2. COMPETENCIA TÉCNICA**
+                    **3. EXPLORACIÓN (Inicio)**
+                    **4. DESARROLLO (Proceso)**
+                    **5. REFLEXIÓN (Cierre)**
+                    **6. ESTRATEGIAS**
+                    **7. RECURSOS**
                     """
-                    try:
-                        # Usa tu función maestra de IA
-                        res_ia = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":prompt_adapt}], 0.7)
-                        st.session_state.temp_propuesta_ia = res_ia
-                    except: st.error("Error de conexión con el cerebro IA.")
-
-        if st.session_state.get('temp_propuesta_ia'):
-            st.markdown("### 📝 Resultado de la Adaptación")
-            plan_final = st.text_area("Edición Final:", value=st.session_state.temp_propuesta_ia, height=350, key="mppe_edit_v6")
-            
-            if st.button("💾 Guardar en Mi Archivo", key="mppe_save_v6", use_container_width=True):
-                try:
-                    df_h = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-                    nuevo_r = pd.DataFrame([{
-                        "FECHA": ahora_ve().strftime("%d/%m/%Y"), 
-                        "USUARIO": st.session_state.u['NOMBRE'], 
-                        "TEMA": "Adaptación Ministerial + Música" if incluir_musica else "Adaptación Ministerial", 
-                        "CONTENIDO": plan_final, 
-                        "ESTADO": "GUARDADO", 
-                        "HORA_INICIO": "--", "HORA_FIN": "--"
-                    }])
-                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df_h, nuevo_r], ignore_index=True))
-                    st.success("✅ ¡Adaptación guardada con lenguaje profesional!")
-                    st.session_state.temp_propuesta_ia = ""
-                    time.sleep(1)
+                    
+                    st.session_state.plan_actual = generar_respuesta([
+                        {"role":"system","content":INSTRUCCIONES_TECNICAS},
+                        {"role":"user","content":prompt_min}
+                    ], 0.5)
                     st.rerun()
-                except Exception as e: st.error(f"Error al guardar: {e}")
+            else:
+                st.warning("⚠️ Por favor, pega el texto del ministerio primero.")
+
+    # --- BLOQUE DE GUARDADO (Asegúrate de que esté debajo de los planificadores) ---
+    if st.session_state.plan_actual and opcion in ["🧠 PLANIFICADOR INTELIGENTE", "📜 PLANIFICADOR MINISTERIAL"]:
+        st.markdown("---")
+        st.markdown(f'<div class="plan-box">{st.session_state.plan_actual}</div>', unsafe_allow_html=True)
+        
+        if st.button("💾 Guardar Planificación Adaptada en Mi Archivo"):
+            try:
+                df_archivo = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                tema_guardar = st.session_state.get('temp_tema', 'Planificación Ministerial')
+                
+                nueva_fila = pd.DataFrame([{
+                    "FECHA": ahora_ve().strftime("%d/%m/%Y"),
+                    "USUARIO": st.session_state.u['NOMBRE'],
+                    "TEMA": tema_guardar[:50],
+                    "CONTENIDO": st.session_state.plan_actual,
+                    "ESTADO": "GUARDADO"
+                }])
+                
+                conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=pd.concat([df_archivo, nueva_fila], ignore_index=True))
+                st.success("✅ ¡Adaptación guardada exitosamente!")
+                time.sleep(2)
+                st.session_state.pagina_actual = "📂 Mi Archivo Pedagógico"
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error al guardar: {e}")
 # -------------------------------------------------------------------------
     # VISTA: AULA VIRTUAL (v13.0 - TRÍADA PEDAGÓGICA: INICIO, DESARROLLO, CIERRE)
     # -------------------------------------------------------------------------
