@@ -1883,18 +1883,36 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
         except Exception as e:
             st.error(f"Error: {e}")
 # -------------------------------------------------------------------------
-    # VISTA: MI ARCHIVO PEDAGÓGICO (VERSIÓN FINAL: RESTAURACIÓN TOTAL DE EVALUACIONES)
+    # VISTA: MI ARCHIVO PEDAGÓGICO (VERSIÓN MAESTRA: CACHÉ + CARPETAS VISIBLES)
     # -------------------------------------------------------------------------
     elif opcion == "📂 Mi Archivo Pedagógico":
         
-        # --- VARIABLES DE ESTADO PARA EL VISOR DE PLANIFICACIÓN ---
+        # --- 1. GESTIÓN DE MEMORIA Y ESTADO ---
         if 'visor_plan_activo' not in st.session_state: st.session_state.visor_plan_activo = False
         if 'visor_plan_data' not in st.session_state: st.session_state.visor_plan_data = {}
         if 'resumen_alumno_ia' not in st.session_state: st.session_state.resumen_alumno_ia = ""
+        if 'alumno_seleccionado_temp' not in st.session_state: st.session_state.alumno_seleccionado_temp = None
+        
+        # Inicialización del Caché (Las fotocopias)
+        if 'cache_ejecucion' not in st.session_state: st.session_state.cache_ejecucion = None
+        if 'cache_evaluaciones' not in st.session_state: st.session_state.cache_evaluaciones = None
+        if 'cache_planes' not in st.session_state: st.session_state.cache_planes = None
+        if 'cache_pensums' not in st.session_state: st.session_state.cache_pensums = None
 
-        # --- FUNCIÓN AUXILIAR BITÁCORA ---
+        # --- FUNCIÓN DE SINCRONIZACIÓN (IR A DIRECCIÓN) ---
+        def sincronizar_datos():
+            try:
+                with st.spinner("🔄 Yendo a dirección a actualizar los archivos..."):
+                    st.session_state.cache_ejecucion = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=0)
+                    st.session_state.cache_evaluaciones = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
+                    st.session_state.cache_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                    st.session_state.cache_pensums = conn.read(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", ttl=0)
+                st.success("✅ Datos actualizados.")
+                time.sleep(0.5)
+            except Exception as e: st.error(f"Error sincronizando: {e}")
+
+        # --- FUNCIÓN TARJETA BITÁCORA ---
         def renderizar_tarjeta(row_act, df_evals):
-            """Tarjeta visual para la Bitácora (Pestaña 1)."""
             fecha = row_act['FECHA']
             titulo = row_act['ACTIVIDAD_TITULO']
             resumen = row_act['RESUMEN_LOGROS']
@@ -1912,46 +1930,62 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
                         with cols_f[i]:
                             if "http" in url: st.image(url, use_container_width=True)
                 else: st.info("📷 Sin foto.")
-
+                
                 if resumen and resumen != "None": st.markdown(f"**📝 Bitácora:** {resumen}")
 
-        # --- CABECERA ---
+                if not df_evals.empty:
+                    evals_dia = df_evals[df_evals['FECHA'] == fecha]
+                    if not evals_dia.empty:
+                        st.divider()
+                        st.markdown("📊 **Resultados:**")
+                        col_juicio = 'EVALUACION_IA' if 'EVALUACION_IA' in evals_dia.columns else None
+                        if col_juicio:
+                            textos = evals_dia[col_juicio].astype(str).str.upper()
+                            cons = textos.str.count("CONSOLIDADO").sum()
+                            proc = textos.str.count("PROCESO").sum()
+                            ini = textos.str.count("INICIADO").sum()
+                            m1, m2, m3, m4 = st.columns(4)
+                            m1.metric("Total", len(evals_dia))
+                            m2.metric("Consolidado", int(cons))
+                            m3.metric("Proceso", int(proc))
+                            m4.metric("Iniciado", int(ini))
+
+        # --- ENCABEZADO ---
         if not st.session_state.visor_plan_activo:
-            st.header("📂 Mi Archivo Pedagógico")
+            c_head, c_btn = st.columns([3, 1])
+            with c_head: st.header("📂 Mi Archivo Pedagógico")
+            with c_btn:
+                if st.button("🔄 ACTUALIZAR DATOS", help="Recargar desde Google Sheets"):
+                    sincronizar_datos()
+                    st.rerun()
 
-        # 1. CARGA DE DATOS (PROTEGIDA)
+        # Carga inicial automática si está vacío
+        if st.session_state.cache_ejecucion is None:
+            sincronizar_datos()
+            st.rerun()
+
+        # --- FILTRADO DE DATOS (USANDO CACHÉ) ---
         try:
-            # Bitácora
-            df_ejecucion = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=0)
-            mis_clases = df_ejecucion[df_ejecucion['USUARIO'] == st.session_state.u['NOMBRE']]
-            
-            # Evaluaciones (TU TABLA REAL)
-            try:
-                df_evaluaciones = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
-                mis_evaluaciones = df_evaluaciones[df_evaluaciones['USUARIO'] == st.session_state.u['NOMBRE']]
-            except: mis_evaluaciones = pd.DataFrame()
+            df_full = st.session_state.cache_ejecucion
+            mis_clases = df_full[df_full['USUARIO'] == st.session_state.u['NOMBRE']]
 
-            # Planificaciones
-            try:
-                df_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-                mis_planes = df_planes[df_planes['USUARIO'] == st.session_state.u['NOMBRE']]
-            except: mis_planes = pd.DataFrame()
+            df_ev_full = st.session_state.cache_evaluaciones
+            mis_evaluaciones = df_ev_full[df_ev_full['USUARIO'] == st.session_state.u['NOMBRE']] if not df_ev_full.empty else pd.DataFrame()
 
-            # Pensums
-            try:
-                df_pensums = conn.read(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", ttl=0)
-                mis_pensums = df_pensums[(df_pensums['USUARIO'] == st.session_state.u['NOMBRE']) & (df_pensums['ESTADO'] == "ACTIVO")]
-            except: mis_pensums = pd.DataFrame()
+            df_pl_full = st.session_state.cache_planes
+            mis_planes = df_pl_full[df_pl_full['USUARIO'] == st.session_state.u['NOMBRE']] if not df_pl_full.empty else pd.DataFrame()
+
+            df_pe_full = st.session_state.cache_pensums
+            mis_pensums = df_pe_full[(df_pe_full['USUARIO'] == st.session_state.u['NOMBRE']) & (df_pe_full['ESTADO'] == "ACTIVO")] if not df_pe_full.empty else pd.DataFrame()
 
         except Exception as e:
-            st.error(f"Error cargando datos: {e}")
+            st.warning("Cargando datos...")
             st.stop()
 
         # =====================================================================
-        # MODO VISOR DE PLANIFICACIÓN (PANTALLA COMPLETA)
+        # MODO VISOR (PANTALLA COMPLETA)
         # =====================================================================
         if st.session_state.visor_plan_activo:
-            # ... (CÓDIGO DEL VISOR QUE YA TE GUSTABA, INTACTO) ...
             data = st.session_state.visor_plan_data
             idx_original = data['INDICE_ORIGINAL']
             
@@ -1965,11 +1999,13 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
 
             texto_editado = st.text_area("Contenido:", value=data['CONTENIDO'], height=600)
             
-            if st.button("💾 GUARDAR CAMBIOS", type="primary", use_container_width=True):
+            if st.button("💾 GUARDAR CAMBIOS (NUBE)", type="primary", use_container_width=True):
                 try:
                     df_master = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
                     df_master.at[idx_original, 'CONTENIDO'] = texto_editado
                     conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_master)
+                    # Actualizar caché
+                    st.session_state.cache_planes.at[idx_original, 'CONTENIDO'] = texto_editado
                     st.session_state.visor_plan_data['CONTENIDO'] = texto_editado
                     st.success("✅ Guardado.")
                 except Exception as e: st.error(f"Error: {e}")
@@ -1978,11 +2014,10 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
         # MODO NORMAL (PESTAÑAS)
         # =====================================================================
         else:
-            tab_bitacora, tab_planes, tab_evals = st.tabs(["📸 Bitácora", "🗓️ Planificaciones", "📊 Registro de Evaluaciones"])
+            tab_bitacora, tab_planes, tab_evals = st.tabs(["📸 Bitácora", "🗓️ Planificaciones", "📊 Evaluaciones"])
 
-            # --- PESTAÑA 1: BITÁCORA ---
+            # --- PESTAÑA 1: BITÁCORA (CON LAS CARPETAS VISIBLES) ---
             with tab_bitacora:
-                # ... (TU BITÁCORA VISUAL, MANTENIDA IGUAL) ...
                 st.subheader("📸 Bitácora de Clases")
                 opciones = ["📘 Portafolio General"]
                 mapa_pensums = {}
@@ -1994,7 +2029,7 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
 
                 if "General" in seleccion:
                     clases_general = mis_clases[(mis_clases['ID_BLOQUE'].isna()) | (mis_clases['ID_BLOQUE'].astype(str) == "0")].sort_values(by="FECHA", ascending=False)
-                    if clases_general.empty: st.info("Sin registros.")
+                    if clases_general.empty: st.info("No hay bitácoras generales.")
                     else:
                         clases_general['MES'] = pd.to_datetime(clases_general['FECHA'], dayfirst=True, errors='coerce').dt.strftime('%B %Y')
                         for mes in clases_general['MES'].unique():
@@ -2002,17 +2037,40 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
                                 for i, row in clases_general[clases_general['MES'] == mes].iterrows():
                                     renderizar_tarjeta(row, mis_evaluaciones)
                 else:
+                    # LÓGICA DE PENSUMS (CORREGIDA PARA MOSTRAR CARPETAS VACÍAS)
                     nombre_pensum = seleccion.replace("🟢 Pensum: ", "")
-                    # ... (Lógica de Bloques del Pensum) ...
-                    # (Resumida aquí para ahorrar espacio, usa la misma lógica de bloques de arriba)
-                    st.info(f"Visualizando: {nombre_pensum}")
+                    texto_full = mapa_pensums.get(nombre_pensum, "")
+                    nombres_bloques = {}
+                    import re
+                    for line in texto_full.split('\n'):
+                        match = re.search(r'(\d+)\.\s*BLOQUE:?\s*(.*)', line, re.IGNORECASE)
+                        if match: nombres_bloques[int(match.group(1))] = match.group(2).strip()
+                    
+                    # Generamos SIEMPRE los bloques del 1 al 14 (o los que haya)
+                    for num_bloque in range(1, 15):
+                        titulo_bloque = nombres_bloques.get(num_bloque, "Tema Específico")
+                        
+                        # Filtramos las clases de este bloque
+                        mis_clases['ID_BLOQUE_STR'] = mis_clases['ID_BLOQUE'].astype(str).str.replace(".0", "").str.strip()
+                        clases_bloque = mis_clases[mis_clases['ID_BLOQUE_STR'] == str(num_bloque)].sort_values(by="FECHA", ascending=False)
+                        
+                        cantidad = len(clases_bloque)
+                        # Icono cambia si tiene contenido o no, pero la carpeta SIEMPRE APARECE
+                        icono = "📂" if cantidad > 0 else "📁"
+                        estado_abierto = True if cantidad > 0 else False
+                        
+                        # AQUI ESTA LA CORRECCIÓN: Renderizamos el expander SIEMPRE
+                        with st.expander(f"{icono} BLOQUE {num_bloque}: {titulo_bloque} ({cantidad})", expanded=estado_abierto):
+                            if clases_bloque.empty:
+                                st.caption("📭 Carpeta vacía. Esperando consolidación de actividad...")
+                            else:
+                                for i, row in clases_bloque.iterrows(): 
+                                    renderizar_tarjeta(row, mis_evaluaciones)
 
-            # --- PESTAÑA 2: PLANIFICACIONES ---
+            # --- PESTAÑA 2: PLANIFICACIONES (CON SWITCH Y CACHÉ) ---
             with tab_planes:
                 st.subheader("🗓️ Gestión de Planificaciones")
-                # ... (LÓGICA CON INTERRUPTOR, EDITAR Y BORRAR QUE APROBASTE) ...
-                if mis_planes.empty:
-                    st.info("No hay planes guardados.")
+                if mis_planes.empty: st.info("No hay planes guardados.")
                 else:
                     mis_planes_sorted = mis_planes.sort_index(ascending=False)
                     for i, row in mis_planes_sorted.iterrows():
@@ -2028,107 +2086,83 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
                             c_tog, c_visor, c_del = st.columns([2, 2, 1])
                             with c_tog:
                                 if st.toggle("Activa", value=es_activa, key=f"tog_{i}"):
-                                    if not es_activa: # Activar
-                                        df_master = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-                                        df_master.loc[df_master['USUARIO'] == st.session_state.u['NOMBRE'], 'ESTADO'] = "GUARDADO"
-                                        df_master.at[i, 'ESTADO'] = "ACTIVO"
-                                        conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_master)
-                                        st.rerun()
+                                    if not es_activa:
+                                        try:
+                                            df_master = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                                            df_master.loc[df_master['USUARIO'] == st.session_state.u['NOMBRE'], 'ESTADO'] = "GUARDADO"
+                                            df_master.at[i, 'ESTADO'] = "ACTIVO"
+                                            conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_master)
+                                            # Actualizar caché manualmente para no recargar todo
+                                            st.session_state.cache_planes.loc[st.session_state.cache_planes['USUARIO'] == st.session_state.u['NOMBRE'], 'ESTADO'] = "GUARDADO"
+                                            st.session_state.cache_planes.at[i, 'ESTADO'] = "ACTIVO"
+                                            st.toast("⚡ ACTIVADA")
+                                            time.sleep(0.5)
+                                            st.rerun()
+                                        except: pass
                                 else:
-                                    if es_activa: # Desactivar
-                                        df_master = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-                                        df_master.at[i, 'ESTADO'] = "GUARDADO"
-                                        conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_master)
-                                        st.rerun()
+                                    if es_activa:
+                                        try:
+                                            df_master = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                                            df_master.at[i, 'ESTADO'] = "GUARDADO"
+                                            conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_master)
+                                            st.session_state.cache_planes.at[i, 'ESTADO'] = "GUARDADO"
+                                            st.rerun()
+                                        except: pass
                             
                             with c_visor:
-                                if st.button("📖 ABRIR", key=f"vis_{i}", use_container_width=True):
+                                if st.button("📖 VISOR", key=f"v_{i}", use_container_width=True):
                                     st.session_state.visor_plan_activo = True
-                                    row_dict = row.to_dict()
-                                    row_dict['INDICE_ORIGINAL'] = i
-                                    st.session_state.visor_plan_data = row_dict
+                                    row_d = row.to_dict(); row_d['INDICE_ORIGINAL'] = i
+                                    st.session_state.visor_plan_data = row_d
                                     st.rerun()
                             
                             with c_del:
-                                if st.button("🗑️", key=f"del_p_{i}"):
-                                    df_master = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
-                                    df_master = df_master.drop(index=i)
-                                    conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_master)
-                                    st.rerun()
+                                if st.button("🗑️", key=f"d_{i}"):
+                                    try:
+                                        df_master = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                                        df_master = df_master.drop(index=i)
+                                        conn.update(spreadsheet=URL_HOJA, worksheet="Hoja1", data=df_master)
+                                        st.session_state.cache_planes = st.session_state.cache_planes.drop(index=i)
+                                        st.rerun()
+                                    except: pass
 
-            # --- PESTAÑA 3: EVALUACIONES (¡AQUÍ ESTÁ LA MAGIA RESTAURADA!) ---
+            # --- PESTAÑA 3: EVALUACIONES (USANDO CACHÉ = VELOCIDAD) ---
             with tab_evals:
-                st.subheader("📊 Historial Académico del Estudiante")
-                st.markdown("Consulta el desempeño individual y genera informes automáticos con IA.")
-
+                st.subheader("📊 Historial Académico")
                 if mis_evaluaciones.empty:
-                    st.info("No hay evaluaciones registradas en el sistema.")
+                    st.info("No hay evaluaciones.")
                 else:
-                    # 1. SELECTOR DE ESTUDIANTE (¡RECUPERADO!)
                     lista_estudiantes = sorted(mis_evaluaciones['ESTUDIANTE'].dropna().unique())
-                    seleccion_alumno = st.selectbox("👤 Selecciona un Estudiante:", lista_estudiantes)
+                    # Selección segura con memoria
+                    idx_sel = 0
+                    if st.session_state.alumno_seleccionado_temp in lista_estudiantes:
+                        idx_sel = lista_estudiantes.index(st.session_state.alumno_seleccionado_temp)
+                    
+                    seleccion_alumno = st.selectbox("👤 Selecciona un Estudiante:", lista_estudiantes, index=idx_sel)
+                    st.session_state.alumno_seleccionado_temp = seleccion_alumno
                     
                     if seleccion_alumno:
-                        # Filtramos datos SOLO de ese alumno
                         df_alumno = mis_evaluaciones[mis_evaluaciones['ESTUDIANTE'] == seleccion_alumno].sort_values(by="FECHA", ascending=False)
                         
-                        # Métricas rápidas
-                        col_m1, col_m2, col_m3 = st.columns(3)
-                        col_m1.metric("Evaluaciones", len(df_alumno))
-                        
-                        # 2. BOTÓN "CEREBRO" PARA RESUMEN / BOLETÍN
-                        with col_m3:
-                            if st.button("✨ Generar Informe IA", type="primary", use_container_width=True):
-                                with st.spinner(f"Analizando historial de {seleccion_alumno}..."):
-                                    # Recopilamos todo el texto de ANECDOTA y EVALUACION_IA
-                                    texto_acumulado = ""
-                                    for idx, row in df_alumno.iterrows():
-                                        texto_acumulado += f"- Fecha: {row['FECHA']}. Actividad: {row['ACTIVIDAD']}. "
-                                        if 'ANECDOTA' in row: texto_acumulado += f"Observación: {row['ANECDOTA']}. "
-                                        if 'EVALUACION_IA' in row: texto_acumulado += f"Detalle IA: {row['EVALUACION_IA']}.\n"
-                                    
-                                    # Prompt para Boletín
-                                    prompt_boletin = f"""
-                                    ACTÚA COMO UN DOCENTE ESPECIALISTA.
-                                    OBJETIVO: Redactar un RESUMEN DE DESEMPEÑO (Informe Cualitativo) para el estudiante: {seleccion_alumno}.
-                                    
-                                    HISTORIAL DE EVALUACIONES:
-                                    {texto_acumulado}
-                                    
-                                    ESTRUCTURA DEL INFORME:
-                                    1. **Avances Significativos:** (Qué ha logrado consolidar).
-                                    2. **Aspectos en Proceso:** (Qué está aprendiendo aún).
-                                    3. **Recomendaciones para el Hogar:** (Sugerencias pedagógicas).
-                                    
-                                    TONO: Empático, profesional y motivador (Enfoque humanista).
-                                    """
-                                    
-                                    res = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":prompt_boletin}], 0.7)
-                                    st.session_state.resumen_alumno_ia = res
+                        c_m1, c_m2 = st.columns([1, 2])
+                        c_m1.metric("Registros", len(df_alumno))
+                        with c_m2:
+                            if st.button("✨ Generar Boletín (IA)", key="btn_bol_ia", use_container_width=True):
+                                with st.spinner("Analizando..."):
+                                    txt = ""
+                                    for _, r in df_alumno.iterrows():
+                                        txt += f"- {r['FECHA']}: {r.get('ANECDOTA','')} | {r.get('EVALUACION_IA','')}\n"
+                                    st.session_state.resumen_alumno_ia = generar_respuesta([{"role":"user","content":f"Redacta un informe cualitativo para el boletín escolar de {seleccion_alumno} basado en: {txt}"}], 0.7)
 
-                        # 3. VISUALIZADOR DEL INFORME GENERADO
                         if st.session_state.resumen_alumno_ia:
-                            st.info(f"📄 **Informe Generado para {seleccion_alumno}:**")
-                            st.markdown(st.session_state.resumen_alumno_ia)
-                            if st.button("Cerrar Informe"):
+                            st.info("📄 Informe:")
+                            st.write(st.session_state.resumen_alumno_ia)
+                            if st.button("Cerrar"):
                                 st.session_state.resumen_alumno_ia = ""
                                 st.rerun()
                         
                         st.divider()
-
-                        # 4. HISTORIAL DETALLADO (TARJETAS)
-                        st.markdown(f"**📜 Bitácora de {seleccion_alumno}:**")
-                        for idx, row in df_alumno.iterrows():
-                            # Usamos tus columnas reales: FECHA, ACTIVIDAD, EVALUACION_IA
-                            fecha_ev = row['FECHA']
-                            actividad_ev = row['ACTIVIDAD']
-                            detalle_ia = row.get('EVALUACION_IA', 'Sin detalle.')
-                            anecdota = row.get('ANECDOTA', '')
-                            
-                            with st.expander(f"📅 {fecha_ev} | {actividad_ev}"):
-                                if anecdota and str(anecdota) != "nan":
-                                    st.markdown(f"**Observación Docente:** {anecdota}")
-                                st.markdown(f"**Análisis Técnico:** {detalle_ia}")
+                        st.dataframe(df_alumno[['FECHA', 'ACTIVIDAD', 'ANECDOTA', 'EVALUACION_IA']], hide_index=True, use_container_width=True)
 # =============================================================================
 # PIE DE PÁGINA OFICIAL (v1.0)
 # =============================================================================
