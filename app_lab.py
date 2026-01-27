@@ -1883,11 +1883,11 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
         except Exception as e:
             st.error(f"Error: {e}")
 # -------------------------------------------------------------------------
-    # VISTA: MI ARCHIVO PEDAGÓGICO 2.0 (VERSIÓN BLINDADA: USA TUS COLUMNAS REALES)
+    # VISTA: MI ARCHIVO PEDAGÓGICO (RESTAURADO: TABS + PLANIFICACIONES + EVIDENCIAS)
     # -------------------------------------------------------------------------
     elif opcion == "📂 Mi Archivo Pedagógico":
         
-        # --- FUNCIÓN AUXILIAR ADAPTADA A TU ESTRUCTURA REAL (EVALUACION_IA) ---
+        # --- FUNCIÓN AUXILIAR (TARJETA DE EVIDENCIA) ---
         def renderizar_tarjeta(row_act, df_evals):
             """Muestra la tarjeta de evidencia cruzando con ANECDOTA y EVALUACION_IA."""
             fecha = row_act['FECHA']
@@ -1896,185 +1896,191 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
             fotos_str = str(row_act['EVIDENCIA_FOTO'])
             
             with st.container(border=True):
-                # 1. Encabezado
+                # Encabezado
                 c_tit, c_fecha = st.columns([4, 1])
                 c_tit.markdown(f"**📌 {titulo}**")
                 c_fecha.caption(f"📅 {fecha}")
                 
-                # 2. Fotos
+                # Fotos
                 if fotos_str and fotos_str != "None" and fotos_str != "":
                     urls = fotos_str.split("|") if "|" in fotos_str else [fotos_str]
                     cols_f = st.columns(len(urls))
                     for i, url in enumerate(urls):
                         with cols_f[i]:
                             if "http" in url:
-                                st.image(url, caption="Evidencia", use_container_width=True)
-                            else:
-                                st.warning("Imagen no válida")
+                                st.image(url, use_container_width=True)
                 else:
                     st.info("📷 Sin registro fotográfico.")
 
-                # 3. Resumen
+                # Resumen
                 if resumen and resumen != "None":
                     st.markdown(f"**📝 Bitácora:** {resumen}")
 
-                # 4. EVALUACIONES (CRUCE CON TUS COLUMNAS REALES)
+                # Evaluaciones (Cruce)
                 if not df_evals.empty:
-                    # Filtro por fecha exacta
                     evals_dia = df_evals[df_evals['FECHA'] == fecha]
-                    
                     if not evals_dia.empty:
                         st.divider()
-                        st.markdown("📊 **Resultados de Evaluación:**")
-                        
-                        total = len(evals_dia)
-                        
-                        # INTELIGENCIA: Buscamos dentro del texto de la IA
-                        # Tu columna real es 'EVALUACION_IA'
+                        st.markdown("📊 **Resultados:**")
                         col_juicio = 'EVALUACION_IA' if 'EVALUACION_IA' in evals_dia.columns else None
                         
                         if col_juicio:
-                            # Convertimos a mayúsculas para buscar palabras clave
                             textos = evals_dia[col_juicio].astype(str).str.upper()
-                            
-                            # Contamos apariciones de palabras clave en el texto
                             cons = textos.str.count("CONSOLIDADO").sum()
                             proc = textos.str.count("PROCESO").sum()
                             ini = textos.str.count("INICIADO").sum()
                             
                             m1, m2, m3, m4 = st.columns(4)
-                            m1.metric("Alumnos", total)
+                            m1.metric("Total", len(evals_dia))
                             m2.metric("Consolidado", int(cons))
-                            m3.metric("En Proceso", int(proc))
+                            m3.metric("Proceso", int(proc))
                             m4.metric("Iniciado", int(ini))
-                        else:
-                            st.caption(f"Se encontraron {total} evaluaciones.")
-
-                        # TABLA DE DATOS (Con tus columnas reales)
-                        with st.expander("Ver detalles de estudiantes"):
-                            # Definimos columnas posibles en TU Excel
+                        
+                        with st.expander("Ver detalles estudiantes"):
                             cols_posibles = ['ESTUDIANTE', 'ALUMNO', 'ANECDOTA', 'OBSERVACION', 'EVALUACION_IA']
-                            # Filtramos solo las que existen para no dar error
                             cols_finales = [c for c in cols_posibles if c in evals_dia.columns]
-                            
-                            if cols_finales:
-                                st.dataframe(evals_dia[cols_finales], hide_index=True)
-                            else:
-                                st.dataframe(evals_dia, hide_index=True)
+                            st.dataframe(evals_dia[cols_finales] if cols_finales else evals_dia, hide_index=True)
 
         # --- INICIO DEL MÓDULO ---
         st.header("📂 Mi Archivo Pedagógico")
-        st.markdown("Bitácora inteligente conectada a tus Evaluaciones.")
-
-        # 1. CARGA DE DATOS
+        
+        # 1. CARGA DE DATOS GENERAL (PARA TODAS LAS PESTAÑAS)
         try:
+            # Bitácora
             df_ejecucion = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=0)
             mis_clases = df_ejecucion[df_ejecucion['USUARIO'] == st.session_state.u['NOMBRE']]
             
-            try:
-                df_pensums = conn.read(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", ttl=0)
-                mis_pensums = df_pensums[(df_pensums['USUARIO'] == st.session_state.u['NOMBRE']) & (df_pensums['ESTADO'] == "ACTIVO")]
-            except: mis_pensums = pd.DataFrame()
-                
+            # Evaluaciones
             try:
                 df_evaluaciones = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
                 mis_evaluaciones = df_evaluaciones[df_evaluaciones['USUARIO'] == st.session_state.u['NOMBRE']]
             except: mis_evaluaciones = pd.DataFrame()
 
+            # Planificaciones Guardadas (Hoja1)
+            try:
+                df_planes = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
+                mis_planes = df_planes[df_planes['USUARIO'] == st.session_state.u['NOMBRE']]
+            except: mis_planes = pd.DataFrame()
+
+            # Pensums (Para nombres de bloques)
+            try:
+                df_pensums = conn.read(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", ttl=0)
+                mis_pensums = df_pensums[(df_pensums['USUARIO'] == st.session_state.u['NOMBRE']) & (df_pensums['ESTADO'] == "ACTIVO")]
+            except: mis_pensums = pd.DataFrame()
+
         except Exception as e:
-            st.error(f"Error base de datos: {e}")
+            st.error(f"Error cargando datos: {e}")
             st.stop()
 
-        # 2. SELECTOR
-        opciones = ["📘 Portafolio General (P.A., P.S.P., Deportes, Especiales)"]
-        mapa_pensums = {}
-        for i, row in mis_pensums.iterrows():
-            titulo = row['TITULO_PENSUM']
-            opciones.append(f"🟢 Pensum Especial: {titulo}")
-            mapa_pensums[titulo] = row['CONTENIDO_FULL']
+        # 2. CREACIÓN DE LAS PESTAÑAS (AQUÍ ESTÁ LO QUE FALTABA)
+        tab_bitacora, tab_planes, tab_evals = st.tabs(["📸 Bitácora de Evidencias", "🗓️ Planificaciones Guardadas", "📊 Registro de Evaluaciones"])
 
-        seleccion = st.selectbox("Seleccione el Portafolio:", opciones)
-        st.divider()
-
-        # 3. VISUALIZACIÓN
-        
-        # CASO A: GENERAL
-        if "General" in seleccion:
-            st.subheader("📘 Actividades Generales")
-            clases_general = mis_clases[
-                (mis_clases['ID_BLOQUE'].isna()) | 
-                (mis_clases['ID_BLOQUE'].astype(str).str.strip() == "") | 
-                (mis_clases['ID_BLOQUE'].astype(str) == "0") |
-                (mis_clases['ID_BLOQUE'].astype(str) == "0.0")
-            ].sort_values(by="FECHA", ascending=False)
+        # =====================================================================
+        # PESTAÑA 1: BITÁCORA (LO QUE YA TENÍAMOS CONFIGURADO)
+        # =====================================================================
+        with tab_bitacora:
+            st.subheader("📸 Bitácora de Clases Ejecutadas")
             
-            if clases_general.empty:
-                st.info("No hay actividades generales.")
+            # Selector de Portafolio
+            opciones = ["📘 Portafolio General (P.A. / P.S.P.)"]
+            mapa_pensums = {}
+            for i, row in mis_pensums.iterrows():
+                titulo = row['TITULO_PENSUM']
+                opciones.append(f"🟢 Pensum Especial: {titulo}")
+                mapa_pensums[titulo] = row['CONTENIDO_FULL']
+
+            seleccion = st.selectbox("Filtrar por Portafolio:", opciones)
+            st.divider()
+
+            # Lógica de visualización (General vs Pensum)
+            if "General" in seleccion:
+                clases_general = mis_clases[
+                    (mis_clases['ID_BLOQUE'].isna()) | 
+                    (mis_clases['ID_BLOQUE'].astype(str).str.strip() == "") | 
+                    (mis_clases['ID_BLOQUE'].astype(str) == "0") |
+                    (mis_clases['ID_BLOQUE'].astype(str) == "0.0")
+                ].sort_values(by="FECHA", ascending=False)
+                
+                if clases_general.empty:
+                    st.info("No hay bitácoras generales.")
+                else:
+                    clases_general['MES'] = pd.to_datetime(clases_general['FECHA'], dayfirst=True, errors='coerce').dt.strftime('%B %Y')
+                    for mes in clases_general['MES'].unique():
+                        if str(mes) != "nan":
+                            with st.expander(f"🗓️ {mes}", expanded=True):
+                                for i, row in clases_general[clases_general['MES'] == mes].iterrows():
+                                    renderizar_tarjeta(row, mis_evaluaciones)
             else:
-                clases_general['MES'] = pd.to_datetime(clases_general['FECHA'], dayfirst=True, errors='coerce').dt.strftime('%B %Y')
-                for mes in clases_general['MES'].unique():
-                    if str(mes) != "nan":
-                        with st.expander(f"🗓️ {mes}", expanded=True):
-                            for i, row in clases_general[clases_general['MES'] == mes].iterrows():
+                nombre_pensum = seleccion.replace("🟢 Pensum Especial: ", "")
+                texto_full = mapa_pensums.get(nombre_pensum, "")
+                
+                # Extraer bloques
+                nombres_bloques = {}
+                import re
+                for line in texto_full.split('\n'):
+                    match = re.search(r'(\d+)\.\s*BLOQUE:?\s*(.*)', line, re.IGNORECASE)
+                    if match: nombres_bloques[int(match.group(1))] = match.group(2).strip()
+
+                hay_datos = False
+                for num_bloque in range(1, 15):
+                    titulo_bloque = nombres_bloques.get(num_bloque, "Tema Específico")
+                    mis_clases['ID_BLOQUE_STR'] = mis_clases['ID_BLOQUE'].astype(str).str.replace(".0", "").str.strip()
+                    clases_bloque = mis_clases[mis_clases['ID_BLOQUE_STR'] == str(num_bloque)].sort_values(by="FECHA", ascending=False)
+                    
+                    cantidad = len(clases_bloque)
+                    icono = "📂" if cantidad > 0 else "📁"
+                    
+                    with st.expander(f"{icono} BLOQUE {num_bloque}: {titulo_bloque} ({cantidad})", expanded=(cantidad>0)):
+                        if not clases_bloque.empty:
+                            hay_datos = True
+                            for i, row in clases_bloque.iterrows():
                                 renderizar_tarjeta(row, mis_evaluaciones)
-
-        # CASO B: PENSUM ESPECIAL
-        else:
-            nombre_pensum = seleccion.replace("🟢 Pensum Especial: ", "")
-            st.subheader(f"🟢 Portafolio: {nombre_pensum}")
-            
-            texto_full = mapa_pensums.get(nombre_pensum, "")
-            nombres_bloques = {}
-            import re
-            for line in texto_full.split('\n'):
-                match = re.search(r'(\d+)\.\s*BLOQUE:?\s*(.*)', line, re.IGNORECASE)
-                if match: nombres_bloques[int(match.group(1))] = match.group(2).strip()
-
-            hay_datos = False
-            for num_bloque in range(1, 15):
-                titulo_bloque = nombres_bloques.get(num_bloque, "Tema Específico")
-                # Filtro seguro de string
-                mis_clases['ID_BLOQUE_STR'] = mis_clases['ID_BLOQUE'].astype(str).str.replace(".0", "").str.strip()
-                clases_bloque = mis_clases[mis_clases['ID_BLOQUE_STR'] == str(num_bloque)].sort_values(by="FECHA", ascending=False)
+                        else:
+                            st.caption("Sin registros.")
                 
-                cantidad = len(clases_bloque)
-                icono = "📂" if cantidad > 0 else "📁"
-                
-                with st.expander(f"{icono} BLOQUE {num_bloque}: {titulo_bloque} ({cantidad})", expanded=(cantidad>0)):
-                    if clases_bloque.empty:
-                        st.caption("Sin actividades.")
-                    else:
-                        hay_datos = True
-                        for i, row in clases_bloque.iterrows():
-                            renderizar_tarjeta(row, mis_evaluaciones)
+                if not hay_datos: st.warning("No hay bitácoras vinculadas a bloques de este Pensum.")
+
+        # =====================================================================
+        # PESTAÑA 2: PLANIFICACIONES GUARDADAS (LO QUE BUSCABAS)
+        # =====================================================================
+        with tab_planes:
+            st.subheader("🗓️ Historial de Planificaciones")
+            st.caption("Aquí están los textos generados por el Planificador Inteligente (Guardados en Hoja1).")
             
-            if not hay_datos: st.warning("No hay bitácoras vinculadas a este Pensum.")
+            if mis_planes.empty:
+                st.info("No has guardado ninguna planificación todavía.")
+            else:
+                # Ordenar por fecha reciente
+                mis_planes = mis_planes.sort_index(ascending=False)
+                
+                for i, row in mis_planes.iterrows():
+                    fecha_p = row['FECHA']
+                    tema_p = row['TEMA']
+                    contenido_p = row['CONTENIDO']
+                    
+                    with st.expander(f"📝 {fecha_p} | {tema_p}"):
+                        st.text_area("Planificación:", value=contenido_p, height=300, key=f"plan_txt_{i}")
+                        st.download_button("📥 Descargar", data=contenido_p, file_name=f"Planificacion_{fecha_p.replace('/','-')}.txt", key=f"down_{i}")
 
-    # =========================================================================
-    # SECCIÓN: RECURSOS EXTRA (MANTENIDOS)
-    # =========================================================================
-    elif opcion == "🌟 Mensaje Motivacional":
-        st.header("🌟 Dosis de Ánimo Docente")
-        if st.button("✨ Recibir Mensaje", use_container_width=True):
-            with st.spinner("Conectando..."):
-                res = generar_respuesta([{"role":"user","content":"Frase motivadora para docente especial Venezuela."}], 0.8)
-                st.success(res)
-
-    elif opcion == "💡 Ideas de Actividades":
-        st.header("💡 Generador de Estrategias")
-        tema = st.text_input("Tema:", placeholder="Ej: Reciclaje...")
-        if st.button("🎲 Generar Ideas") and tema:
-            with st.spinner("Pensando..."):
-                res = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":f"3 actividades cortas sobre {tema} para educación especial."}], 0.7)
-                st.write(res)
-
-    elif opcion == "❓ Consultas Técnicas":
-        st.header("❓ Asesor Pedagógico IA")
-        c = st.text_area("Duda:")
-        if st.button("🔍 Consultar") and c:
-            with st.spinner("Analizando..."):
-                res = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":c}], 0.5)
-                st.info(res)
+        # =====================================================================
+        # PESTAÑA 3: REGISTRO DE EVALUACIONES (DATA CRUDA)
+        # =====================================================================
+        with tab_evals:
+            st.subheader("📊 Base de Datos de Evaluaciones")
+            st.caption("Vista directa de tu hoja de Excel 'EVALUACIONES'.")
+            
+            if mis_evaluaciones.empty:
+                st.info("No hay evaluaciones registradas.")
+            else:
+                # Filtros básicos
+                estudiantes = mis_evaluaciones['ESTUDIANTE'].unique() if 'ESTUDIANTE' in mis_evaluaciones.columns else []
+                filtro_alum = st.multiselect("Filtrar por Estudiante:", estudiantes)
+                
+                df_show = mis_evaluaciones
+                if filtro_alum:
+                    df_show = df_show[df_show['ESTUDIANTE'].isin(filtro_alum)]
+                
+                st.dataframe(df_show, use_container_width=True, hide_index=True)
 
 # =============================================================================
 # PIE DE PÁGINA OFICIAL (v1.0)
