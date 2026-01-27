@@ -1447,11 +1447,11 @@ else:
                             st.success("✅ ¡Jornada Exitosa! 3 Evidencias Guardadas.")
                             time.sleep(2); st.session_state.pagina_actual = "HOME"; st.rerun()
 # -------------------------------------------------------------------------
-    # VISTA: FÁBRICA DE PENSUMS (VERSIÓN FINAL BLINDADA: SIN CONCLUSIONES)
+    # VISTA: FÁBRICA DE PENSUMS (V. FINAL: LOGICA DE TEMARIO + TOGGLE + DÍAS)
     # -------------------------------------------------------------------------
     elif opcion == "🏗️ FÁBRICA DE PENSUMS":
         st.header("🏗️ Fábrica de Diseño Instruccional")
-        st.markdown("Generador estandarizado para crear Pensums de nuevas especialidades.")
+        st.markdown("Generador estandarizado de currículo y gestión de activación.")
 
         # --- MEMORIA TEMPORAL ---
         if 'fp_fase1' not in st.session_state: st.session_state.fp_fase1 = ""
@@ -1459,8 +1459,11 @@ else:
         if 'fp_fase3' not in st.session_state: st.session_state.fp_fase3 = ""
         if 'fp_completo' not in st.session_state: st.session_state.fp_completo = ""
 
-        tab_fabrica, tab_biblioteca = st.tabs(["🏭 Línea de Producción (Crear)", "📚 Biblioteca de Pensums"])
+        tab_fabrica, tab_biblioteca = st.tabs(["🏭 Línea de Producción (Crear)", "📚 Biblioteca y Activación"])
 
+        # =====================================================================
+        # PESTAÑA 1: LA FÁBRICA (CREACIÓN)
+        # =====================================================================
         with tab_fabrica:
             # 1. DATOS DE ENTRADA
             st.subheader("1. Ficha Técnica")
@@ -1470,9 +1473,8 @@ else:
             with c2:
                 docente_resp = st.text_input("Docente Responsable:", value=st.session_state.u['NOMBRE'])
             
-            # CAMPO CLAVE PARA ADAPTACIÓN
             contexto_extra = st.text_area("Recursos y Enfoque (Clave para la adaptación):", 
-                                        placeholder="Ej: Tenemos instrumentos de percusión, queremos formar una banda, no tenemos electricidad...")
+                                        placeholder="Ej: Tenemos instrumentos de percusión, queremos formar una banda...")
             
             st.divider()
 
@@ -1480,22 +1482,20 @@ else:
             st.markdown("### 🔹 Fase 1: Fundamentación Institucional")
             if st.button("Generar Fase 1 (Fundamentación)", type="primary"):
                 if especialidad:
-                    with st.spinner("Redactando bases legales y filosóficas..."):
+                    with st.spinner("Redactando bases..."):
                         prompt_f1 = f"""
-                        ACTÚA COMO COORDINADOR PEDAGÓGICO DEL TEL ERAC (ZULIA).
+                        ACTÚA COMO COORDINADOR DEL TEL ERAC (ZULIA).
                         REDACTA LA "FUNDAMENTACIÓN Y METAS" PARA EL PENSUM DE: {especialidad}.
-                        
                         CONTEXTO: "{contexto_extra}".
                         
                         ESTRUCTURA OBLIGATORIA:
                         1. Encabezado Oficial: República Bolivariana... TEL ERAC.
-                        2. PEIC VIGENTE: "Una escuela sustentable en pro del desarrollo integral y laboral".
-                        3. Vértice 5: Cada familia una escuela. Tema Indispensable: Proceso Social del Trabajo.
-                        4. JUSTIFICACIÓN: Adaptada a {especialidad}.
-                        5. METAS: Independencia laboral, Resiliencia, Autoestima, Integración.
-                        6. LIMITACIONES REALES (ZULIA): Menciona fallas eléctricas diarias, transporte difícil, economía multimoneda.
+                        2. PEIC VIGENTE: "Una escuela sustentable...". Vértice 5.
+                        3. JUSTIFICACIÓN: Adaptada a {especialidad}.
+                        4. METAS: Independencia laboral, Resiliencia, Autoestima.
+                        5. LIMITACIONES (ZULIA): Fallas eléctricas, transporte, economía multimoneda.
                         
-                        REGLA DE ORO (PROHIBIDO): NO ESCRIBAS NINGUNA CONCLUSIÓN, CIERRE O DESPEDIDA AL FINAL. EL TEXTO DEBE CORTARSE EN EL ÚLTIMO PUNTO DE LAS LIMITACIONES. CUALQUIER PALABRA EXTRA SERÁ CONSIDERADA UN ERROR.
+                        REGLA DE ORO: NO ESCRIBAS NINGUNA CONCLUSIÓN O DESPEDIDA. EL TEXTO DEBE CORTARSE EN EL ÚLTIMO PUNTO.
                         """
                         st.session_state.fp_fase1 = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":prompt_f1}], 0.7)
                 else: st.error("Falta el nombre de la especialidad.")
@@ -1503,25 +1503,30 @@ else:
             if st.session_state.fp_fase1:
                 st.session_state.fp_fase1 = st.text_area("Edición Fase 1:", value=st.session_state.fp_fase1, height=200)
 
-            # 3. FASE 2: MALLA CURRICULAR
-            st.markdown("### 🔹 Fase 2: Bloques de Contenido (Numeración Limpia)")
-            st.info("La IA intercalará los contenidos técnicos con los transversales.")
+            # 3. FASE 2: MALLA CURRICULAR (TEMARIO, NO ACTIVIDADES)
+            st.markdown("### 🔹 Fase 2: Temario y Contenidos (Listas)")
+            st.info("La IA generará listas de conceptos (Temario) para que el Planificador tenga material para variar.")
             
-            if st.button("Generar Fase 2 (Bloques)", type="primary"):
+            if st.button("Generar Fase 2 (Temario)", type="primary"):
                 if st.session_state.fp_fase1:
-                    with st.spinner("Diseñando Malla Curricular..."):
+                    with st.spinner("Diseñando Estructura de Temas..."):
                         prompt_f2 = f"""
                         CONTEXTO: {especialidad}. RECURSOS: {contexto_extra}.
                         
-                        TAREA: DISEÑA LOS BLOQUES DE CONTENIDO.
+                        TAREA: DISEÑA LOS BLOQUES DE CONTENIDO (TEMARIO).
                         
-                        FORMATO ESTRICTO DE NUMERACIÓN (PROHIBIDO NÚMEROS ROMANOS):
-                        Usa una lista simple: "1. BLOQUE: [NOMBRE]".
-                        No uses subtítulos como "Bloque Técnico II". Solo el número y el nombre.
+                        IMPORTANTE: NO GENERES ACTIVIDADES ESPECÍFICAS (NO digas "hacer un dibujo").
+                        GENERA LISTAS DE CONCEPTOS Y TEMAS TÉCNICOS. EL DOCENTE USARÁ ESTA LISTA PARA CREAR MÚLTIPLES CLASES.
                         
-                        ORDEN EXACTO:
+                        Ejemplo de Formato Correcto:
+                        1. BLOQUE: ECONOMÍA
+                           - Concepto de Divisas
+                           - Tipos de Billetes
+                           - Tasa de Cambio
+                        
+                        ORDEN EXACTO DE LOS BLOQUES:
                         1. BLOQUE: INTRODUCCIÓN A {especialidad}
-                        2. BLOQUE: ATENCIÓN AL PÚBLICO (Normas de cortesía)
+                        2. BLOQUE: ATENCIÓN AL PÚBLICO
                         3. BLOQUE: [TEMA TÉCNICO BÁSICO DE {especialidad}]
                         4. BLOQUE: SEGURIDAD E HIGIENE
                         5. BLOQUE: [TEMA TÉCNICO INTERMEDIO DE {especialidad}]
@@ -1535,7 +1540,7 @@ else:
                         13. BLOQUE: P.S.P. (Producto Final)
                         14. BLOQUE: MERCADEO Y VENTAS
                         
-                        Desarrolla el contenido detallado de cada uno. NO AGREGUES CONCLUSIONES AL FINAL.
+                        NO AGREGUES CONCLUSIONES. SOLO LA LISTA NUMERADA.
                         """
                         st.session_state.fp_fase2 = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":prompt_f2}], 0.7)
                 else: st.error("Genera la Fase 1 primero.")
@@ -1547,15 +1552,14 @@ else:
             st.markdown("### 🔹 Fase 3: Estrategias y Evaluación")
             if st.button("Generar Fase 3 (Metodología)", type="primary"):
                 if st.session_state.fp_fase2:
-                    with st.spinner("Creando cuadros metodológicos..."):
+                    with st.spinner("Creando metodología..."):
                         prompt_f3 = f"""
                         PARA EL PENSUM DE: {especialidad}.
-                        GENERA EL APARTADO DE: ESTRATEGIAS, RECURSOS Y EVALUACIÓN.
+                        GENERA: ESTRATEGIAS, RECURSOS Y EVALUACIÓN.
+                        NO HAGAS CONCLUSIONES.
                         
-                        REGLA DE ORO: NO HAGAS NINGUNA CONCLUSIÓN O TEXTO DE CIERRE AL FINAL. SOLO DAME LOS DATOS TÉCNICOS.
-                        
-                        - ESTRATEGIAS: Vivenciales y adaptadas a: "{contexto_extra}".
-                        - RECURSOS: Incluye materiales de provecho y Billetes del Cono Monetario.
+                        - ESTRATEGIAS: Vivenciales (Roleplay, Práctica de Campo).
+                        - RECURSOS: "{contexto_extra}", materiales de provecho, Billetes del Cono Monetario.
                         - EVALUACIÓN: Lista de Cotejo, Observación.
                         """
                         st.session_state.fp_fase3 = generar_respuesta([{"role":"system","content":INSTRUCCIONES_TECNICAS},{"role":"user","content":prompt_f3}], 0.6)
@@ -1566,7 +1570,7 @@ else:
 
             st.divider()
 
-            # 5. ZONA DE ENSAMBLAJE (CON VISOR)
+            # 5. CONSOLIDACIÓN
             st.markdown("### 🔗 Consolidación Final")
             if st.button("🔗 UNIR TODO EL DOCUMENTO", type="primary", use_container_width=True):
                 if st.session_state.fp_fase1 and st.session_state.fp_fase2 and st.session_state.fp_fase3:
@@ -1581,7 +1585,7 @@ FECHA: {ahora_ve().strftime("%d/%m/%Y")}
 {st.session_state.fp_fase1}
 
 ----------------------------------------------------------------
-MALLA CURRICULAR Y BLOQUES DE CONTENIDO
+MALLA CURRICULAR Y TEMARIO (CONTENIDOS)
 ----------------------------------------------------------------
 {st.session_state.fp_fase2}
 
@@ -1592,32 +1596,32 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
                     """
                     st.success("✅ Documento Unificado.")
                 else:
-                    st.error("Faltan fases por generar.")
+                    st.error("Faltan fases.")
 
-            # VISOR EDITABLE
             if st.session_state.fp_completo:
                 st.markdown("#### 📄 Vista Previa y Edición Final")
                 st.session_state.fp_completo = st.text_area("Documento Maestro (Editable):", 
-                                                          value=st.session_state.fp_completo, 
-                                                          height=500)
+                                                          value=st.session_state.fp_completo, height=400)
                 
                 c_save, c_down = st.columns(2)
-                
                 with c_save:
                     if st.button("💾 Guardar en Biblioteca"):
                         try:
                             try:
                                 df_lib = conn.read(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", ttl=0)
                             except:
-                                df_lib = pd.DataFrame(columns=["FECHA", "USUARIO", "TITULO_PENSUM", "CONTENIDO_FULL", "ESTADO"])
+                                # Creamos DF con la nueva columna DIAS
+                                df_lib = pd.DataFrame(columns=["FECHA", "USUARIO", "TITULO_PENSUM", "CONTENIDO_FULL", "ESTADO", "DIAS"])
 
                             nuevo_pen = pd.DataFrame([{
                                 "FECHA": ahora_ve().strftime("%d/%m/%Y"),
                                 "USUARIO": st.session_state.u['NOMBRE'],
                                 "TITULO_PENSUM": especialidad,
                                 "CONTENIDO_FULL": st.session_state.fp_completo,
-                                "ESTADO": "BORRADOR"
+                                "ESTADO": "INACTIVO", # Nace inactivo hasta que se configure
+                                "DIAS": "" 
                             }])
+                            # Concatenamos asegurando que las columnas coincidan
                             conn.update(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", data=pd.concat([df_lib, nuevo_pen], ignore_index=True))
                             st.balloons()
                             st.success("Guardado en la Nube.")
@@ -1625,45 +1629,90 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
                             st.error(f"Error al guardar: {e}")
 
                 with c_down:
-                    st.download_button(
-                        label="📥 Descargar Archivo (.txt)",
-                        data=st.session_state.fp_completo,
-                        file_name=f"PENSUM_{especialidad.replace(' ','_')}_ERAC.txt",
-                        mime="text/plain"
-                    )
+                    st.download_button("📥 Descargar Archivo (.txt)", data=st.session_state.fp_completo, file_name=f"PENSUM_{especialidad}_ERAC.txt")
 
+        # =====================================================================
+        # PESTAÑA 2: BIBLIOTECA (GESTIÓN REAL: TOGGLE Y DÍAS)
+        # =====================================================================
         with tab_biblioteca:
-            st.subheader("📚 Mis Pensums Creados")
+            st.subheader("📚 Gestión de Pensums y Horarios")
             try:
                 df_biblio = conn.read(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", ttl=0)
                 mis_p = df_biblio[df_biblio['USUARIO'] == st.session_state.u['NOMBRE']]
                 
                 if mis_p.empty:
-                    st.info("No hay pensums registrados.")
+                    st.info("No tienes pensums registrados.")
                 else:
                     for i, row in mis_p.iterrows():
-                        estado = "🟢 ACTIVO" if row['ESTADO'] == "ACTIVO" else "🟡 BORRADOR"
-                        with st.expander(f"{estado} - {row['TITULO_PENSUM']}"):
-                            st.text_area("Vista Rápida", row['CONTENIDO_FULL'][:500] + "...", height=100, disabled=True)
+                        # Recuperamos el estado y los días
+                        estado_actual = row['ESTADO']
+                        es_activo = (estado_actual == "ACTIVO")
+                        
+                        # Recuperar días guardados (manejo de errores si está vacío)
+                        dias_guardados = []
+                        if "DIAS" in row and pd.notna(row['DIAS']) and row['DIAS'] != "":
+                            dias_guardados = str(row['DIAS']).split(",")
+                        
+                        # Título de la tarjeta con indicador visual
+                        titulo_card = f"🟢 {row['TITULO_PENSUM']}" if es_activo else f"⚪ {row['TITULO_PENSUM']} (Inactivo)"
+                        
+                        with st.expander(titulo_card):
+                            st.caption(f"Fecha de creación: {row['FECHA']}")
                             
-                            c_act, c_del = st.columns([1, 1])
+                            # COLUMNAS DE GESTIÓN
+                            col_conf, col_del = st.columns([3, 1])
                             
-                            with c_act:
-                                if st.button("🚀 ACTIVAR COMO CEREBRO", key=f"act_pen_{i}"):
-                                    df_biblio.loc[df_biblio['USUARIO'] == st.session_state.u['NOMBRE'], 'ESTADO'] = "INACTIVO"
-                                    df_biblio.at[i, 'ESTADO'] = "ACTIVO"
-                                    conn.update(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", data=df_biblio)
-                                    st.toast(f"¡Activado!")
-                                    time.sleep(1)
-                                    st.rerun()
+                            with col_conf:
+                                st.markdown("##### ⚙️ Configuración de Activación")
+                                
+                                # 1. EL INTERRUPTOR (TOGGLE)
+                                nuevo_estado_bool = st.toggle("¿Activar este Pensum?", value=es_activo, key=f"tog_{i}")
+                                
+                                # 2. EL SELECTOR DE DÍAS (SOLO SI ESTÁ ACTIVO)
+                                seleccion_dias = []
+                                if nuevo_estado_bool:
+                                    st.info("Selecciona los días que darás esta especialidad:")
+                                    seleccion_dias = st.multiselect(
+                                        "Días de clase:",
+                                        ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
+                                        default=dias_guardados,
+                                        key=f"ms_{i}"
+                                    )
+                                else:
+                                    st.caption("Activa el interruptor para configurar los días.")
 
-                            with c_del:
-                                if st.button("🗑️ Eliminar", key=f"del_pen_{i}"):
+                                # BOTÓN DE GUARDAR CAMBIOS (Actualiza Estado y Días)
+                                if st.button("💾 Actualizar Configuración", key=f"upd_{i}"):
+                                    try:
+                                        # Actualizamos el DF en memoria
+                                        df_biblio.at[i, 'ESTADO'] = "ACTIVO" if nuevo_estado_bool else "INACTIVO"
+                                        df_biblio.at[i, 'DIAS'] = ",".join(seleccion_dias) # Guardamos como texto separado por comas
+                                        
+                                        # (Opcional) Si quieres que solo haya UNO activo, descomenta:
+                                        # if nuevo_estado_bool:
+                                        #     df_biblio.loc[(df_biblio['USUARIO'] == st.session_state.u['NOMBRE']) & (df_biblio.index != i), 'ESTADO'] = "INACTIVO"
+
+                                        conn.update(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", data=df_biblio)
+                                        st.toast("✅ Cambios guardados en la nube.")
+                                        time.sleep(1)
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.error(f"Error al actualizar: {e}")
+
+                            with col_del:
+                                st.write("") # Espacio para alinear
+                                st.write("")
+                                if st.button("🗑️ Borrar", key=f"del_{i}", type="secondary"):
                                     df_new = df_biblio.drop(i)
                                     conn.update(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", data=df_new)
                                     st.rerun()
-            except:
-                st.warning("No se encontraron pensums.")
+
+                            # VISOR DEL CONTENIDO
+                            st.divider()
+                            st.text_area("Contenido del Pensum:", row['CONTENIDO_FULL'], height=150, disabled=True)
+
+            except Exception as e:
+                st.warning(f"No se pudo cargar la biblioteca. Asegúrate de tener la columna 'DIAS' en la hoja. Error: {e}")
 # -------------------------------------------------------------------------
     # VISTA: GESTIÓN DE PROYECTOS (v11.6 - MENÚ DINÁMICO REAL)
     # -------------------------------------------------------------------------
