@@ -908,12 +908,12 @@ else:
             st.info("✅ Registro completo.")
             if st.button("Volver"): st.session_state.pagina_actual="HOME"; st.rerun()
 # -------------------------------------------------------------------------
-    # VISTA: PLANIFICADOR INTELIGENTE (FUSIÓN: TU ESTRUCTURA + LÓGICA PA/PSP/BLOQUES)
+    # VISTA: PLANIFICADOR INTELIGENTE (CORREGIDO: NOMBRE Y LÓGICA DE PROYECTOS)
     # -------------------------------------------------------------------------
-    elif opcion == "📝 Planificador Inteligente": # (O el nombre que tengas en el menú)
+    elif opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.markdown("**Generación de Planificación Pedagógica Especializada**")
         
-        # 1. TUS INPUTS ORIGINALES (RESPETANDO UI)
+        # 1. INTERFAZ DE USUARIO (TU CÓDIGO ORIGINAL RESPETADO)
         col1, col2 = st.columns(2)
         with col1:
             rango = st.text_input("Lapso (Fechas):", placeholder="Ej: 26 al 30 de Enero")
@@ -942,11 +942,11 @@ else:
         notas = st.text_area("Tema Generador / Referente Ético / Notas:", height=100)
 
         # =============================================================================
-        # BOTÓN MAESTRO: LÓGICA MEJORADA
+        # BOTÓN MAESTRO: AQUÍ ESTÁ LA INTELIGENCIA INYECTADA
         # =============================================================================
         if st.button("🚀 Generar Planificación Estructurada", type="primary"):
             
-            # VALIDACIONES
+            # VALIDACIONES BÁSICAS
             if not rango or not notas:
                 st.error("⚠️ Por favor ingrese el Lapso y el Tema.")
             elif is_pei and not perfil_alumno:
@@ -954,9 +954,9 @@ else:
             elif modalidad == "Taller de Educación Laboral (T.E.L.)" and not aula_especifica:
                 st.error("⚠️ Especifique el área del Taller.")
             else:
-                with st.spinner('Conectando Proyectos, Pensums y Horarios...'):
+                with st.spinner('Conectando Proyectos, Horarios y Pensum Activo...'):
                     
-                    # A. VOCABULARIO Y TONO (TU LÓGICA ORIGINAL)
+                    # A. DETERMINAR TONO Y VOCABULARIO (TU LÓGICA)
                     vocabulario_sugerido = ""
                     tono_redaccion = ""
                     if "Inicial" in modalidad:
@@ -975,46 +975,54 @@ else:
                         tono_redaccion = "SENSORIAL Y HÁBITOS."
                         vocabulario_sugerido = "- INICIO: Saludo.\n- DESARROLLO: Estimulación.\n- CIERRE: Aseo."
 
-                    # B. RECUPERACIÓN DE PROYECTOS (MEJORADA: PA vs PSP)
+                    # B. RECUPERAR DATOS DE PROYECTO (PA vs PSP) DESDE LA NUBE
                     texto_instruccion_proyecto = ""
                     datos_proyecto = None
-                    
                     try:
                         df_p = conn.read(spreadsheet=URL_HOJA, worksheet="CONFIG_PROYECTO", ttl=0)
                         user_p = df_p[df_p['USUARIO'] == st.session_state.u['NOMBRE']]
                         if not user_p.empty:
                             fila = user_p.iloc[0]
+                            # Recuperamos datos de forma segura
                             datos_proyecto = {
-                                'ACTIVO': str(fila['ACTIVO']).upper().strip() if 'ACTIVO' in fila else "TRUE", # Compatibilidad
-                                'NOMBRE_PA': fila['TITULO_PA'] if 'TITULO_PA' in fila else fila.get('NOMBRE_PA', 'Valores'),
-                                'NOMBRE_PSP': fila['TITULO_PSP'] if 'TITULO_PSP' in fila else fila.get('NOMBRE_PSP', 'Taller'),
+                                'ACTIVO': str(fila['ACTIVO']).upper().strip() if 'ACTIVO' in fila else "TRUE",
+                                'NOMBRE_PA': fila['TITULO_PA'] if 'TITULO_PA' in fila else 'Valores',
+                                'NOMBRE_PSP': fila['TITULO_PSP'] if 'TITULO_PSP' in fila else 'Taller',
                                 'DIAS_PA': str(fila['DIAS_PA']) if 'DIAS_PA' in fila else "",
-                                'DIAS_PSP': str(fila['DIAS_PSP']) if 'DIAS_PSP' in fila else str(fila.get('DIAS_PSP', ''))
+                                'DIAS_PSP': str(fila['DIAS_PSP']) if 'DIAS_PSP' in fila else ""
                             }
                     except: datos_proyecto = None
 
-                    # C. RECUPERACIÓN DE PENSUM Y BLOQUE (NUEVO)
+                    # C. RECUPERAR PENSUM ACTIVO Y EL BLOQUE ACTUAL
                     texto_bloque_pensum = ""
                     nombre_bloque_pensum = ""
                     try:
                         df_bib = conn.read(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", ttl=0)
+                        # Buscamos el pensum ACTIVO de este usuario
                         pensum_act = df_bib[(df_bib['USUARIO'] == st.session_state.u['NOMBRE']) & (df_bib['ESTADO'] == "ACTIVO")]
+                        
                         if not pensum_act.empty:
                             fila_pen = pensum_act.iloc[0]
-                            # Detectamos el bloque actual
-                            nom_bloque = fila_pen['BLOQUE_ACTUAL'] if 'BLOQUE_ACTUAL' in fila_pen and pd.notna(fila_pen['BLOQUE_ACTUAL']) else "1. BLOQUE"
-                            nombre_bloque_pensum = nom_bloque
-                            # Extraemos el contenido
+                            
+                            # ¿Qué bloque toca esta semana? (Leemos la columna BLOQUE_ACTUAL)
+                            if 'BLOQUE_ACTUAL' in fila_pen and pd.notna(fila_pen['BLOQUE_ACTUAL']):
+                                nombre_bloque_pensum = fila_pen['BLOQUE_ACTUAL']
+                            else:
+                                nombre_bloque_pensum = "BLOQUE GENERAL (Sin definir)"
+                            
+                            # Extraemos el texto SOLO de ese bloque
                             full_txt = fila_pen['CONTENIDO_FULL']
-                            inicio = full_txt.find(nom_bloque)
+                            inicio = full_txt.find(nombre_bloque_pensum)
                             if inicio != -1:
+                                # Buscamos dónde termina este bloque (el siguiente "BLOQUE:")
                                 fin = full_txt.find("BLOQUE:", inicio + 20)
                                 texto_bloque_pensum = full_txt[inicio:fin] if fin != -1 else full_txt[inicio:]
                             else:
-                                texto_bloque_pensum = full_txt[:2000] # Fallback
+                                # Fallback: Primeros 2000 caracteres si no encuentra el bloque exacto
+                                texto_bloque_pensum = full_txt[:2000]
                     except: pass
 
-                    # D. CONSTRUCCIÓN DE LA INSTRUCCIÓN DE PROYECTO
+                    # D. CONSTRUIR LA INSTRUCCIÓN DE HORARIO PARA LA IA
                     if datos_proyecto:
                         pa = datos_proyecto['NOMBRE_PA']
                         psp = datos_proyecto['NOMBRE_PSP']
@@ -1023,34 +1031,34 @@ else:
                         
                         if "Taller" in modalidad:
                             texto_instruccion_proyecto = f"""
-                            🚨 **HORARIO ESTRICTO (AULA vs TALLER):**
-                            - DÍAS DE P.A. (TEORÍA/AULA): {dias_pa}. PROYECTO: "{pa}". 
-                              *Enfoque:* Pizarra, cuadernos, valores, teoría del tema.
-                            - DÍAS DE P.S.P. (PRÁCTICA/TALLER): {dias_psp}. PROYECTO: "{psp}".
-                              *Enfoque:* Herramientas, ejecución física, producción, normas de seguridad.
+                            🚨 **REGLA DE ORO DE HORARIO (AULA vs TALLER):**
+                            - DÍAS DE P.A. (TEORÍA/AULA): {dias_pa}. 
+                              *Instrucción:* Planifica actividades de aula, pizarra, valores y teoría sobre el tema. PROYECTO: "{pa}".
+                            - DÍAS DE P.S.P. (PRÁCTICA/TALLER): {dias_psp}.
+                              *Instrucción:* Planifica actividades prácticas, uso de herramientas y ejecución física. PROYECTO: "{psp}".
                             """
                         else:
                             texto_instruccion_proyecto = f"""🚨 **PROYECTO ACTIVO:** "{pa}"."""
                     else:
                         texto_instruccion_proyecto = "Sin proyecto configurado. Usa el Tema Generador."
 
-                    # E. PROMPT CON ENCABEZADO LEGAL (TU ESTRUCTURA)
+                    # E. PROMPT FINAL (EL CEREBRO)
                     st.session_state.temp_tema = f"{modalidad} - {notas}"
+                    
                     encabezado_legal = """
                     **PLANIFICACIÓN SUGERIDA POR SUPER DOCENTE 1.0**
                     *Sustentada en el Currículo Nacional Bolivariano y la Ley Orgánica de Educación (L.O.E.)*
                     ---------------------------------------------------
                     """
                     
-                    # Inyección del contenido del Pensum
                     contexto_pensum = ""
                     if texto_bloque_pensum:
                         contexto_pensum = f"""
-                        💎 **CONTENIDO CURRICULAR OBLIGATORIO (PENSUM):**
-                        ESTAMOS TRABAJANDO EL: "{nombre_bloque_pensum}"
-                        CONTENIDO TÉCNICO A USAR:
+                        💎 **CONTENIDO TÉCNICO OBLIGATORIO (DEL PENSUM):**
+                        ESTA SEMANA ESTAMOS EN EL: "{nombre_bloque_pensum}"
+                        CONTENIDO A IMPARTIR:
                         {texto_bloque_pensum}
-                        (Usa este contenido técnico para rellenar las actividades).
+                        (Usa este contenido para rellenar la "Competencia Técnica" y las actividades).
                         """
 
                     prompt = f"""
@@ -1075,29 +1083,29 @@ else:
                     
                     ### [DÍA Y FECHA]
                     
-                    **1. TÍTULO DE LA ACTIVIDAD:** (Debe coincidir si es PA o PSP según el día)
+                    **1. TÍTULO DE LA ACTIVIDAD:** (Debe corresponder si es día de P.A. o P.S.P.)
                     <br>
-                    **2. COMPETENCIA TÉCNICA:** (Sácala del Contenido del Pensum)
+                    **2. COMPETENCIA TÉCNICA:** (Extraída del contenido del Bloque del Pensum)
                     <br>
                     **3. EXPLORACIÓN (Inicio):** [Actividad]
                     <br>
-                    **4. DESARROLLO (Proceso):** [Actividad detallada]
+                    **4. DESARROLLO (Proceso):** [Actividad detallada acorde al espacio Aula/Taller]
                     <br>
                     **5. REFLEXIÓN (Cierre):** [Evaluación]
                     <br>
                     **6. ESTRATEGIAS:** [Técnicas]
                     <br>
-                    **7. RECURSOS:** [Materiales acordes al día]
+                    **7. RECURSOS:** [Materiales]
                     ---------------------------------------------------
                     """
                     
-                    # 4. GENERACIÓN IA
+                    # LLAMADA A LA IA
                     respuesta_raw = generar_respuesta([
                         {"role":"system","content":INSTRUCCIONES_TECNICAS}, 
                         {"role":"user","content":prompt}
                     ], 0.7)
                     
-                    # --- TU TRUCO DE FORMATO (INTACTO) ---
+                    # FORMATEO DE ESPACIOS
                     respuesta_formateada = respuesta_raw \
                         .replace("**1.", "\n\n**1.") \
                         .replace("**2.", "\n\n**2.") \
@@ -1112,7 +1120,7 @@ else:
                     st.rerun()
 
         # =============================================================================
-        # 5. VISUALIZACIÓN Y GUARDADO (TU ESTRUCTURA ORIGINAL)
+        # 5. VISUALIZACIÓN Y GUARDADO (TU CÓDIGO ORIGINAL RESTAURADO)
         # =============================================================================
         if st.session_state.plan_actual:
             st.divider()
@@ -1131,7 +1139,6 @@ else:
                 if st.button("💾 Guardar en Mi Archivo", key="btn_guardar_final"):
                     try:
                         with st.spinner("Guardando..."):
-                            # TU LÓGICA DE GUARDADO A HOJA1
                             df_historia = conn.read(spreadsheet=URL_HOJA, worksheet="Hoja1", ttl=0)
                             tema_guardar = st.session_state.get('temp_tema', notas)
                             nuevo_registro = pd.DataFrame([{
