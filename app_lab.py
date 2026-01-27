@@ -908,12 +908,12 @@ else:
             st.info("✅ Registro completo.")
             if st.button("Volver"): st.session_state.pagina_actual="HOME"; st.rerun()
 # -------------------------------------------------------------------------
-    # VISTA: PLANIFICADOR INTELIGENTE (CORREGIDO: NOMBRE Y LÓGICA DE PROYECTOS)
+    # VISTA: PLANIFICADOR INTELIGENTE (CÓDIGO ORIGINAL + CEREBRO SUPER DOCENTE 1.0)
     # -------------------------------------------------------------------------
     elif opcion == "🧠 PLANIFICADOR INTELIGENTE":
         st.markdown("**Generación de Planificación Pedagógica Especializada**")
         
-        # 1. INTERFAZ DE USUARIO (TU CÓDIGO ORIGINAL RESPETADO)
+        # 1. INTERFAZ DE USUARIO (TU CÓDIGO ORIGINAL RESPETADO AL 100%)
         col1, col2 = st.columns(2)
         with col1:
             rango = st.text_input("Lapso (Fechas):", placeholder="Ej: 26 al 30 de Enero")
@@ -942,11 +942,11 @@ else:
         notas = st.text_area("Tema Generador / Referente Ético / Notas:", height=100)
 
         # =============================================================================
-        # BOTÓN MAESTRO: AQUÍ ESTÁ LA INTELIGENCIA INYECTADA
+        # BOTÓN MAESTRO: CEREBRO "SUPER DOCENTE 1.0"
         # =============================================================================
         if st.button("🚀 Generar Planificación Estructurada", type="primary"):
             
-            # VALIDACIONES BÁSICAS
+            # VALIDACIONES ORIGINALES
             if not rango or not notas:
                 st.error("⚠️ Por favor ingrese el Lapso y el Tema.")
             elif is_pei and not perfil_alumno:
@@ -954,95 +954,62 @@ else:
             elif modalidad == "Taller de Educación Laboral (T.E.L.)" and not aula_especifica:
                 st.error("⚠️ Especifique el área del Taller.")
             else:
-                with st.spinner('Conectando Proyectos, Horarios y Pensum Activo...'):
+                with st.spinner('Super Docente 1.0 analizando Pilares, Pensum y Estrategias...'):
                     
-                    # A. DETERMINAR TONO Y VOCABULARIO (TU LÓGICA)
+                    # A. TONO SEGÚN MODALIDAD (TU LÓGICA BASE)
                     vocabulario_sugerido = ""
                     tono_redaccion = ""
                     if "Inicial" in modalidad:
                         tono_redaccion = "AFECTIVO, LÚDICO Y MATERNAL."
-                        vocabulario_sugerido = "- INICIO: Cantamos, La ronda.\n- DESARROLLO: Rasgamos, Pintamos.\n- CIERRE: Canción."
                     elif "Taller" in modalidad:
-                        tono_redaccion = "TÉCNICO, PRE-PROFESIONAL Y PRODUCTIVO."
-                        vocabulario_sugerido = "- INICIO: Normas de seguridad.\n- DESARROLLO: Ejecutamos, Reparamos.\n- CIERRE: Control de calidad."
-                    elif "Aula Integrada" in modalidad or "U.P.E." in modalidad:
-                        tono_redaccion = "PSICO-EDUCATIVO Y REMEDIAL."
-                        vocabulario_sugerido = "- INICIO: Gimnasia cerebral.\n- DESARROLLO: Leemos, Escribimos.\n- CIERRE: Refuerzo."
+                        tono_redaccion = "PRODUCTIVO, EMANCIPADOR Y SOCIOLABORAL."
                     elif "Autismo" in modalidad:
-                        tono_redaccion = "ESTRUCTURADO Y VISUAL."
-                        vocabulario_sugerido = "- INICIO: Agenda visual.\n- DESARROLLO: Clasificamos, Encajamos.\n- CIERRE: Guardado."
+                        tono_redaccion = "ESTRUCTURADO, ANTICIPADO Y VISUAL."
                     else: 
-                        tono_redaccion = "SENSORIAL Y HÁBITOS."
-                        vocabulario_sugerido = "- INICIO: Saludo.\n- DESARROLLO: Estimulación.\n- CIERRE: Aseo."
+                        tono_redaccion = "PSICO-EDUCATIVO E INTEGRAL."
 
-                    # B. RECUPERAR DATOS DE PROYECTO (PA vs PSP) DESDE LA NUBE
+                    # B. CONTEXTO DE PROYECTOS (Lectura Simple)
                     texto_instruccion_proyecto = ""
-                    datos_proyecto = None
                     try:
                         df_p = conn.read(spreadsheet=URL_HOJA, worksheet="CONFIG_PROYECTO", ttl=0)
                         user_p = df_p[df_p['USUARIO'] == st.session_state.u['NOMBRE']]
                         if not user_p.empty:
                             fila = user_p.iloc[0]
-                            # Recuperamos datos de forma segura
-                            datos_proyecto = {
-                                'ACTIVO': str(fila['ACTIVO']).upper().strip() if 'ACTIVO' in fila else "TRUE",
-                                'NOMBRE_PA': fila['TITULO_PA'] if 'TITULO_PA' in fila else 'Valores',
-                                'NOMBRE_PSP': fila['TITULO_PSP'] if 'TITULO_PSP' in fila else 'Taller',
-                                'DIAS_PA': str(fila['DIAS_PA']) if 'DIAS_PA' in fila else "",
-                                'DIAS_PSP': str(fila['DIAS_PSP']) if 'DIAS_PSP' in fila else ""
-                            }
-                    except: datos_proyecto = None
+                            pa = fila.get('TITULO_PA', 'Valores')
+                            psp = fila.get('TITULO_PSP', 'Productivo')
+                            dias_pa = str(fila.get('DIAS_PA', ''))
+                            dias_psp = str(fila.get('DIAS_PSP', ''))
+                            
+                            texto_instruccion_proyecto = f"""
+                            CONTEXTO DE PROYECTOS ACTIVOS:
+                            1. Proyecto de Aprendizaje (Aula/Teoría): "{pa}" (Días sugeridos: {dias_pa}).
+                            2. Proyecto Socio-Productivo (Taller/Práctica): "{psp}" (Días sugeridos: {dias_psp}).
+                            """
+                    except: 
+                        texto_instruccion_proyecto = "Usa el Tema Generador como eje central."
 
-                    # C. RECUPERAR PENSUM ACTIVO Y EL BLOQUE ACTUAL
+                    # C. RECUPERAR CONTENIDO TÉCNICO (BLOQUE DEL PENSUM)
                     texto_bloque_pensum = ""
                     nombre_bloque_pensum = ""
                     try:
                         df_bib = conn.read(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", ttl=0)
-                        # Buscamos el pensum ACTIVO de este usuario
                         pensum_act = df_bib[(df_bib['USUARIO'] == st.session_state.u['NOMBRE']) & (df_bib['ESTADO'] == "ACTIVO")]
                         
                         if not pensum_act.empty:
                             fila_pen = pensum_act.iloc[0]
-                            
-                            # ¿Qué bloque toca esta semana? (Leemos la columna BLOQUE_ACTUAL)
-                            if 'BLOQUE_ACTUAL' in fila_pen and pd.notna(fila_pen['BLOQUE_ACTUAL']):
-                                nombre_bloque_pensum = fila_pen['BLOQUE_ACTUAL']
-                            else:
-                                nombre_bloque_pensum = "BLOQUE GENERAL (Sin definir)"
-                            
-                            # Extraemos el texto SOLO de ese bloque
+                            # 1. Nombre del Bloque
+                            nombre_bloque_pensum = fila_pen.get('BLOQUE_ACTUAL', "Contenido General")
+                            # 2. Texto del Bloque (Lógica de recorte)
                             full_txt = fila_pen['CONTENIDO_FULL']
                             inicio = full_txt.find(nombre_bloque_pensum)
                             if inicio != -1:
-                                # Buscamos dónde termina este bloque (el siguiente "BLOQUE:")
                                 fin = full_txt.find("BLOQUE:", inicio + 20)
                                 texto_bloque_pensum = full_txt[inicio:fin] if fin != -1 else full_txt[inicio:]
                             else:
-                                # Fallback: Primeros 2000 caracteres si no encuentra el bloque exacto
-                                texto_bloque_pensum = full_txt[:2000]
+                                texto_bloque_pensum = full_txt[:2500]
                     except: pass
 
-                    # D. CONSTRUIR LA INSTRUCCIÓN DE HORARIO PARA LA IA
-                    if datos_proyecto:
-                        pa = datos_proyecto['NOMBRE_PA']
-                        psp = datos_proyecto['NOMBRE_PSP']
-                        dias_pa = datos_proyecto['DIAS_PA']
-                        dias_psp = datos_proyecto['DIAS_PSP']
-                        
-                        if "Taller" in modalidad:
-                            texto_instruccion_proyecto = f"""
-                            🚨 **REGLA DE ORO DE HORARIO (AULA vs TALLER):**
-                            - DÍAS DE P.A. (TEORÍA/AULA): {dias_pa}. 
-                              *Instrucción:* Planifica actividades de aula, pizarra, valores y teoría sobre el tema. PROYECTO: "{pa}".
-                            - DÍAS DE P.S.P. (PRÁCTICA/TALLER): {dias_psp}.
-                              *Instrucción:* Planifica actividades prácticas, uso de herramientas y ejecución física. PROYECTO: "{psp}".
-                            """
-                        else:
-                            texto_instruccion_proyecto = f"""🚨 **PROYECTO ACTIVO:** "{pa}"."""
-                    else:
-                        texto_instruccion_proyecto = "Sin proyecto configurado. Usa el Tema Generador."
-
-                    # E. PROMPT FINAL (EL CEREBRO)
+                    # D. CONSTRUCCIÓN DEL PROMPT "SUPER DOCENTE 1.0"
                     st.session_state.temp_tema = f"{modalidad} - {notas}"
                     
                     encabezado_legal = """
@@ -1051,51 +1018,72 @@ else:
                     ---------------------------------------------------
                     """
                     
+                    # Inyección del contenido técnico
                     contexto_pensum = ""
                     if texto_bloque_pensum:
                         contexto_pensum = f"""
-                        💎 **CONTENIDO TÉCNICO OBLIGATORIO (DEL PENSUM):**
-                        ESTA SEMANA ESTAMOS EN EL: "{nombre_bloque_pensum}"
-                        CONTENIDO A IMPARTIR:
+                        💎 **INSUMO TÉCNICO (PENSUM ACTIVO):**
+                        ESTAMOS EN EL BLOQUE: "{nombre_bloque_pensum}"
+                        CONTENIDO TÉCNICO A IMPARTIR:
                         {texto_bloque_pensum}
-                        (Usa este contenido para rellenar la "Competencia Técnica" y las actividades).
+                        (Usa este contenido para redactar la COMPETENCIA TÉCNICA y el DESARROLLO).
                         """
 
+                    # LA CONSTITUCIÓN DEL SUPER DOCENTE (Tus Reglas de Oro)
+                    reglas_super_docente = """
+                    🚨 **REGLAS DE REDACCIÓN OBLIGATORIAS (ANTI-ROBOT):**
+                    
+                    1. **LOS 4 PILARES:** La planificación debe reflejar: Aprender a Crear, Aprender a Convivir, Aprender a Valorar, Aprender a Reflexionar.
+                    
+                    2. **COMPETENCIA TÉCNICA (Punto 2):**
+                       - Estructura OBLIGATORIA: VERBO (Infinitivo) + OBJETO (Qué) + CONDICIÓN (Para qué).
+                       - Ejemplo: "Lijar superficies de madera para obtener acabados prolijos."
+                    
+                    3. **ROTACIÓN DE SINÓNIMOS (NO REPETIR):**
+                       - INICIO: Indagamos, Socializamos, Conversamos, Presentamos, Visualizamos. (¡No uses el mismo dos días seguidos!).
+                       - DESARROLLO: Ejecutamos, Construimos, Elaboramos, Practicamos, Aplicamos, Transformamos.
+                       - CIERRE: Valoramos, Sistematizamos, Reflexionamos, Concluimos, Evaluamos.
+                    
+                    4. **ENFOQUE VIVENCIAL:** Todo debe ser "Aprender Haciendo". Prohibido mandar a "Investigar en casa". La actividad ocurre AQUÍ y AHORA.
+                    """
+
                     prompt = f"""
-                    ERES UN EXPERTO EN PLANIFICACIÓN EDUCATIVA VENEZOLANA.
-                    CONTEXTO: {modalidad} {aula_especifica}. 
+                    ERES SUPER DOCENTE 1.0, ASISTENTE PEDAGÓGICO EXPERTO DE VENEZUELA.
+                    TU MISIÓN: Generar una planificación adaptada a la modalidad: {modalidad} {aula_especifica}.
+                    
                     TEMA GENERADOR: {notas}.
                     LAPSO: {rango}.
+                    
+                    {reglas_super_docente}
                     
                     {texto_instruccion_proyecto}
                     
                     {contexto_pensum}
                     
-                    PERFIL PEI (Si aplica): {perfil_alumno if is_pei else "Grupo regular"}.
-                    TONO: {tono_redaccion}. VOCABULARIO: {vocabulario_sugerido}.
+                    PERFIL PEI: {perfil_alumno if is_pei else "Grupo regular"}.
+                    TONO: {tono_redaccion}.
                     
-                    🚨 **REGLA DE FORMATO VISUAL (INQUEBRANTABLE):**
-                    ES OBLIGATORIO DEJAR UNA LÍNEA VACÍA ENTRE CADA PUNTO NUMERADO.
+                    🚨 **FORMATO VISUAL:** USA NEGRITAS PARA TÍTULOS Y DEJA UNA LÍNEA VACÍA ENTRE CADA PUNTO.
                     
-                    ESTRUCTURA DE SALIDA REQUERIDA (Repite para cada día de Lunes a Viernes):
+                    ESTRUCTURA DE SALIDA (Repite para Lunes a Viernes):
                     
                     {encabezado_legal}
                     
                     ### [DÍA Y FECHA]
                     
-                    **1. TÍTULO DE LA ACTIVIDAD:** (Debe corresponder si es día de P.A. o P.S.P.)
+                    **1. TÍTULO DE LA ACTIVIDAD:** (Creativo y vinculado al tema)
                     <br>
-                    **2. COMPETENCIA TÉCNICA:** (Extraída del contenido del Bloque del Pensum)
+                    **2. COMPETENCIA TÉCNICA:** (Verbo Infinitivo + Qué + Para qué)
                     <br>
-                    **3. EXPLORACIÓN (Inicio):** [Actividad]
+                    **3. EXPLORACIÓN (Inicio):** [Verbo 1ra persona plural + Actividad socializadora]
                     <br>
-                    **4. DESARROLLO (Proceso):** [Actividad detallada acorde al espacio Aula/Taller]
+                    **4. DESARROLLO (Proceso):** [Actividad Vivencial Práctica del Contenido]
                     <br>
-                    **5. REFLEXIÓN (Cierre):** [Evaluación]
+                    **5. REFLEXIÓN (Cierre):** [Sistematización y valoración]
                     <br>
-                    **6. ESTRATEGIAS:** [Técnicas]
+                    **6. ESTRATEGIAS:** [Técnicas CNB: Lluvia de ideas, Demostración, Práctica Guiada]
                     <br>
-                    **7. RECURSOS:** [Materiales]
+                    **7. RECURSOS:** [Materiales necesarios]
                     ---------------------------------------------------
                     """
                     
@@ -1103,9 +1091,9 @@ else:
                     respuesta_raw = generar_respuesta([
                         {"role":"system","content":INSTRUCCIONES_TECNICAS}, 
                         {"role":"user","content":prompt}
-                    ], 0.7)
+                    ], 0.75) # Temperatura ajustada para variedad de sinónimos
                     
-                    # FORMATEO DE ESPACIOS
+                    # FORMATEO VISUAL (TU CÓDIGO)
                     respuesta_formateada = respuesta_raw \
                         .replace("**1.", "\n\n**1.") \
                         .replace("**2.", "\n\n**2.") \
@@ -1120,7 +1108,7 @@ else:
                     st.rerun()
 
         # =============================================================================
-        # 5. VISUALIZACIÓN Y GUARDADO (TU CÓDIGO ORIGINAL RESTAURADO)
+        # 5. VISUALIZACIÓN Y GUARDADO (ORIGINAL E INTACTO)
         # =============================================================================
         if st.session_state.plan_actual:
             st.divider()
