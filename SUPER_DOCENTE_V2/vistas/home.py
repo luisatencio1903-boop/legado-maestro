@@ -5,7 +5,7 @@ def render_home(conn):
     # --- 1. BOTONERA SUPERIOR (ACCIONES RÁPIDAS V1) ---
     col_update, col_clean, col_logout = st.columns([1.2, 1, 1])
     
-    # Botón Actualizar: Borra caché de la Nube (Regla de Oro)
+    # Botón Actualizar
     with col_update:
         if st.button("♻️ ACTUALIZAR", help="Descargar datos frescos de Google"):
             st.cache_data.clear()
@@ -13,7 +13,7 @@ def render_home(conn):
             time.sleep(1)
             st.rerun()
 
-    # Botón Limpiar: Borra memoria temporal local
+    # Botón Limpiar
     with col_clean:
         if st.button("🧹 LIMPIAR"):
             st.session_state.plan_actual = ""
@@ -37,15 +37,15 @@ def render_home(conn):
     
     st.write("")
     
-    # --- 3. MENÚ DE NAVEGACIÓN (EL CORAZÓN DEL SISTEMA) ---
+    # --- 3. MENÚ DE NAVEGACIÓN ---
     
-    # A. Control Diario (Botón Grande)
+    # A. Control Diario
     st.markdown("### ⏱️ CONTROL DIARIO")
     if st.button("📸 REGISTRAR ASISTENCIA / SALIDA", type="primary", use_container_width=True):
         st.session_state.pagina_actual = "⏱️ Control de Asistencia"
         st.rerun()
     
-    # B. Gestión Docente (Selector Principal)
+    # B. Gestión Docente (AQUÍ QUITAMOS LA OPCIÓN REPETIDA)
     st.markdown("### 🛠️ GESTIÓN DOCENTE")
     opciones_gestion = [
         "(Seleccionar)",
@@ -54,8 +54,7 @@ def render_home(conn):
         "🧠 PLANIFICADOR INTELIGENTE",
         "📜 PLANIFICADOR MINISTERIAL",
         "🏗️ FÁBRICA DE PENSUMS",
-        "🏗️ GESTIÓN DE PROYECTOS Y PLANES",
-        "📊 Registro de Evaluaciones"
+        "🏗️ GESTIÓN DE PROYECTOS Y PLANES"
     ]
     
     sel_principal = st.selectbox("Herramientas de Planificación:", opciones_gestion, key="home_gestion")
