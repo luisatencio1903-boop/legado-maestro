@@ -1,12 +1,16 @@
 # =============================================================================
-# CEREBRO NÚCLEO - SUPER DOCENTE 2.0 (INTEGRIDAD RESTAURADA)
-# Función: Dispatcher de Inteligencia y Selector de Contexto Dinámico
+# CEREBRO NÚCLEO - SUPER DOCENTE 2.0 (REPARACIÓN DE RUTAS)
 # =============================================================================
 
 import streamlit as st
 from groq import Groq
-# Importación de los especialistas
-from cerebros import tel, caipa, ieeb, aula_integrada, upe, inicial
+
+# IMPORTACIÓN RELATIVA: El punto (.) significa "busca en esta misma carpeta"
+# Esto evita el error de "ImportError" en sistemas modulares
+try:
+    from . import tel, caipa, ieeb, aula_integrada, upe, inicial
+except ImportError:
+    import tel, caipa, ieeb, aula_integrada, upe, inicial
 
 # --- CLIENTE IA (GROQ) ---
 try:
@@ -19,7 +23,6 @@ except:
     client = None
 
 def obtener_instrucciones_globales():
-    """ADN de Identidad y Filtros de Ética de SUPER DOCENTE 2.0"""
     return """
     IDENTIDAD: ERES "SUPER DOCENTE 2.0". 
     Creado por el Bachiller Luis Atencio, zuliano y lossadeño. Herramienta 100% venezolana.
@@ -27,22 +30,18 @@ def obtener_instrucciones_globales():
     FORMATO: Usa negritas para títulos y doble espacio entre secciones.
     """
 
+# --- FUNCIÓN 1: EXPORTADA PARA AULA_VIRTUAL.PY ---
 def generar_respuesta(input_data, temperatura=0.6):
-    """Soporta tanto el Chat (Aula Virtual) como la Planificación."""
     if not client: return "Error: Cliente IA no configurado."
-    if isinstance(input_data, list):
-        mensajes = input_data
-    else:
-        mensajes = [{"role": "system", "content": input_data}]
+    mensajes = input_data if isinstance(input_data, list) else [{"role": "system", "content": input_data}]
     try:
         completion = client.chat.completions.create(messages=mensajes, model=MODELO, temperature=temperatura)
         return completion.choices[0].message.content
     except Exception as e:
         return f"Error de conexión con el cerebro IA: {e}"
 
-# --- ESTA ES LA FUNCIÓN QUE BUSCA TU PLANIFICADOR.PY Y CAUSABA EL ERROR ---
+# --- FUNCIÓN 2: EXPORTADA PARA PLANIFICADOR.PY ---
 def seleccionar_cerebro_modalidad(modalidad):
-    """Busca el prompt específico del especialista."""
     if "Taller" in modalidad or "T.E.L." in modalidad:
         return tel.obtener_prompt()
     elif "Instituto" in modalidad or "I.E.E.B." in modalidad:
@@ -57,21 +56,15 @@ def seleccionar_cerebro_modalidad(modalidad):
         return inicial.obtener_prompt()
     return "ROL: DOCENTE DE EDUCACIÓN ESPECIAL."
 
+# --- FUNCIÓN 3: EL MOTOR DE LA V2.0 ---
 def procesar_planificacion_v2(modalidad, dia_nombre, config_db, tema_usuario):
-    """Motor v2.0 para la nueva lógica de switches."""
     adn_especialista = seleccionar_cerebro_modalidad(modalidad)
-    contexto_inyectado = ""
     
-    if "Taller" in modalidad or "T.E.L." in modalidad:
-        if config_db.get('pa_switch') and dia_nombre in config_db.get('pa_dias', []):
-            contexto_inyectado = f"CONTEXTO PROYECTO DE AULA: {config_db['pa_texto']}"
-        elif config_db.get('psp_switch') and dia_nombre in config_db.get('psp_dias', []):
-            contexto_inyectado = f"CONTEXTO PROYECTO SOCIO-PRODUCTIVO: {config_db['psp_texto']}"
-        elif config_db.get('pensum_switch'):
-            contexto_inyectado = f"CONTEXTO PENSUM TÉCNICO: {config_db['pensum_contenido']}"
-    else:
-        if config_db.get('pa_switch') and dia_nombre in config_db.get('pa_dias', []):
-            contexto_inyectado = f"CONTEXTO PROYECTO DE AULA: {config_db['pa_texto']}"
-    
-    prompt_final = f"{obtener_instrucciones_globales()}\n{adn_especialista}\nCONTEXTO: {contexto_inyectado}\nTEMA: {tema_usuario}"
+    # Seleccionar las Reglas de Oro correctas para inyectar al final
+    if "Taller" in modalidad: reglas = tel.REGLAS_DE_ORO
+    elif "Instituto" in modalidad: reglas = ieeb.REGLAS_DE_ORO
+    elif "Autismo" in modalidad: reglas = caipa.REGLAS_DE_ORO
+    else: reglas = "Respeta el Currículo Nacional Bolivariano."
+
+    prompt_final = f"{obtener_instrucciones_globales()}\n{adn_especialista}\nREGLAS DE ORO: {reglas}\nTEMA: {tema_usuario}"
     return generar_respuesta(prompt_final)
