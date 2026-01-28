@@ -1,5 +1,5 @@
 # =============================================================================
-# CEREBRO NÚCLEO - SUPER DOCENTE 2.0 (ACTUALIZADO)
+# CEREBRO NÚCLEO - SUPER DOCENTE 2.0 (INTEGRIDAD RESTAURADA)
 # Función: Dispatcher de Inteligencia y Selector de Contexto Dinámico
 # =============================================================================
 
@@ -28,89 +28,50 @@ def obtener_instrucciones_globales():
     """
 
 def generar_respuesta(input_data, temperatura=0.6):
-    """
-    FUNCIÓN MAESTRA: Soporta tanto el Chat (Aula Virtual) como la Planificación.
-    input_data: Puede ser una lista de mensajes (chat) o un string (prompt único).
-    """
-    if not client: return "Error: Cliente IA no configurado en Secrets."
-    
+    """Soporta tanto el Chat (Aula Virtual) como la Planificación."""
+    if not client: return "Error: Cliente IA no configurado."
+    if isinstance(input_data, list):
+        mensajes = input_data
+    else:
+        mensajes = [{"role": "system", "content": input_data}]
     try:
-        # Detectar si recibimos un historial de chat (lista) o un prompt directo (string)
-        if isinstance(input_data, list):
-            mensajes_finales = input_data
-        else:
-            mensajes_finales = [{"role": "system", "content": input_data}]
-
-        completion = client.chat.completions.create(
-            messages=mensajes_finales,
-            model=MODELO,
-            temperature=temperatura
-        )
+        completion = client.chat.completions.create(messages=mensajes, model=MODELO, temperature=temperatura)
         return completion.choices[0].message.content
     except Exception as e:
         return f"Error de conexión con el cerebro IA: {e}"
 
-def procesar_planificacion_v2(modalidad, dia_nombre, config_db, tema_usuario):
-    """
-    Motor lógico que selecciona el cerebro y el contexto (PA/PSP/Pensum)
-    config_db: Diccionario con los datos de la base de datos.
-    """
-    
-    # 1. IDENTIFICAR EL CEREBRO ESPECIALISTA
+# --- ESTA ES LA FUNCIÓN QUE BUSCA TU PLANIFICADOR.PY Y CAUSABA EL ERROR ---
+def seleccionar_cerebro_modalidad(modalidad):
+    """Busca el prompt específico del especialista."""
     if "Taller" in modalidad or "T.E.L." in modalidad:
-        especialista = tel
+        return tel.obtener_prompt()
     elif "Instituto" in modalidad or "I.E.E.B." in modalidad:
-        especialista = ieeb
+        return ieeb.obtener_prompt()
     elif "Autismo" in modalidad or "C.A.I.P.A." in modalidad:
-        especialista = caipa
+        return caipa.obtener_prompt()
     elif "Aula Integrada" in modalidad:
-        especialista = aula_integrada
+        return aula_integrada.obtener_prompt()
     elif "Unidad" in modalidad or "U.P.E." in modalidad:
-        especialista = upe
-    else:
-        especialista = inicial
+        return upe.obtener_prompt()
+    elif "Inicial" in modalidad:
+        return inicial.obtener_prompt()
+    return "ROL: DOCENTE DE EDUCACIÓN ESPECIAL."
 
-    # 2. LÓGICA DE SELECCIÓN DE CONTEXTO
+def procesar_planificacion_v2(modalidad, dia_nombre, config_db, tema_usuario):
+    """Motor v2.0 para la nueva lógica de switches."""
+    adn_especialista = seleccionar_cerebro_modalidad(modalidad)
     contexto_inyectado = ""
-    tipo_actividad = ""
-
+    
     if "Taller" in modalidad or "T.E.L." in modalidad:
         if config_db.get('pa_switch') and dia_nombre in config_db.get('pa_dias', []):
-            contexto_inyectado = f"CONTEXTO PROYECTO DE AULA (TEORÍA): {config_db.get('pa_texto')}"
-            tipo_actividad = "Formación en Aula"
+            contexto_inyectado = f"CONTEXTO PROYECTO DE AULA: {config_db['pa_texto']}"
         elif config_db.get('psp_switch') and dia_nombre in config_db.get('psp_dias', []):
-            contexto_inyectado = f"CONTEXTO PROYECTO SOCIO-PRODUCTIVO (PRÁCTICA): {config_db.get('psp_texto')}"
-            tipo_actividad = "Ejecución de Taller (Enfoque Capataz/Supervisor)"
+            contexto_inyectado = f"CONTEXTO PROYECTO SOCIO-PRODUCTIVO: {config_db['psp_texto']}"
         elif config_db.get('pensum_switch'):
-            contexto_inyectado = f"CONTEXTO PENSUM TÉCNICO DE OFICIO: {config_db.get('pensum_contenido')}"
-            tipo_actividad = "Formación Técnica de Oficio"
-        else:
-            contexto_inyectado = "Enfoque general de formación para el trabajo."
-            tipo_actividad = "Habilidades Laborales"
+            contexto_inyectado = f"CONTEXTO PENSUM TÉCNICO: {config_db['pensum_contenido']}"
     else:
         if config_db.get('pa_switch') and dia_nombre in config_db.get('pa_dias', []):
-            contexto_inyectado = f"CONTEXTO PROYECTO DE AULA: {config_db.get('pa_texto')}"
-            tipo_actividad = "Actividad de Proyecto"
-        else:
-            contexto_inyectado = "Enfoque en Autovalimiento y Habilidades Adaptativas."
-            tipo_actividad = "Actividad Curricular General"
-
-    # 3. ENSAMBLAJE DEL PROMPT FINAL
-    prompt_maestro = f"""
-    {obtener_instrucciones_globales()}
-    {especialista.obtener_prompt()}
+            contexto_inyectado = f"CONTEXTO PROYECTO DE AULA: {config_db['pa_texto']}"
     
-    --- CONTEXTO OPERATIVO ---
-    MODALIDAD SELECCIONADA: {modalidad}
-    DÍA DE LA CLASE: {dia_nombre}
-    TIPO DE JORNADA: {tipo_actividad}
-    CONTEXTO PEDAGÓGICO: {contexto_inyectado}
-    TEMA DEL DOCENTE: {tema_usuario}
-    
-    --- INSTRUCCIÓN FINAL ---
-    Planifica siguiendo la estructura de 7 puntos (Título, Competencia, Inicio, Desarrollo, Cierre, Estrategias, Recursos).
-    RECUERDA: {especialista.REGLAS_DE_ORO}
-    """
-
-    # 4. LLAMADA A LA IA USANDO LA FUNCIÓN UNIFICADA
-    return generar_respuesta(prompt_maestro)
+    prompt_final = f"{obtener_instrucciones_globales()}\n{adn_especialista}\nCONTEXTO: {contexto_inyectado}\nTEMA: {tema_usuario}"
+    return generar_respuesta(prompt_final)
