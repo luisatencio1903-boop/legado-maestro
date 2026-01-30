@@ -76,22 +76,20 @@ Tema Indispensable: Proceso Social del Trabajo."""
                     TAREA: Generar la Fundamentación y Metas para el pensum de: {especialidad}.
                     CONTEXTO DEL TALLER: "{contexto_extra}".
 
-                    REGLA INVIOLABLE #1 (MARCO LEGAL): Debes copiar este texto TEXTUALMENTE, sin cambiar ni una coma:
+                    REGLA INVIOLABLE DE MARCO LEGAL (DEBES COPIARLO LITERAL):
                     {MARCO_LEGAL_ASAMBLEA}
 
-                    REGLA INVIOLABLE #2 (METAS): Debes incluir exactamente esta lista de 10 puntos, sin añadir explicaciones ni párrafos adicionales a cada punto:
-                    {METAS_PROGRAMA_OFICIAL}
-
                     ESTRUCTURA OBLIGATORIA A CONTINUACIÓN:
-                    1. JUSTIFICACIÓN: Redacta un párrafo sobre por qué {especialidad} es importante para el desarrollo laboral.
-                    2. LIMITACIONES: Menciona brevemente los desafíos reales de La Concepción, Zulia (Electricidad, transporte).
+                    1. JUSTIFICACIÓN: Específica para {especialidad} dentro del TEL ERAC.
+                    2. METAS DEL PROGRAMA: 10 metas técnicas y humanas (Autonomía, Independencia, etc).
+                    3. LIMITACIONES: Basadas en la realidad de La Concepción, Zulia (Luz, transporte, etc).
                     REGLA DE ORO: NO ESCRIBAS NINGUNA CONCLUSIÓN O DESPEDIDA.
                     """
                     st.session_state.fp_fase1 = generar_respuesta([{"role":"user","content":prompt_f1}], 0.7)
             else: st.error("Falta el nombre de la especialidad.")
         
         if st.session_state.fp_fase1:
-            st.session_state.fp_fase1 = st.text_area("Edición Fase 1:", value=st.session_state.fp_fase1, height=300, key="edit_f1")
+            st.session_state.fp_fase1 = st.text_area("Edición Fase 1:", value=st.session_state.fp_fase1, height=200, key="edit_f1")
 
         # --- FASE 2: TEMARIO ---
         st.markdown("### 🔹 Fase 2: Temario y Contenidos")
@@ -154,11 +152,12 @@ Tema Indispensable: Proceso Social del Trabajo."""
         st.markdown("### 🔗 Consolidación Final")
         if st.button("🔗 UNIR TODO EL DOCUMENTO", type="primary", use_container_width=True):
             if st.session_state.fp_fase1 and st.session_state.fp_fase2 and st.session_state.fp_fase3:
-                # FORZAMOS EL ENCABEZADO OFICIAL POR CÓDIGO (SEGURIDAD TOTAL)
                 st.session_state.fp_completo = f"""================================================================
 DISEÑO INSTRUCCIONAL: {especialidad.upper()}
 INSTITUCIÓN: TEL ELENA ROSA ARANGUREN DE CASTELLANO (ERAC)
 UBICACIÓN: LA CONCEPCIÓN, ZULIA.
+----------------------------------------------------------------
+{MARCO_LEGAL_ASAMBLEA}
 ----------------------------------------------------------------
 DOCENTE RESPONSABLE: {docente_resp}
 FECHA DE CREACIÓN: {ahora_ve().strftime("%d/%m/%Y")}
@@ -194,11 +193,15 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
                         except:
                             df_lib = pd.DataFrame(columns=["FECHA", "USUARIO", "TITULO_PENSUM", "CONTENIDO_FULL", "ESTADO", "DIAS", "BLOQUE_ACTUAL"])
 
+                        # --- ACTUALIZACIÓN ANTIFÓRMULA ---
+                        # Agregamos la comilla simple para que Google Sheets no lo trate como fórmula por los "====="
+                        contenido_seguro = "'" + st.session_state.fp_completo
+
                         nuevo_pen = pd.DataFrame([{
                             "FECHA": ahora_ve().strftime("%d/%m/%Y"),
                             "USUARIO": st.session_state.u['NOMBRE'],
                             "TITULO_PENSUM": especialidad,
-                            "CONTENIDO_FULL": st.session_state.fp_completo,
+                            "CONTENIDO_FULL": contenido_seguro,
                             "ESTADO": "INACTIVO", 
                             "DIAS": "",
                             "BLOQUE_ACTUAL": "1. BLOQUE: INTRODUCCIÓN"
@@ -206,7 +209,7 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
                         
                         conn.update(spreadsheet=URL_HOJA, worksheet="BIBLIOTECA_PENSUMS", data=pd.concat([df_lib, nuevo_pen], ignore_index=True))
                         st.balloons()
-                        st.success("Guardado en la Nube.")
+                        st.success("Guardado en la Nube correctamente.")
                     except Exception as e:
                         st.error(f"Error al guardar: {e}")
 
