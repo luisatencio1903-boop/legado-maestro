@@ -7,12 +7,24 @@ from utils.comunes import ahora_ve
 from cerebros.nucleo import generar_respuesta
 
 def render_fabrica(conn):
-    # --- BLOQUE LEGAL INAMOVIBLE (APROBADO EN ASAMBLEA TEL ERAC) ---
+    # --- BLOQUE LEGAL Y METAS INAMOVIBLES (BASE ASAMBLEA TEL ERAC) ---
     MARCO_LEGAL_ASAMBLEA = """MARCO LEGAL (PEIC):
 Título: "Una escuela sustentable en pro del desarrollo integral y laboral de los participantes del TEL ERAC".
 Línea de Investigación: Educación y Trabajo.
 Vértice #5: Cada familia una escuela por la calidad educativa.
 Tema Indispensable: Proceso Social del Trabajo."""
+
+    METAS_PROGRAMA_OFICIAL = """METAS DEL PROGRAMA:
+1. Desarrollo de habilidades técnicas.
+2. Independencia laboral.
+3. Integración social.
+4. Adaptabilidad y flexibilidad.
+5. Habilidades de comunicación.
+6. Autonomía y toma de decisiones.
+7. Empleabilidad y oportunidades laborales.
+8. Bienestar emocional y autoestima.
+9. Inclusión digital.
+10. Colaboración con empresas e instituciones."""
 
     # --- CONFIGURACIÓN INICIAL ---
     st.header("🏗️ Fábrica de Diseño Instruccional (TEL ERAC)")
@@ -64,20 +76,22 @@ Tema Indispensable: Proceso Social del Trabajo."""
                     TAREA: Generar la Fundamentación y Metas para el pensum de: {especialidad}.
                     CONTEXTO DEL TALLER: "{contexto_extra}".
 
-                    REGLA INVIOLABLE DE MARCO LEGAL (DEBES COPIARLO LITERAL):
+                    REGLA INVIOLABLE #1 (MARCO LEGAL): Debes copiar este texto TEXTUALMENTE, sin cambiar ni una coma:
                     {MARCO_LEGAL_ASAMBLEA}
 
+                    REGLA INVIOLABLE #2 (METAS): Debes incluir exactamente esta lista de 10 puntos, sin añadir explicaciones ni párrafos adicionales a cada punto:
+                    {METAS_PROGRAMA_OFICIAL}
+
                     ESTRUCTURA OBLIGATORIA A CONTINUACIÓN:
-                    1. JUSTIFICACIÓN: Específica para {especialidad} dentro del TEL ERAC.
-                    2. METAS DEL PROGRAMA: 10 metas técnicas y humanas (Autonomía, Independencia, etc).
-                    3. LIMITACIONES: Basadas en la realidad de La Concepción, Zulia (Luz, transporte, etc).
+                    1. JUSTIFICACIÓN: Redacta un párrafo sobre por qué {especialidad} es importante para el desarrollo laboral.
+                    2. LIMITACIONES: Menciona brevemente los desafíos reales de La Concepción, Zulia (Electricidad, transporte).
                     REGLA DE ORO: NO ESCRIBAS NINGUNA CONCLUSIÓN O DESPEDIDA.
                     """
                     st.session_state.fp_fase1 = generar_respuesta([{"role":"user","content":prompt_f1}], 0.7)
             else: st.error("Falta el nombre de la especialidad.")
         
         if st.session_state.fp_fase1:
-            st.session_state.fp_fase1 = st.text_area("Edición Fase 1:", value=st.session_state.fp_fase1, height=200, key="edit_f1")
+            st.session_state.fp_fase1 = st.text_area("Edición Fase 1:", value=st.session_state.fp_fase1, height=300, key="edit_f1")
 
         # --- FASE 2: TEMARIO ---
         st.markdown("### 🔹 Fase 2: Temario y Contenidos")
@@ -140,12 +154,11 @@ Tema Indispensable: Proceso Social del Trabajo."""
         st.markdown("### 🔗 Consolidación Final")
         if st.button("🔗 UNIR TODO EL DOCUMENTO", type="primary", use_container_width=True):
             if st.session_state.fp_fase1 and st.session_state.fp_fase2 and st.session_state.fp_fase3:
+                # FORZAMOS EL ENCABEZADO OFICIAL POR CÓDIGO (SEGURIDAD TOTAL)
                 st.session_state.fp_completo = f"""================================================================
 DISEÑO INSTRUCCIONAL: {especialidad.upper()}
 INSTITUCIÓN: TEL ELENA ROSA ARANGUREN DE CASTELLANO (ERAC)
 UBICACIÓN: LA CONCEPCIÓN, ZULIA.
-----------------------------------------------------------------
-{MARCO_LEGAL_ASAMBLEA}
 ----------------------------------------------------------------
 DOCENTE RESPONSABLE: {docente_resp}
 FECHA DE CREACIÓN: {ahora_ve().strftime("%d/%m/%Y")}
