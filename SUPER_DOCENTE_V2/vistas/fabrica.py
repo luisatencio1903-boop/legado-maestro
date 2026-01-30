@@ -38,6 +38,7 @@ Tema Indispensable: Proceso Social del Trabajo."""
         return
 
     # --- MEMORIA TEMPORAL (SESSION STATE) ---
+    if 'fp_especialidad_actual' not in st.session_state: st.session_state.fp_especialidad_actual = ""
     if 'fp_fase1' not in st.session_state: st.session_state.fp_fase1 = ""
     if 'fp_fase2' not in st.session_state: st.session_state.fp_fase2 = ""
     if 'fp_fase3' not in st.session_state: st.session_state.fp_fase3 = ""
@@ -57,39 +58,54 @@ Tema Indispensable: Proceso Social del Trabajo."""
         st.subheader("1. Ficha Técnica")
         c1, c2 = st.columns(2)
         with c1:
-            especialidad = st.text_input("Especialidad a Crear:", placeholder="Ej: Educación Musical")
+            especialidad = st.text_input("Especialidad a Crear:", placeholder="Ej: Autonomía Familiar")
         with c2:
             docente_resp = st.text_input("Docente Responsable:", value=st.session_state.u['NOMBRE'])
         
         contexto_extra = st.text_area("Recursos y Enfoque (Clave para la adaptación):", 
-                                    placeholder="Ej: Tenemos instrumentos de percusión, queremos formar una banda, no hay electricidad...")
+                                    placeholder="Ej: Solo disponemos de cocina y tareas del hogar...")
         
+        # --- LÓGICA DE LIMPIEZA AUTOMÁTICA DE CONTEXTO ---
+        if especialidad != st.session_state.fp_especialidad_actual:
+            st.session_state.fp_fase1 = ""
+            st.session_state.fp_fase2 = ""
+            st.session_state.fp_fase3 = ""
+            st.session_state.fp_completo = ""
+            st.session_state.fp_especialidad_actual = especialidad
+
         st.divider()
 
         # --- FASE 1: FUNDAMENTACIÓN ---
         st.markdown("### 🔹 Fase 1: Fundamentación Institucional")
         if st.button("Generar Fase 1 (Fundamentación)", key="gen_f1", type="primary"):
-            if especialidad:
-                with st.spinner("Redactando bases (Contexto TEL ERAC)..."):
+            if especialidad and contexto_extra:
+                with st.spinner(f"Redactando fundamentación para {especialidad}..."):
                     prompt_f1 = f"""
                     ACTÚA COMO COORDINADOR DEL TEL ERAC (ZULIA).
                     TAREA: Generar la Fundamentación y Metas para el pensum de: {especialidad}.
+                    ENFOQUE EXCLUSIVO: {especialidad}.
                     CONTEXTO DEL TALLER: "{contexto_extra}".
 
-                    REGLA INVIOLABLE DE MARCO LEGAL (DEBES COPIARLO LITERAL):
+                    REGLA DE ORO DE CONTENIDO:
+                    Ignora cualquier tema tratado anteriormente. Céntrate ÚNICAMENTE en {especialidad}
+                    y el contexto de recursos: {contexto_extra}.
+
+                    REGLA INVIOLABLE #1 (MARCO LEGAL): Debes copiar este texto TEXTUALMENTE:
                     {MARCO_LEGAL_ASAMBLEA}
 
+                    REGLA INVIOLABLE #2 (METAS): Debes incluir exactamente esta lista de 10 puntos:
+                    {METAS_PROGRAMA_OFICIAL}
+
                     ESTRUCTURA OBLIGATORIA A CONTINUACIÓN:
-                    1. JUSTIFICACIÓN: Específica para {especialidad} dentro del TEL ERAC.
-                    2. METAS DEL PROGRAMA: 10 metas técnicas y humanas (Autonomía, Independencia, etc).
-                    3. LIMITACIONES: Basadas en la realidad de La Concepción, Zulia (Luz, transporte, etc).
+                    1. JUSTIFICACIÓN: Redacta por qué {especialidad} es vital para la independencia del joven.
+                    2. LIMITACIONES: Basadas en La Concepción, Zulia (Luz, transporte, recursos).
                     REGLA DE ORO: NO ESCRIBAS NINGUNA CONCLUSIÓN O DESPEDIDA.
                     """
                     st.session_state.fp_fase1 = generar_respuesta([{"role":"user","content":prompt_f1}], 0.7)
-            else: st.error("Falta el nombre de la especialidad.")
+            else: st.error("Falta el nombre de la especialidad o los recursos.")
         
         if st.session_state.fp_fase1:
-            st.session_state.fp_fase1 = st.text_area("Edición Fase 1:", value=st.session_state.fp_fase1, height=200, key="edit_f1")
+            st.session_state.fp_fase1 = st.text_area("Edición Fase 1:", value=st.session_state.fp_fase1, height=300, key="edit_f1")
 
         # --- FASE 2: TEMARIO ---
         st.markdown("### 🔹 Fase 2: Temario y Contenidos")
@@ -97,10 +113,11 @@ Tema Indispensable: Proceso Social del Trabajo."""
         
         if st.button("Generar Fase 2 (Temario)", key="gen_f2", type="primary"):
             if st.session_state.fp_fase1:
-                with st.spinner("Diseñando Estructura de Temas..."):
+                with st.spinner(f"Diseñando bloques para {especialidad}..."):
                     prompt_f2 = f"""
                     CONTEXTO: {especialidad}. RECURSOS: {contexto_extra}.
                     TAREA: DISEÑA LOS BLOQUES DE CONTENIDO (TEMARIO).
+                    REGLA DE ORO: No generes actividades de otros temas anteriores. Todo debe ser sobre {especialidad}.
                     IMPORTANTE: NO GENERES ACTIVIDADES ESPECÍFICAS. GENERA LISTAS DE CONCEPTOS.
                     FORMATO DE NUMERACIÓN ESTRICTO: "1. BLOQUE: [NOMBRE]"
                     
@@ -152,29 +169,18 @@ Tema Indispensable: Proceso Social del Trabajo."""
         st.markdown("### 🔗 Consolidación Final")
         if st.button("🔗 UNIR TODO EL DOCUMENTO", type="primary", use_container_width=True):
             if st.session_state.fp_fase1 and st.session_state.fp_fase2 and st.session_state.fp_fase3:
-                st.session_state.fp_completo = f"""================================================================
+                encabezado_maestro = f"""================================================================
 DISEÑO INSTRUCCIONAL: {especialidad.upper()}
 INSTITUCIÓN: TEL ELENA ROSA ARANGUREN DE CASTELLANO (ERAC)
 UBICACIÓN: LA CONCEPCIÓN, ZULIA.
-----------------------------------------------------------------
-{MARCO_LEGAL_ASAMBLEA}
 ----------------------------------------------------------------
 DOCENTE RESPONSABLE: {docente_resp}
 FECHA DE CREACIÓN: {ahora_ve().strftime("%d/%m/%Y")}
 ================================================================
 
-{st.session_state.fp_fase1}
-
-----------------------------------------------------------------
-MALLA CURRICULAR Y TEMARIO (CONTENIDOS)
-----------------------------------------------------------------
-{st.session_state.fp_fase2}
-
-----------------------------------------------------------------
-ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
-----------------------------------------------------------------
-{st.session_state.fp_fase3}
-                """
+"""
+                # Agregamos la comilla simple al inicio para evitar Formula Parse Error en Google Sheets
+                st.session_state.fp_completo = "'" + encabezado_maestro + st.session_state.fp_fase1 + "\n\n" + st.session_state.fp_fase2 + "\n\n" + st.session_state.fp_fase3
                 st.success("✅ Documento Unificado con blindaje institucional.")
             else:
                 st.error("Faltan fases para consolidar.")
@@ -193,15 +199,11 @@ ESTRATEGIAS METODOLÓGICAS Y EVALUACIÓN
                         except:
                             df_lib = pd.DataFrame(columns=["FECHA", "USUARIO", "TITULO_PENSUM", "CONTENIDO_FULL", "ESTADO", "DIAS", "BLOQUE_ACTUAL"])
 
-                        # --- ACTUALIZACIÓN ANTIFÓRMULA ---
-                        # Agregamos la comilla simple para que Google Sheets no lo trate como fórmula por los "====="
-                        contenido_seguro = "'" + st.session_state.fp_completo
-
                         nuevo_pen = pd.DataFrame([{
                             "FECHA": ahora_ve().strftime("%d/%m/%Y"),
                             "USUARIO": st.session_state.u['NOMBRE'],
                             "TITULO_PENSUM": especialidad,
-                            "CONTENIDO_FULL": contenido_seguro,
+                            "CONTENIDO_FULL": st.session_state.fp_completo,
                             "ESTADO": "INACTIVO", 
                             "DIAS": "",
                             "BLOQUE_ACTUAL": "1. BLOQUE: INTRODUCCIÓN"
