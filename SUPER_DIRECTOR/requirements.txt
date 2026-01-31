@@ -1,0 +1,10 @@
+streamlit
+pandas
+st-gsheets-connection
+groq
+pyotp
+qrcode
+pillow
+google-api-python-client
+google-auth
+requests
