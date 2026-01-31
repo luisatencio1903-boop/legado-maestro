@@ -18,34 +18,11 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
-
-    .stApp {
-        background-color: #f1f5f9;
-    }
-
-    .stSelectbox label {
-        font-size: 1.2rem !important;
-        font-weight: 800 !important;
-        color: #1e3a8a !important;
-    }
-
-    .stButton button {
-        width: 100%;
-        border-radius: 10px;
-        height: 3.5em;
-        font-weight: 700;
-        background-color: #1e3a8a;
-        color: white;
-        border: none;
-    }
-
-    .plan-box {
-        background-color: white;
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 8px solid #1e3a8a;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    }
+    .stApp { background-color: #f1f5f9; }
+    .stSelectbox label { font-size: 1.2rem !important; font-weight: 800 !important; color: #1e3a8a !important; }
+    .stButton button { width: 100%; border-radius: 10px; height: 3.5em; font-weight: 700; background-color: #1e3a8a; color: white; border: none; }
+    .plan-box { background-color: white; padding: 20px; border-radius: 10px; border-left: 8px solid #1e3a8a; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .stMetric { background-color: white; padding: 15px; border-radius: 10px; border-top: 5px solid #1e3a8a; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 </style>
 """, unsafe_allow_html=True)
 
@@ -95,6 +72,24 @@ universo = cargar_universo_datos(conn, URL_HOJA)
 if st.session_state.vista_actual == "HOME":
     st.write(f"**Director:** {st.session_state.u_dir['NOMBRE']}")
     st.title("🛡️ Panel de Control")
+    st.divider()
+
+    st.markdown("### 🚦 ESTADO DEL PLANTEL (HOY)")
+    hoy = ahora_ve().strftime("%d/%m/%Y")
+    df_as = universo["asistencia"]
+    df_ej = universo["ejecucion"]
+    
+    data_hoy = df_as[df_as['FECHA'] == hoy]
+    pres = len(data_hoy[data_hoy['TIPO'] == "ASISTENCIA"])
+    fals = len(data_hoy[data_hoy['TIPO'] == "INASISTENCIA"])
+    pend_as = len(df_as[df_as['ESTADO_DIRECTOR'] == "PENDIENTE"])
+    pend_ej = len(df_ej[df_ej['ESTADO'] == "PENDIENTE"])
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Presentes", f"{pres}")
+    c2.metric("Faltas", f"{fals}")
+    c3.metric("Pendientes", f"{pend_as + pend_ej}")
+
     st.divider()
 
     st.markdown("### 🛠️ GESTIÓN ESTRATÉGICA")
