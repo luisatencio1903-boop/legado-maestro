@@ -101,35 +101,40 @@ if st.session_state.vista_actual == "HOME":
 
     st.markdown("### 🚦 ESTADO DEL PLANTEL (HOY)")
     hoy = ahora_ve().strftime("%d/%m/%Y")
-    df_as = universo["asistencia"]
-    df_ej = universo["ejecucion"]
     
-    data_hoy = df_as[df_as['FECHA'] == hoy]
-    pres = len(data_hoy[data_hoy['TIPO'] == "ASISTENCIA"])
-    fals = len(data_hoy[data_hoy['TIPO'] == "INASISTENCIA"])
-    pend_as = len(df_as[df_as['ESTADO_DIRECTOR'] == "PENDIENTE"])
-    pend_ej = len(df_ej[df_ej['ESTADO'] == "PENDIENTE"])
+    # Uso de get para evitar errores si la carga falló parcialmente
+    df_as = universo.get("asistencia", pd.DataFrame())
+    df_ej = universo.get("ejecucion", pd.DataFrame())
+    
+    if not df_as.empty and not df_ej.empty:
+        data_hoy = df_as[df_as['FECHA'] == hoy]
+        pres = len(data_hoy[data_hoy['TIPO'] == "ASISTENCIA"])
+        fals = len(data_hoy[data_hoy['TIPO'] == "INASISTENCIA"])
+        pend_as = len(df_as[df_as['ESTADO_DIRECTOR'] == "PENDIENTE"])
+        pend_ej = len(df_ej[df_ej['ESTADO'] == "PENDIENTE"])
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Presentes", f"{pres}")
-    c2.metric("Faltas", f"{fals}")
-    c3.metric("Pendientes", f"{pend_as + pend_ej}")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Presentes", f"{pres}")
+        c2.metric("Faltas", f"{fals}")
+        c3.metric("Pendientes", f"{pend_as + pend_ej}")
 
-    st.divider()
+        st.divider()
 
-    st.markdown("### ⚠️ ALERTAS DE INCUMPLIMIENTO")
-    docs_con_salida = data_hoy[(data_hoy['TIPO'] == "ASISTENCIA") & (data_hoy['HORA_SALIDA'] != "-")]
-    sin_foto_s = docs_con_salida[docs_con_salida['FOTO_SALIDA'] == "-"]
-    if not sin_foto_s.empty:
-        for _, fila in sin_foto_s.iterrows():
-            st.markdown(f"<div class='alert-box'>📸 <b>{fila['USUARIO']}</b> marcó salida sin foto de evidencia.</div>", unsafe_allow_html=True)
+        st.markdown("### ⚠️ ALERTAS DE INCUMPLIMIENTO")
+        docs_con_salida = data_hoy[(data_hoy['TIPO'] == "ASISTENCIA") & (data_hoy['HORA_SALIDA'] != "-")]
+        sin_foto_s = docs_con_salida[docs_con_salida['FOTO_SALIDA'] == "-"]
+        if not sin_foto_s.empty:
+            for _, fila in sin_foto_s.iterrows():
+                st.markdown(f"<div class='alert-box'>📸 <b>{fila['USUARIO']}</b> marcó salida sin foto de evidencia.</div>", unsafe_allow_html=True)
 
-    docs_presentes = data_hoy[data_hoy['TIPO'] == "ASISTENCIA"]['USUARIO'].tolist()
-    docs_ejecutaron = df_ej[df_ej['FECHA'] == hoy]['USUARIO'].tolist()
-    faltan_ej = [d for d in docs_presentes if d not in docs_ejecutaron]
-    if faltan_ej:
-        for d in faltan_ej:
-            st.markdown(f"<div class='alert-box' style='background-color:#fff3e0;border-left-color:#fb8c00;color:#e65100;'>🏫 <b>{d}</b> no ha culminado actividad en Aula Virtual.</div>", unsafe_allow_html=True)
+        docs_presentes = data_hoy[data_hoy['TIPO'] == "ASISTENCIA"]['USUARIO'].tolist()
+        docs_ejecutaron = df_ej[df_ej['FECHA'] == hoy]['USUARIO'].tolist()
+        faltan_ej = [d for d in docs_presentes if d not in docs_ejecutaron]
+        if faltan_ej:
+            for d in faltan_ej:
+                st.markdown(f"<div class='alert-box' style='background-color:#fff3e0;border-left-color:#fb8c00;color:#e65100;'>🏫 <b>{d}</b> no ha culminado actividad en Aula Virtual.</div>", unsafe_allow_html=True)
+    else:
+        st.warning("⚠️ Esperando sincronización de datos...")
 
     st.divider()
     st.markdown("### 🛠️ GESTIÓN ESTRATÉGICA")
@@ -150,6 +155,7 @@ else:
         informe_diario.render_informe(universo)
     elif st.session_state.vista_actual == "📩 Revisión de Planes":
         from vistas import revision_planes
+        # CORRECCIÓN VITAL: Se pasan 3 argumentos
         revision_planes.render_revision(conn, URL_HOJA, universo)
     elif st.session_state.vista_actual == "📸 Validar Evidencias":
         from vistas import validar_evidencias
