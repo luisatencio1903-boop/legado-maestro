@@ -1,67 +1,87 @@
 import streamlit as st
 import pandas as pd
+import time
 from datetime import datetime, timedelta
+from streamlit_gsheets import GSheetsConnection
+
+st.set_page_config(
+    page_title="SUPER DIRECTOR 1.0",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 def ahora_ve():
     return datetime.utcnow() - timedelta(hours=4)
 
-def render_informe(conn, URL_HOJA):
-    hoy = ahora_ve().strftime("%d/%m/%Y")
-    
-    try:
-        df_as = conn.read(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", ttl=0)
-        df_ev = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
-        df_ej = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=0)
-        df_mat = conn.read(spreadsheet=URL_HOJA, worksheet="MATRICULA_GLOBAL", ttl=0)
-    except Exception as e:
-        st.error(f"Error técnico: {e}")
-        return
+def limpiar_id(v):
+    if v is None: return ""
+    return str(v).strip().upper().replace(',', '').replace('.', '').replace('V-', '').replace('E-', '').replace(' ', '')
 
-    st.subheader(f"📊 Informe de Gestión Diaria: {hoy}")
-    
-    m1, m2, m3 = st.columns(3)
-    
-    docentes_p = len(df_as[(df_as['FECHA'] == hoy) & (df_as['TIPO'] == "ASISTENCIA")])
-    m1.metric("Docentes en Plantel", f"{docentes_p}")
+st.markdown("""
+<style>
+    .main { background-color: #f0f2f6; }
+    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .report-card { background-color: #ffffff; padding: 20px; border-radius: 12px; border-left: 8px solid #0d47a1; margin-bottom: 20px; }
+</style>
+""", unsafe_allow_html=True)
 
-    alumnos_atendidos = df_ev[df_ev['FECHA'] == hoy]['ESTUDIANTE'].nunique()
-    total_m = len(df_mat)
-    porcentaje = (alumnos_atendidos / total_m * 100) if total_m > 0 else 0
-    m2.metric("Matrícula Atendida", f"{alumnos_atendidos}", f"{porcentaje:.1f}%")
+try:
+    conn = st.connection("gsheets", type=GSheetsConnection)
+    URL_HOJA = st.secrets["GSHEETS_URL"]
+except Exception as e:
+    st.error("Error de conexión.")
+    st.stop()
 
-    clases_c = len(df_ej[(df_ej['FECHA'] == hoy) & (df_ej['ESTADO'] == "CULMINADA")])
-    m3.metric("Actividades de Aula", f"{clases_c}")
+if 'auth_dir' not in st.session_state:
+    st.session_state.auth_dir = False
 
+if not st.session_state.auth_dir:
+    st.title("🛡️ Acceso: SUPER DIRECTOR")
+    with st.form("login_director"):
+        cedula = st.text_input("Cédula de Identidad:")
+        clave = st.text_input("Contraseña:", type="password")
+        btn_login = st.form_submit_button("Entrar al Panel de Control")
+        
+        if btn_login:
+            df_u = conn.read(spreadsheet=URL_HOJA, worksheet="USUARIOS", ttl=0)
+            df_u['C_L'] = df_u['CEDULA'].apply(limpiar_id)
+            match = df_u[(df_u['C_L'] == limpiar_id(cedula)) & (df_u['CLAVE'] == clave)]
+            
+            if not match.empty:
+                if match.iloc[0]['ROL'] == "DIRECTOR":
+                    st.session_state.auth_dir = True
+                    st.session_state.u_dir = match.iloc[0].to_dict()
+                    st.success("Cargando sistemas...")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("Acceso Denegado: Requiere rol de DIRECTOR.")
+            else:
+                st.error("Credenciales incorrectas.")
+    st.stop()
+
+with st.sidebar:
+    st.title("🛡️ SUPER DIRECTOR")
+    st.write(f"Director: **{st.session_state.u_dir['NOMBRE']}**")
     st.divider()
     
-    ejecuciones_hoy = df_ej[df_ej['FECHA'] == hoy]
+    opcion = st.radio(
+        "SISTEMAS DE CONTROL:",
+        ["📊 Informe Diario Gestión", "📸 Validar Evidencias", "🏆 Ranking de Méritos"]
+    )
     
-    if ejecuciones_hoy.empty:
-        st.warning("No se han reportado cierres de aula el día de hoy.")
-    else:
-        for _, clase in ejecuciones_hoy.iterrows():
-            with st.container(border=True):
-                c_izq, c_der = st.columns([2, 1])
-                
-                with c_izq:
-                    st.markdown(f"### 📍 {clase['ACTIVIDAD_TITULO']}")
-                    st.markdown(f"**Docente:** {clase['USUARIO']}")
-                    st.markdown("**Resumen de Ejecución:**")
-                    st.write(clase['RESUMEN_LOGROS'])
-                    
-                    evals_clase = df_ev[(df_ev['FECHA'] == hoy) & (df_ev['USUARIO'] == clase['USUARIO'])]
-                    if not evals_clase.empty:
-                        with st.expander(f"🧒 Ver {len(evals_clase)} alumnos evaluados"):
-                            for _, ev in evals_clase.iterrows():
-                                st.caption(f"• {ev['ESTUDIANTE']}: {ev['ANECDOTA'][:80]}...")
-                
-                with c_der:
-                    fotos = str(clase['EVIDENCIA_FOTO']).split('|')
-                    if len(fotos) > 0 and "http" in fotos[0]:
-                        st.image(fotos[0].strip(), caption="Inicio", use_container_width=True)
-                    if len(fotos) > 1 and "http" in fotos[1]:
-                        st.image(fotos[1].strip(), caption="Culminación", use_container_width=True)
+    st.write("")
+    if st.button("🔒 Cerrar Sesión"):
+        st.session_state.auth_dir = False
+        st.rerun()
 
-    if st.button("🖨️ Finalizar y Firmar Reporte", use_container_width=True):
-        st.balloons()
-        st.success("Reporte consolidado en la base de datos histórica.")
+if opcion == "📊 Informe Diario Gestión":
+    from vistas import informe_diario
+    informe_diario.render_informe(conn, URL_HOJA)
+
+elif opcion == "📸 Validar Evidencias":
+    st.info("Módulo de Validación en desarrollo.")
+
+elif opcion == "🏆 Ranking de Méritos":
+    st.info("Módulo de Ranking en desarrollo.")
