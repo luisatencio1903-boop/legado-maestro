@@ -13,22 +13,35 @@ def limpiar_id(v):
 
 @st.cache_data(ttl=300)
 def cargar_universo_datos(_conn, url):
+    # Lectura de hojas (tal cual tu original)
     asistencia = _conn.read(spreadsheet=url, worksheet="ASISTENCIA")
     evaluaciones = _conn.read(spreadsheet=url, worksheet="EVALUACIONES")
     ejecucion = _conn.read(spreadsheet=url, worksheet="EJECUCION")
     usuarios = _conn.read(spreadsheet=url, worksheet="USUARIOS")
     matricula = _conn.read(spreadsheet=url, worksheet="MATRICULA_GLOBAL")
     planes = _conn.read(spreadsheet=url, worksheet="Hoja1")
+    
     return {
+        # --- COMPATIBILIDAD LEGACY (Minúsculas) ---
+        # Mantenemos esto para que Super Docente y funciones viejas sigan sirviendo
         "asistencia": asistencia,
         "evaluaciones": evaluaciones,
         "ejecucion": ejecucion,
         "usuarios": usuarios,
         "matricula": matricula,
-        "planes": planes
+        "planes": planes,
+
+        # --- COMPATIBILIDAD NUEVA (Mayúsculas - Estándar Excel) ---
+        # Agregamos estos alias para que Super Director y el Informe Diario encuentren las hojas
+        "ASISTENCIA": asistencia,
+        "EVALUACIONES": evaluaciones,
+        "EJECUCION": ejecucion,
+        "MATRICULA_GLOBAL": matricula, # Clave corregida para coincidir con la vista
+        "USUARIOS": usuarios
     }
 
 def obtener_metricas_dashboard(universo):
+    # Esta función usa las claves en minúscula, ahora funcionará perfecto
     df_as = universo["asistencia"]
     hoy = ahora_ve().strftime("%d/%m/%Y")
     
@@ -37,6 +50,7 @@ def obtener_metricas_dashboard(universo):
     faltas = len(data_hoy[data_hoy['TIPO'] == "INASISTENCIA"])
     
     pendientes_as = len(df_as[df_as['ESTADO_DIRECTOR'] == "PENDIENTE"])
+    # Aquí aseguramos que busque en la clave correcta
     pendientes_ej = len(universo["ejecucion"][universo["ejecucion"]['ESTADO'] == "PENDIENTE"])
     
     return {
