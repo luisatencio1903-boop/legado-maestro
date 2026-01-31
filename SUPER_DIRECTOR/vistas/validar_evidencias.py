@@ -2,18 +2,16 @@ import streamlit as st
 import pandas as pd
 import time
 
-def render_validacion(conn, URL_HOJA):
-    try:
-        df_as = conn.read(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", ttl=0)
-        df_ej = conn.read(spreadsheet=URL_HOJA, worksheet="EJECUCION", ttl=0)
-    except:
-        st.error("Error al conectar con la base de datos.")
-        return
+def render_validacion(conn, URL_HOJA, universo):
+    # Ya no leemos de Google aquí, usamos el "universo" que ya está en memoria
+    df_as = universo["asistencia"]
+    df_ej = universo["ejecucion"]
 
     tab1, tab2 = st.tabs(["🕒 Asistencias", "🏫 Actividades de Aula"])
 
     with tab1:
         st.subheader("Validación de Asistencia Biométrica")
+        # Filtramos los que están pendientes en la tabla que ya tenemos
         pendientes_as = df_as[df_as['ESTADO_DIRECTOR'] == "PENDIENTE"]
         
         if pendientes_as.empty:
@@ -35,12 +33,16 @@ def render_validacion(conn, URL_HOJA):
                         
                         col_b1, col_b2 = st.columns(2)
                         if col_b1.button("✅ Aprobar", key=f"btn_ap_as_{idx}"):
+                            # Cuando aprobamos, SÍ escribimos en la nube para guardar el cambio
                             df_as.at[idx, 'ESTADO_DIRECTOR'] = "APROBADO"
                             conn.update(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", data=df_as)
+                            st.cache_data.clear() # Limpiamos caché para que el Director vea el cambio
                             st.rerun()
+                            
                         if col_b2.button("❌ Rechazar", key=f"btn_re_as_{idx}"):
                             df_as.at[idx, 'ESTADO_DIRECTOR'] = "RECHAZADO"
                             conn.update(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", data=df_as)
+                            st.cache_data.clear()
                             st.rerun()
 
     with tab2:
@@ -66,8 +68,11 @@ def render_validacion(conn, URL_HOJA):
                     if col_b3.button("🏆 Certificar Actividad", key=f"btn_ap_ej_{idx}"):
                         df_ej.at[idx, 'ESTADO'] = "CULMINADA"
                         conn.update(spreadsheet=URL_HOJA, worksheet="EJECUCION", data=df_ej)
+                        st.cache_data.clear()
                         st.rerun()
+                        
                     if col_b4.button("❌ Invalidar", key=f"btn_re_ej_{idx}"):
                         df_ej.at[idx, 'ESTADO'] = "RECHAZADA"
                         conn.update(spreadsheet=URL_HOJA, worksheet="EJECUCION", data=df_ej)
+                        st.cache_data.clear()
                         st.rerun()
