@@ -21,8 +21,8 @@ st.markdown("""
     .stApp { background-color: #f1f5f9; }
     .stSelectbox label { font-size: 1.2rem !important; font-weight: 800 !important; color: #1e3a8a !important; }
     .stButton button { width: 100%; border-radius: 10px; height: 3.5em; font-weight: 700; background-color: #1e3a8a; color: white; border: none; }
-    .plan-box { background-color: white; padding: 20px; border-radius: 10px; border-left: 8px solid #1e3a8a; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .stMetric { background-color: white; padding: 15px; border-radius: 10px; border-top: 5px solid #1e3a8a; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .alert-box { background-color: #ffebee; border-left: 5px solid #c62828; padding: 15px; border-radius: 10px; margin-bottom: 10px; color: #b71c1c; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -89,6 +89,30 @@ if st.session_state.vista_actual == "HOME":
     c1.metric("Presentes", f"{pres}")
     c2.metric("Faltas", f"{fals}")
     c3.metric("Pendientes", f"{pend_as + pend_ej}")
+
+    st.divider()
+
+    st.markdown("### ⚠️ ALERTAS DE INCUMPLIMIENTO")
+    
+    docs_con_salida = data_hoy[(data_hoy['TIPO'] == "ASISTENCIA") & (data_hoy['HORA_SALIDA'] != "-")]
+    sin_foto_s = docs_con_salida[docs_con_salida['FOTO_SALIDA'] == "-"]
+    
+    if not sin_foto_s.empty:
+        for _, fila in sin_foto_s.iterrows():
+            st.markdown(f"""<div class='alert-box'>📸 <b>{fila['USUARIO']}</b> marcó salida a las {fila['HORA_SALIDA']} pero <b>NO tomó la foto de evidencia</b>.</div>""", unsafe_allow_html=True)
+
+    docs_presentes = data_hoy[data_hoy['TIPO'] == "ASISTENCIA"]['USUARIO'].tolist()
+    docs_ejecutaron = df_ej[df_ej['FECHA'] == hoy]['USUARIO'].tolist()
+    faltan_ejecucion = [d for d in docs_presentes if d not in docs_ejecutaron]
+
+    if faltan_ejecucion:
+        for d in faltan_ejecucion:
+            st.markdown(f"""<div class='alert-box' style='background-color: #fff3e0; border-left-color: #fb8c00; color: #e65100;'>🏫 <b>{d}</b> está presente pero aún no ha culminado su actividad en el Aula Virtual.</div>""", unsafe_allow_html=True)
+
+    if sin_foto_s.empty and not faltan_ejecucion and pres > 0:
+        st.success("✅ Todo el personal presente está cumpliendo con los protocolos de registro.")
+    elif pres == 0:
+        st.info("Esperando los primeros registros de asistencia...")
 
     st.divider()
 
