@@ -9,6 +9,7 @@
 # Plataforma de gestión pedagógica basada en Inteligencia Artificial.
 # Incluye: Asistencia Biométrica, Planificación, Evaluación y Gestión de Archivos.
 # Estructura: Modular (Vistas, Utils, Cerebros).
+# Actualización: Sistema de Resiliencia Local (Persistencia en Dispositivo).
 # =============================================================================
 
 import streamlit as st
@@ -17,6 +18,8 @@ import time
 # --- 1. IMPORTAR HERRAMIENTAS Y ESTILOS ---
 from utils.visuales import cargar_css
 from utils.db import conectar_db, cargar_datos_maestros
+# NUEVAS HERRAMIENTAS DE RESILIENCIA (PASO 3)
+from utils.maletin import inicializar_maletin, recuperar_del_dispositivo, persistir_en_dispositivo
 
 # --- 2. IMPORTAR TODAS LAS VISTAS (MÓDULOS) ---
 from vistas import login
@@ -42,25 +45,45 @@ st.set_page_config(
 # Cargar Estilos CSS (Visuales)
 cargar_css()
 
-# --- 4. GESTIÓN DE MEMORIA (SESSION STATE) ---
-# Variables fundamentales para que el sistema no se pierda
+# =============================================================================
+# 4. GESTIÓN DE MEMORIA Y RESILIENCIA (SESSION STATE + LOCAL STORAGE)
+# =============================================================================
+
+# A. Inicializamos variables de sesión estándar
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'u' not in st.session_state: st.session_state.u = None
 if 'pagina_actual' not in st.session_state: st.session_state.pagina_actual = "HOME"
 
-# Variables globales del Aula Virtual para evitar errores al cambiar de pantalla
+# Variables globales del Aula Virtual
 if 'av_foto1' not in st.session_state: st.session_state.av_foto1 = None
 if 'av_foto2' not in st.session_state: st.session_state.av_foto2 = None
 if 'av_foto3' not in st.session_state: st.session_state.av_foto3 = None
 if 'av_resumen' not in st.session_state: st.session_state.av_resumen = ""
 if 'modo_suplencia_activo' not in st.session_state: st.session_state.modo_suplencia_activo = False
 
-# --- 5. CONEXIÓN A LA BASE DE DATOS ---
+# B. LÓGICA DE RECUPERACIÓN (EL "ESCUDO" CONTRA EL RESETEO DEL NAVEGADOR)
+# Intentamos recuperar el "Maletín de Campo" desde el disco duro del teléfono
+try:
+    datos_maletin = recuperar_del_dispositivo("maletin_super_docente")
+    if datos_maletin:
+        # Si el navegador se reseteó, restauramos los datos guardados al Session State
+        for llave, valor in datos_maletin.items():
+            if llave not in st.session_state or st.session_state[llave] is None:
+                st.session_state[llave] = valor
+        st.toast("🔄 Sesión recuperada desde el dispositivo", icon="📱")
+except:
+    pass # Si no hay datos o falla, iniciamos sesión limpia
+
+# =============================================================================
+# 5. CONEXIÓN A LA BASE DE DATOS
+# =============================================================================
 conn = conectar_db()
 if not conn:
     st.stop() # Si no hay internet o falla Google Sheets, se detiene aquí.
 
-# --- 6. RUTEO PRINCIPAL (EL CEREBRO DE NAVEGACIÓN) ---
+# =============================================================================
+# 6. RUTEO PRINCIPAL (EL CEREBRO DE NAVEGACIÓN)
+# =============================================================================
 
 if not st.session_state.auth:
     # ESCENARIO A: NO ESTÁ LOGUEADO -> MOSTRAR LOGIN
