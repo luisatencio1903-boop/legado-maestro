@@ -1,9 +1,17 @@
 # =============================================================================
-# CEREBRO NÚCLEO - SUPER DOCENTE 2.0 (REPARACIÓN DE RUTAS)
+# CEREBRO NÚCLEO - SUPER DOCENTE 2.0 (REPARACIÓN DE RUTAS Y ESCUDO OFFLINE)
 # =============================================================================
 
 import streamlit as st
-from groq import Groq
+
+# --- ESCUDO DE IMPORTACIÓN v2.0 (EVITA EL BUCLE "PLEASE WAIT" EN MODO OFFLINE) ---
+try:
+    from groq import Groq
+except ImportError:
+    # Si la librería Groq no está disponible (Stlite Offline), creamos un sustituto
+    class Groq:
+        def __init__(self, api_key): pass
+    client = None
 
 # IMPORTACIÓN RELATIVA: El punto (.) significa "busca en esta misma carpeta"
 # Esto evita el error de "ImportError" en sistemas modulares
@@ -32,7 +40,13 @@ def obtener_instrucciones_globales():
 
 # --- FUNCIÓN 1: EXPORTADA PARA AULA_VIRTUAL.PY ---
 def generar_respuesta(input_data, temperatura=0.6):
-    if not client: return "Error: Cliente IA no configurado."
+    """
+    Soporta tanto el Chat como la Planificación. 
+    En modo Offline, informa que la IA requiere conexión.
+    """
+    if not client: 
+        return "⚠️ Modo Autónomo: La Inteligencia Artificial requiere conexión a internet para generar respuestas. Sus datos administrativos (Asistencia/Evaluación) siguen protegidos localmente."
+    
     mensajes = input_data if isinstance(input_data, list) else [{"role": "system", "content": input_data}]
     try:
         completion = client.chat.completions.create(messages=mensajes, model=MODELO, temperature=temperatura)
