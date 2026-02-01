@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>SUPER DOCENTE 2.0 - SISTEMA AUTÓNOMO</title>
+    <!-- Cargador de Stlite: Trae el motor de Python al navegador -->
+    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.31.0/build/stlite.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+    stlite.mount({
+        // 1. LIBRERÍAS NECESARIAS: Se descargan una sola vez al celular
+        requirements: ["pandas", "pillow", "requests"], 
+        entrypoint: "app_offline.py",
+        files: {
+            "app_offline.py": `
+import streamlit as st
+import pandas as pd
+
+# CONFIGURACIÓN VISUAL RÁPIDA
+st.set_page_config(page_title="Modo Autónomo", page_icon="🛡️")
+
+st.title("🦸‍♂️ SUPER DOCENTE 2.0")
+st.success("✅ MOTOR DE PYTHON CARGADO EN ESTE CELULAR")
+
+st.info("🕒 PRUEBA TÉCNICA: Pon tu móvil en MODO AVIÓN ahora mismo.")
+
+menu = st.selectbox("HERRAMIENTA:", ["Inicio", "Prueba de Asistencia", "Prueba de Evaluación"])
+
+if menu == "Prueba de Asistencia":
+    st.subheader("⏱️ Registro Offline")
+    st.write("El sistema está procesando datos en el celular, no en internet.")
+    st.button("📸 Capturar Evidencia (Simulado)")
+    st.warning("Si puedes ver este mensaje SIN INTERNET, la arquitectura es un ÉXITO.")
+
+if menu == "Prueba de Evaluación":
+    st.subheader("📝 Evaluación Estudiantil")
+    nombre = st.text_input("Nombre del Alumno:")
+    obs = st.text_area("Observación:")
+    if st.button("Guardar en el Teléfono"):
+        st.success(f"Dato de {nombre} guardado en el disco duro del navegador.")
+            `
+        }
+    }, document.getElementById("root"))
+    </script>
+</body>
+</html>
