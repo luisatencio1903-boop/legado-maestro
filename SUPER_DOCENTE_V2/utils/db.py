@@ -22,10 +22,11 @@ def conectar_db():
 
 def guardar_asistencia_hibrida(conn, datos):
     """Decide si guarda en Google o en el teléfono según la señal."""
-    URL_HOJA = st.secrets["GSHEETS_URL"]
+    # Usamos .get para evitar errores de atributo si el secreto no ha cargado
+    URL_HOJA = st.secrets.get("GSHEETS_URL", "")
     
     # 1. Intentar guardado en la Nube (Online)
-    if conn is not None:
+    if conn is not None and URL_HOJA:
         try:
             df = conn.read(spreadsheet=URL_HOJA, worksheet="ASISTENCIA", ttl=0)
             df_final = pd.concat([df, pd.DataFrame([datos])], ignore_index=True)
@@ -42,9 +43,9 @@ def guardar_asistencia_hibrida(conn, datos):
 
 def guardar_evaluacion_hibrida(conn, datos):
     """Guarda la nota del alumno en el teléfono si no hay internet."""
-    URL_HOJA = st.secrets["GSHEETS_URL"]
+    URL_HOJA = st.secrets.get("GSHEETS_URL", "")
     
-    if conn is not None:
+    if conn is not None and URL_HOJA:
         try:
             df = conn.read(spreadsheet=URL_HOJA, worksheet="EVALUACIONES", ttl=0)
             df_final = pd.concat([df, pd.DataFrame([datos])], ignore_index=True)
@@ -54,7 +55,7 @@ def guardar_evaluacion_hibrida(conn, datos):
         except:
             pass
             
-    # Guardar en una lista de pendientes dentro del celular
+    # Guardar en una lista de pendientes dentro del celular (Modo Offline)
     pendientes = recuperar_del_dispositivo("cola_evaluaciones") or []
     pendientes.append(datos)
     persistir_en_dispositivo("cola_evaluaciones", pendientes)
@@ -62,8 +63,8 @@ def guardar_evaluacion_hibrida(conn, datos):
     return False
 
 def cargar_datos_maestros(conn, url):
-    """Carga las listas de alumnos y profes."""
-    if conn is None:
+    """Carga las listas de alumnos y profes con manejo de errores para Stlite."""
+    if conn is None or not url:
         return pd.DataFrame(), pd.DataFrame()
     try:
         profes = conn.read(spreadsheet=url, worksheet="USUARIOS", ttl=600)
