@@ -180,3 +180,4 @@ else:
         st.caption("© 2026 SUPER DOCENTE | Desarrollado para el T.E.L E.R.A.C por: **Luis Atencio**")
     with col_pie2:
         st.caption("v2.0 Modular")
+
