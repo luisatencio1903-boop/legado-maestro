@@ -1,33 +1,39 @@
-import streamlit as st
-from streamlit_local_storage import LocalStorage
 import json
+import streamlit as st
 
-def inicializar_maletin():
-    return LocalStorage()
+# Intentamos conectar con el motor del navegador (Stlite)
+try:
+    from js import window
+    localStorage = window.localStorage
+except ImportError:
+    # Si estamos en Streamlit Cloud normal, usamos un maletín virtual
+    localStorage = None
 
 def persistir_en_dispositivo(llave, valor):
-    local_storage = inicializar_maletin()
-    try:
-        # Convertimos los datos a texto JSON para el navegador
-        dato_serializado = json.dumps(valor)
-        local_storage.set(llave, dato_serializado)
-    except Exception as e:
-        st.error(f"Error de persistencia local: {e}")
+    """Guarda datos físicamente en el disco duro del navegador del celular."""
+    if localStorage:
+        try:
+            dato_json = json.dumps(valor)
+            localStorage.setItem(llave, dato_json)
+        except:
+            pass
+    else:
+        # Fallback para modo Online
+        st.session_state[llave] = valor
 
 def recuperar_del_dispositivo(llave):
-    local_storage = inicializar_maletin()
-    try:
-        dato_serializado = local_storage.get(llave)
-        if dato_serializado:
-            return json.loads(dato_serializado)
-        return None
-    except:
-        return None
+    """Busca y recupera datos del celular aunque no haya internet."""
+    if localStorage:
+        try:
+            dato_json = localStorage.getItem(llave)
+            return json.loads(dato_json) if dato_json else None
+        except:
+            return None
+    return st.session_state.get(llave, None)
 
 def borrar_del_dispositivo(llave):
-    local_storage = inicializar_maletin()
-    local_storage.delete(llave)
-
-def limpiar_todo_el_maletin():
-    local_storage = inicializar_maletin()
-    local_storage.deleteAll()
+    """Limpia el maletín después de sincronizar con Google Sheets."""
+    if localStorage:
+        localStorage.removeItem(llave)
+    elif llave in st.session_state:
+        del st.session_state[llave]
