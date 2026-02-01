@@ -9,6 +9,10 @@ except ImportError:
     # Si estamos en Streamlit Cloud normal, usamos un maletín virtual
     localStorage = None
 
+def inicializar_maletin():
+    """Retorna el objeto localStorage del navegador."""
+    return localStorage
+
 def persistir_en_dispositivo(llave, valor):
     """Guarda datos físicamente en el disco duro del navegador del celular."""
     if localStorage:
@@ -34,6 +38,9 @@ def recuperar_del_dispositivo(llave):
 def borrar_del_dispositivo(llave):
     """Limpia el maletín después de sincronizar con Google Sheets."""
     if localStorage:
-        localStorage.removeItem(llave)
+        try:
+            localStorage.removeItem(llave)
+        except:
+            pass
     elif llave in st.session_state:
         del st.session_state[llave]
