@@ -10,7 +10,6 @@
     <div id="root"></div>
     <script>
     stlite.mount({
-        // 1. REQUISITOS COMPATIBLES: Solo lo que el celular puede procesar
         requirements: ["pandas", "pillow", "requests"], 
         entrypoint: "app.py",
         files: {
@@ -39,7 +38,9 @@
             "cerebros/ieeb.py": { url: "cerebros/ieeb.py" },
             "cerebros/aula_integrada.py": { url: "cerebros/aula_integrada.py" },
             "cerebros/upe.py": { url: "cerebros/upe.py" },
-            "cerebros/inicial.py": { url: "cerebros/inicial.py" }
+            "cerebros/inicial.py": { url: "cerebros/inicial.py" },
+            "vistas/__init__.py": { content: "" },
+            "utils/__init__.py": { content: "" }
         }
     }, document.getElementById("root"))
     </script>
