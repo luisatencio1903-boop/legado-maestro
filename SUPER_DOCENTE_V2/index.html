@@ -4,43 +4,52 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>SUPER DOCENTE 2.0</title>
-    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.39.0/build/stlite.js"></script>
+    <!-- Versión estable y moderna de Stlite -->
+    <script src="https://cdn.jsdelivr.net/npm/@stlite/mountable@0.46.0/build/stlite.js"></script>
 </head>
 <body>
     <div id="root"></div>
     <script>
     stlite.mount({
+        // 1. LIBRERÍAS ESENCIALES (Sin Google Sheets para evitar el bucle infinito)
         requirements: ["pandas", "pillow", "requests"], 
         entrypoint: "app.py",
         files: {
-            "app.py": { url: "app.py" },
-            "utils/maletin.py": { url: "utils/maletin.py" },
-            "utils/traductor.py": { url: "utils/traductor.py" },
-            "utils/visuales.py": { url: "utils/visuales.py" },
-            "utils/db.py": { url: "utils/db.py" },
-            "utils/sync_engine.py": { url: "utils/sync_engine.py" },
-            "vistas/home.py": { url: "vistas/home.py" },
-            "vistas/asistencia.py": { url: "vistas/asistencia.py" },
-            "vistas/aula_virtual.py": { url: "vistas/aula_virtual.py" },
-            "vistas/planificador.py": { url: "vistas/planificador.py" },
-            "vistas/fabrica.py": { url: "vistas/fabrica.py" },
-            "vistas/proyectos.py": { url: "vistas/proyectos.py" },
-            "vistas/ministerial.py": { url: "vistas/ministerial.py" },
-            "vistas/archivo.py": { url: "vistas/archivo.py" },
-            "vistas/extras.py": { url: "vistas/extras.py" },
-            "vistas/login.py": { url: "vistas/login.py" },
-            "vistas/sidebar.py": { url: "vistas/sidebar.py" },
-            "vistas/sincronizar.py": { url: "vistas/sincronizar.py" },
-            "cerebros/__init__.py": { content: "" },
-            "cerebros/nucleo.py": { url: "cerebros/nucleo.py" },
-            "cerebros/tel.py": { url: "cerebros/tel.py" },
-            "cerebros/caipa.py": { url: "cerebros/caipa.py" },
-            "cerebros/ieeb.py": { url: "cerebros/ieeb.py" },
-            "cerebros/aula_integrada.py": { url: "cerebros/aula_integrada.py" },
-            "cerebros/upe.py": { url: "cerebros/upe.py" },
-            "cerebros/inicial.py": { url: "cerebros/inicial.py" },
+            // ARCHIVO PRINCIPAL
+            "app.py": { url: "./app.py" },
+            
+            // CARPETA UTILS (Lógica técnica)
+            "utils/maletin.py": { url: "./utils/maletin.py" },
+            "utils/traductor.py": { url: "./utils/traductor.py" },
+            "utils/visuales.py": { url: "./utils/visuales.py" },
+            "utils/db.py": { url: "./utils/db.py" },
+            "utils/sync_engine.py": { url: "./utils/sync_engine.py" },
+            "utils/__init__.py": { content: "" },
+
+            // CARPETA VISTAS (Interfaz de usuario)
+            "vistas/home.py": { url: "./vistas/home.py" },
+            "vistas/asistencia.py": { url: "./vistas/asistencia.py" },
+            "vistas/aula_virtual.py": { url: "./vistas/aula_virtual.py" },
+            "vistas/planificador.py": { url: "./vistas/planificador.py" },
+            "vistas/fabrica.py": { url: "./vistas/fabrica.py" },
+            "vistas/proyectos.py": { url: "./vistas/proyectos.py" },
+            "vistas/ministerial.py": { url: "./vistas/ministerial.py" },
+            "vistas/archivo.py": { url: "./vistas/archivo.py" },
+            "vistas/extras.py": { url: "./vistas/extras.py" },
+            "vistas/login.py": { url: "./vistas/login.py" },
+            "vistas/sidebar.py": { url: "./vistas/sidebar.py" },
+            "vistas/sincronizar.py": { url: "./vistas/sincronizar.py" },
             "vistas/__init__.py": { content: "" },
-            "utils/__init__.py": { content: "" }
+
+            // CARPETA CEREBROS (Inteligencia Pedagógica)
+            "cerebros/nucleo.py": { url: "./cerebros/nucleo.py" },
+            "cerebros/tel.py": { url: "./cerebros/tel.py" },
+            "cerebros/caipa.py": { url: "./cerebros/caipa.py" },
+            "cerebros/ieeb.py": { url: "./cerebros/ieeb.py" },
+            "cerebros/aula_integrada.py": { url: "./cerebros/aula_integrada.py" },
+            "cerebros/upe.py": { url: "./cerebros/upe.py" },
+            "cerebros/inicial.py": { url: "./cerebros/inicial.py" },
+            "cerebros/__init__.py": { content: "" }
         }
     }, document.getElementById("root"))
     </script>
