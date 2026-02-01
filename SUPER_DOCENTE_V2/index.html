@@ -10,15 +10,18 @@
     <div id="root"></div>
     <script>
     stlite.mount({
-        requirements: ["pandas", "pillow", "requests", "groq", "streamlit-gsheets-connection"], 
+        // 1. SOLO LIBRERÍAS COMPATIBLES Y LIGERAS
+        requirements: ["pandas", "pillow", "requests"], 
         entrypoint: "app.py",
         files: {
             "app.py": { url: "app.py" },
+            // Carpeta UTILS
             "utils/maletin.py": { url: "utils/maletin.py" },
             "utils/traductor.py": { url: "utils/traductor.py" },
             "utils/visuales.py": { url: "utils/visuales.py" },
             "utils/db.py": { url: "utils/db.py" },
             "utils/sync_engine.py": { url: "utils/sync_engine.py" },
+            // Carpeta VISTAS
             "vistas/home.py": { url: "vistas/home.py" },
             "vistas/asistencia.py": { url: "vistas/asistencia.py" },
             "vistas/aula_virtual.py": { url: "vistas/aula_virtual.py" },
@@ -31,6 +34,7 @@
             "vistas/login.py": { url: "vistas/login.py" },
             "vistas/sidebar.py": { url: "vistas/sidebar.py" },
             "vistas/sincronizar.py": { url: "vistas/sincronizar.py" },
+            // Carpeta CEREBROS
             "cerebros/__init__.py": { content: "" },
             "cerebros/nucleo.py": { url: "cerebros/nucleo.py" },
             "cerebros/tel.py": { url: "cerebros/tel.py" },
